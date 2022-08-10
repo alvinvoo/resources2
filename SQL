@@ -1,0 +1,42 @@
+how to fix ordering (without letting it auto arrange by id)
+#MYSQL - seems it doesnt care about data type for `id`
+#
+liv3ly_core> select * from achievements where id in (6,3,8,9,2) order by find_in_set(id, '6,3,8,9,2');
+
+# find_in_set return the position
+liv3ly_core> select find_in_set(2, '6,3,8,9,2');
++-------------------------------+
+| find_in_set('2', '6,3,8,9,2') |
++-------------------------------+
+| 5                             |
++-------------------------------+
+1 row in set
+Time: 0.041s
+
+#PSQL 13.4
+# array will have integer type
+# need to explicitly typecast the id
+api_gateway_dev=# select * from users where id in (9,6,25,23) order by array_position(array[9,6,25,23], cast(id as integer));
+# OR, precast the array
+api_gateway_dev=# select * from users where id in (9,6,25,23) order by array_position(array[9,6,25,23]::bigint[], id);
+
+
+
+ id |     name      |   username    | gender_id | date_of_birth | country_id | weight | height |     inserted_at     |     updated_at      |
+                                 avatar_url                                       | role_id | old_user_id
+----+---------------+---------------+-----------+---------------+------------+--------+--------+---------------------+---------------------+------
+----------------------------------------------------------------------------------+---------+-------------
+  9 |               | alvin....vooo |           | 1990-02-09    |            |        |        | 2021-10-13 08:11:40 | 2021-12-03 10:40:13 |
+                                                                                  |       2 |
+  6 | Alvin Voo     | naz1234       |         1 | 1990-02-09    |          3 |   0.29 |  56.15 | 2021-09-07 16:13:07 | 2022-02-18 10:41:26 | https
+://backend-2-development.s3.amazonaws.com/users/6/avatar.png                      |       2 |
+ 25 | Cheryl Chiang |               |         1 | 1982-07-02    |          1 |  53.00 | 164.00 | 2022-02-14 19:11:21 | 2022-02-14 19:11:21 | https
+://s3.ap-southeast-1.amazonaws.com/liv3ly-staging.com/users/images/43/avatar.jpeg |         |          43
+ 23 | Kai           |               |           |               |            |   0.00 |   0.00 | 2022-02-14 19:11:21 | 2022-02-14 19:11:21 |
+                                                                                  |         |           1
+(4 rows)
+
+
+SELECT u0."id", u0."name", u0."username", u0."gender_id", u0."date_of_birth", u0."country_id", u0."role_id", u0."weight", u0."height", u0."avatar_
+url", u0."old_user_id", u0."inserted_at", u0."updated_at" FROM "users" AS u0 WHERE (u0."id" = ANY($1)) ORDER BY array_position(array[9,6,25,23]::b
+igint[], id) [[9, 6, 25, 23]] 

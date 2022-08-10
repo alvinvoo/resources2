@@ -1,0 +1,1843 @@
+most basic vue app (index.html):
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+
+<div id="app">
+    <input type="text" v-on:input="changeTitle">
+    <p>{{ title }}</p>
+</div>
+
+
+<script>
+    new Vue({
+        el : '#app', // el, data and methods are reserved properties
+        data: { // needs to be a function data() for non-root components
+            title: 'Hello World'
+        },
+        methods: {
+            changeTitle: function(event) {
+                // Vue acts as a proxy for our data and methods properties, and propagate these properties to the top level of the Vue instance, such that it can be accessed by 'this'
+                this.title = event.target.value || 'Hello World';
+            }
+        }
+    })
+</script>
+---
+VueJS DOM Updating
+
+Vue Instance <--watch--> Virtual DOM <--update--> _Real_ DOM
+
+Vue only updates _Real_ DOM when there's a diff between the Vue Instance and Virtual DOM
+Vue only updates the diff, and tries to access the _Real_ DOM as little as possible
+
+--
+//vm stands for vue model
+const app = new Vue({
+    el: '#app', // here it specifies that the element with id app is the ROOT component (component under vue rendering)
+});
+
+
+Vuejs creates a template based on our html code, stores that internally and then uses this template to create the real html code which is rendered as the dom
+
+Vue.use(plugin) to install plugin and extend current Vue instance functionaliy
+----
+Options in Vue
+
+1) Computed properties (for data)
+
+Computed properties are cached, and only re-computed on reactive dependency changes.
+We can think of computed properties as 'observables'! Becoz it changes reactively.
+computed: {
+    output(){ //<--- this is the computed property, it is setup here as a function
+        // but accessed like a data property
+        // will only be called when the dependencies in this scope is affected
+        console.log('computed');
+        return this.counter > 5 ? 'Greater' : 'Smaller';
+    }
+}
+while computed properties is usually treated like a get function
+it can define BOTH get AND set functions
+hence, we could apply v-model (two way binding) on a computed property as well
+this is especially useful when we want an easier way to write back to vuex state
+<input type="text" v-model="value">
+..
+computed:{
+            value: {
+                get(){
+                    return this.$store.state.value;
+                },
+                set(v){
+                    this.$store.dispatch('setValue',v); // dispatching to 'setValue' action
+                }
+            }
+        }
+
+accessible programmatically directly on instance: $vm.value
+
+2) Watcher
+
+watch: {
+  counter: function(value){ // key is the expression to watch and value is callback
+        setTimeout(function(){
+            this.counter = 0;
+        }.bind(this), 2000);
+    }
+
+}
+----
+An instance object of VueJs has Instance Properties like $data, $props, $el, $refs etc
+
+we could access all these properties inside / outside the Vue instance.
+When accessing inside, we could use this.$data, this.$props (even though its a bit redundant) AND this.$refs
+
+For $refs, we could use it as a mean to access any html element by placing a ref key attribute on the element itself, for.e.g
+
+<h1 ref="heading">{{ title }}</h1>
+..
+then we could access heading as a HTML element
+this.$refs.heading.innerText
+
+$attrs - when there's some parent scope bindings (other than class and style) which are not recognized/defined as props, it will be available in this attribute $attrs
+
+<element foo="bar" man="woman"></element>
+..
+available in this.$attrs as { "foo":"bar", "man:"woman" }
+
+--
+instance method $mount()
+vm.$mount() can be used to manually start the mounting of an unmounted Vue instance (with no el option).
+
+const vm3 = new Vue({
+    template: '<h1>Created for VM3</h1>'
+});
+
+// vm3.$mount('#app3'); // mount the template on an empty div#app3
+----
+//can also do like this
+vm3.$mount();// mount it off screen, once mounted, $el property would be available
+
+document.getElementById('app3').appendChild(vm3.$el);
+
+----
+Lifecycle hooks
+
+all hooks can be used as functions under Vue root
+beforeCreate()
+created()
+beforeMount()
+mounted()
+beforeUpdate()
+updated()
+beforeDestroy()
+destroyed()
+
+----
+Basic component
+//.component register a component globally
+Vue.component('hello',{
+    template: '<h1>Reusable Hello</h1>'
+});
+
+But <hello></hello> can only be 'usable' inside a Vue managed template
+If the root of an entire DOM is Vue managed, then it can be placed anywhere
+
+--
+Global component
+
+Vue.component('my-cmp', {
+  data: function() { // data needs to be a function here instead of object
+    return {
+      status: critical
+    }
+  }
+});
+
+new Vue({
+  el: '#app'
+})
+
+then it can be (re)used within app div
+
+<div id="app">
+  <my-cmp></my-cmp>
+  <my-cmp></my-cmp>
+</div>
+
+*component data needs to be a function, Vue tries to stop us from using an Object.
+But if an Object were to be used, it would overwrite the global data object of the Vue root instance
+A function is self contained, and when accesing any component parts via the *this* keyword, it
+is accessing _within_ the component instance itself
+
+to register a local component, we can import it locally and register using the components option
+
+new Vue({
+  el: '#app',
+  components: {
+    my-cmp
+  }
+})
+
+--
+All Vue components (including root) requires at least one root element in the template
+
+<template>
+  <div class="root">  <--- it can be anything, as long as it is ONE root element encompassing the rest
+    ...
+  </div>
+</template>
+
+----
+Dynamic styling
+
+<div class="demo" :class="[color, {red: attachRed}]"></div>
+..
+data: {
+    attachRed: false,
+    color: 'green'
+}
+
+'color' here is a data property with value 'green'
+'red' here is a css class which will be attached depending on the conditional value of 'attachRed'
+
+similar concept for :style
+<div class="demo" :style="{backgroundColor: color, width: width + 'px'}"></div> // can use object syntax or array syntax for multiple classes/styles
+
+//another example of class array, using && logic
+<li
+    :class="[isActive && 'router-link-active', isExactActive && 'router-link-exact-active']"
+  >
+..
+</li>
+
+--
+to encapsulate styling, use 'scoped' keyword
+
+<style scoped>
+ ..
+</style>
+
+----
+
+All '.vue' files are called 'single file component'
+
+General structure..
+<template>
+
+</template>
+
+<script>
+ export default { // this behaves like a vue instance
+
+
+ }
+</script>
+
+<style>
+
+</style>
+
+--
+Dynamic Component
+
+we can use the 'is' attribute to switch between components, just need to pass in the component name
+<component v-bind:is="currentTabComponent"></component>
+
+if we want to cache inactive components, we can use the <keep-alive> element
+<keep-alive>
+  <component v-bind:is="currentTabComponent"></component>
+</keep-alive>
+
+there are other props to be used with keep-alive: https://vuejs.org/v2/api/#keep-alive
+
+additional two lifecycle hooks for dynamic components:
+1. activated() --> called when component is activated
+2. deactivated() --> called when component is navigated away (deactivated)
+
+---
+for case sensitive attributes or naming
+
+<SomethingLikeThis>
+<.. :myName=".."> etc
+
+we could only use it on a single file component (.vue), if we use it on a blade template for e.g. it would error out, becoz the normal DOM doesnt recognize case sensitivities; while the vue templates would be compiled to javascript (virtual DOM).
+
+--
+
+in laravel, since app.js specify the whole main or body tag of the template as a ROOT component
+
+so this means we could use Vue directives (or special functions) anywhere in our blade template and it will still work
+
+--
+Props
+
+data property passed to a child component by a parent component
+
+to pass to a child component
+<app-user-detail name="name"></app-user-detail> --> like this the name would be "name"
+to bind it to a dynamic data variable "name", use v-bind
+<app-user-detail :name="name"></app-user-detail>
+
+export default {
+  props: ['name'],
+  ..
+}
+
+a prop can be accessed just like a normal data variable inside the instance via this, for e.g this.name
+
+a prop can be validated.
+https://vuejs.org/v2/guide/components-props.html#Prop-Validation
+
+to take note, for non primitive type validation like array and object, the default option must be a function. This is same concept as the data option.
+
+export default{
+        props: {
+            name: {
+                type: Array,
+                default: function() {
+                    return ['asdf','kaiser']
+                }
+            }
+        }
+    }
+
+--
+Components Communication
+
+**** // when prop is directly changeable (older vue version)
+take note whether it's primitive (number, string or boolean) or reference type (array or object) that was passed initially from parent to child.
+
+if an array was passed for e.g., any changes to this array prop directly in the child component will also change it for the parent, since it's the array pointer which was passed. Same for object.
+****
+for newer version, vue would need child component to derive a data variable from prop and only that data variable if mutable. Hence the props are for readonly.
+
+nevertheless, an array or object which gets passed into a child component thru a emitter-receiver methodology still can be changed globally, just by changing it in the child component.
+
+1. via custom event
+use this.$emit to emit a custom event and v-on from the parent to listen to this event
+
+child:
+  this.$emit('eventName', someArg);
+
+parent
+  <child-component @eventName="someDataVar = $event" .. // where $event is the someArg passed
+
+we could then change the corresponding data in parent like this.
+OR, we could directly access the parent instance from child, this.$parent.data.. and change the dta straight (if it's purely changing data without any preprocessing, but this makes it not very visible from the parent level that it's data is being changed by child.)
+
+Dataflow is unidirectional from Parent <-> Child. To pass data from one child to another, we need to go through the parent.
+
+2. via a custom callback function
+we can pass a callback function into prop, and then invoke the function in child
+
+parent:
+
+<app-user-detail 
+  :resetFn="resetName" // pass callback function to child
+></app-user-detail>
+
+resetName() {
+    this.name = "max";
+}
+
+child:
+
+<button @click="resetFn">Reset Callback</button> // when clicked, will call resetName() at parent
+
+props: {
+  resetFn: Function
+},
+
+3. event bus
+child to child communication would quickly get out of hand if keep needing to pass back to parent(and parent might not even need though child date)
+
+// since vue instances implement an event emitter interface, so can use like this
+// we can use an empty Vue instance as a 'service'
+// take note this solution is not scalable, it's still advisable to use Vuex (state management)
+export const eventBus = new Vue();
+..
+source child:
+//we import the bus and emit
+
+import { eventBus } from '../main';
+..
+methods: {
+  changeAge() {
+     eventBus.$emit('changedAgeEvent', 30);
+  }
+}
+
+target child:
+//we import the bus and listen
+
+created() {
+      // hook the event bus listener at the created hook
+      eventBus.$on('changedAgeEvent', (age)=>{
+          this.age = age;
+      });
+  }
+// like this we can bypass the parent instance
+// this is much like angular where we use a service class as an intermediate (bus)
+// if we apply this concept fully, i.e. use a Vue instance like a service class, we can store
+// some common code or constants here
+
+export const eventBus = new Vue({
+  methods: {
+      changeAge(age) {
+         this.$emit('changedAgeEvent', age);
+      }
+    }
+
+});
+---
+Slots
+(much like ng-content, which replaces content in child component)
+
+parent:
+
+<child-component>
+  <h2>Some title here</h2>
+</child-component>
+
+child:
+
+<template>
+ ..
+ <slot></slot> // after rendering, 'Some title..' would appear here
+ ..
+
+<style scoped>  // styling for slot applies at child component (as well as the parent component)
+ ..
+  h2{  
+    color: red
+  }
+</style>
+
+--
+Slots (A powerful feature)
+
+1. We can define a default fallback content for slot
+<child-component></child-component> // nothing is passed so
+..
+<slot>Default Template Here</slot>  // default template here  would be used
+
+2. Named slots. Content within a slot can be named and split accordingly
+
+child:
+<div class="container">
+  <header>
+    <slot name="header"></slot>
+  </header>
+  <main>
+    <slot></slot> // unamed slot is by default named 'default'
+  </main>
+  <footer>
+    <slot name="footer"></slot>
+  </footer>
+</div>
+
+parent:
+<child-component>
+  <template v-slot:header>
+    <h1>Here might be a page title</h1>
+  </template>
+
+<!-- <template v-slot:default> -- we can still wrap it as default even though unnecessary -->
+  <p>A paragraph for the main content.</p> // these would appear in default slot
+  <p>And another one.</p>
+<!-- </template> -->
+
+  <template v-slot:footer>
+    <p>Here's some contact info</p>
+  </template>
+</child-component>
+  
+3. Scoped Slots. Parent slot can accessed data in child component.
+We can bind attributes (slot props) to a <slot> element. 
+
+child:
+<span>
+  <slot v-bind:user="user"> // "user" data from child
+    {{ user.lastName }}
+  </slot>
+</span>
+
+parent:
+<current-user>
+  <template v-slot:default="slotProps"> // parent can get it here wrapped in a prop object, can be named anything.
+    {{ slotProps.user.firstName }}  // BUT can only use prop within this child component tag scope
+  </template>
+</current-user>
+
+// we could use destructuring on slot props as well, so the below works
+<template v-slot:default="{ user }"> // other javascript assignment syntaks should work as well
+    {{ user.firstName }}
+  </template>
+
+### special case for lone default slot
+when ONLY default slot is provided, we can remove the <template> and use v-slot on the component tag(selector) straight
+
+<current-user v-slot="slotProps"> // we could even remove 'default'from v-slot:default
+  {{ slotProps.user.firstName }}
+</current-user>
+
+bring back the <template> tag when there are multiple slots
+
+4. shorthand # (HAS to be followed by an argument name)
+
+<base-layout>
+  <template #header>
+    <h1>Here might be a page title</h1>
+  </template>
+
+  <p>A paragraph for the main content.</p>
+  <p>And another one.</p>
+
+  <template #footer>
+    <p>Here's some contact info</p>
+  </template>
+</base-layout>
+
+<current-user #default="{ user }"> // just #=".." is invalid, has to have an argument name
+  {{ user.firstName }}
+</current-user>
+
+
+----
+
+HTML5 properties vs attributes 
+
+Properties may or may not reflect attributes, or it may have a different name, for e.g. htmlFor reflects the for attribute, className reflects the class attribute
+
+For a given DOM node object, properties are the properties of that object, and attributes are the elements of the attributes property of that object.
+
+When a DOM node is created for a given HTML element, many of its properties relate to attributes with the same or similar names, but it's not a one-to-one relationship.
+
+----
+Vue CLI
+
+Since Vue Cli 3+, vue.config.js is the optional config file that will be automatically loaded by @vue/cli-service
+its a wrapper service for all the configurables
+for e.g. if we want to configure webpack, we could export a 'configureWebpack' object
+
+// vue.config.js
+module.exports = {
+  configureWebpack: config => {
+    if (process.env.NODE_ENV === 'production') {
+      // mutate config for production...
+    } else {
+      // mutate for development...
+    }
+  }
+}
+
+All official plugins look like: @vue/cli-plugin-***
+All 3rd party plugins look like: vue-cli-plugin-***
+we can add a new plugin like: vue add ***   <--- plugin name
+A plugin might prompt for further configuration etc
+
+Environment Variables
+We can specify .env, .env.[mode] (multiple) files to store our environment variables
+https://cli.vuejs.org/guide/mode-and-env.html#environment-variables
+
+the variables must start with VUE_APP_*** for it to be embedded into the client bundle 
+there it could be access from javascript code:
+process.env.VUE_APP_***
+
+thre are 3 built-in modes: development, test and production
+we can set build for development
+"build:development": "vue-cli-service build --mode development",
+
+by default vue-cli-service build will build for production
+
+we can also build for a custom mode, for e.g. staging and use a .env.staging
+to further specify or configure a mode, we would need to extend webpack configuration
+
+---
+*we need to do vue-cli-service to do the below:
+npm install @vue/cli-service -g
+
+Build Targets
+1.Vue App (default)
+vue build --target app
+normal vue app bundle
+includes Vue Code + Vue Framework
+good for prototyping single file component on the fly
+
+2.Vue Library
+vue build --target lib
+A distributable Vue Library Bundle
+ONLY includes Vue code. NOT the Vue Framework
+Need to be 'installed' with the Vue Framework to be used
+
+3.Web Component
+A custom vue component which can be dumped into normal HTML code and still works (reusable in any framework/project)
+vue build --target wc
+A distributable Web Component
+Still needs to import vue (either through npm package or include a cdn link globally)
+ONLY includes Vue code. NOT the Vue Framework
+
+can be used in html as a tag (need to define during build)
+
+----
+Directives
+
+Text interpolation (or called Mustache due to the double curly braces) {{ dataOrMethodHere  }} only works for the text or value(attribute) of an element, i.e. <p>{{ someCode }}</p>. To manipulate other implicit attributes of an HTML element, we need to use directives. And different directives for different attributes.
+
+Simple javascript expressions work within mustache {{ ok ? 'YES' : 'NO' }} or {{ message.split('').reverse().join('') }}
+
+v-on (shorthand @)  seems to be the most used 
+attaches an event listener to the element (works on any DOM events for this element, e.g. mouse events, keyboard events)
+can be used with Event modifiers like .stop (stopPropagation to parent) and .prevent (preventDefault behaviour)
+also Key modifiers (for keyboard events)
+- .{keyCode | keyAlias} ==>  .{ @keyup.13 | @keyup.enter}
+
+can be used on a custom Vue component -> it listens to custom events emitted on this child component
+when listening to DOM events, it has access to the $event property
+
+<button v-on:click="doThis"></button> // we can access doThis(event)
+<button @click="doThis"></button>
+
+To access click even on the child natvie DOM (such that we can implement callback method on the parent component)
+*Just doing @click wont work on a custom component (non native DOM)
+<!-- native event on component -->
+Parent:
+<child-component @click.native="onClick"></child-component>
+
+v-bind (shorthand :) second most used  (one way binding >>)
+<a href="{{ link }}">Some link</a>  // string interpolation doesnt work inside an element's attribute
+We need to use v-bind to indicate we want to bind to an attribute dynamically
+<a v-bind:href="link">Some Link</a>
+
+v-once
+renders the element only once (get rid of the reactivity after first time rendering)
+
+v-html
+vuejs by default renders all string interpolation as STRING. This is the default behaviour. It helps prevent XSS.
+<p>{{ someHtmlCode }}</p> //gets rendered as string
+
+if we want to override this behaviour, we could do
+<p v-html="someHtmlCode"></p> // gets renders as HTML. But beware of XSS!
+
+v-model
+two-way binding on a data object (<< >>), limited to
+<input>
+<select>
+<textarea>
+components
+
+<input type.. v-model="name">
+
+behind the scene, v-model is simply
+
+<input
+  :value="userData"
+  @input="userData.email = $event.target.value" // or listens to @change if .lazy
+>
+
+with this we can build custom component which uses v-model easily. Just need to have a props which take in value and a emitter which emits 'input' event when something changed
+
+props: {
+    value: {
+        type: Boolean,
+        default: true
+    }
+},
+methods: {
+    switched(value) {
+        this.$emit('input', value)
+    }
+}
+
+modifiers
+.lazy - listen to change event rather than input event (i.e. only update value when focus leave current field)
+.number - cast to valid number
+.trim - trim input
+
+can bind to checkbox as well,
+single checkbox as boolean value
+multiple checkboxes as values in the same Array
+
+can bind to array, when bind multiple radios to same model, it limits the choice to one
+
+v-if (Expect any argument)
+
+<template v-if="show"> // use a template tag to group together a conditional block, the template tag would not be shown in html
+    <h1>Ah ha</h1>
+    <p>Inside template</p>
+</template>
+
+v-else (Does not expect argument. Previous sibling element must have v-if or v-else-if)
+
+v-else-if (Expect any argument. Restriction: previous sibling element must have v-if or v-else-if)
+
+v-show - toggle the display properties of an element
+
+v-for
+
+<div v-for="(item, index) in items"></div>
+<div v-for="(val, key) in object"></div>
+<div v-for="(val, name, index) in object"></div>
+
+The default behavior of v-for will try to patch the elements in-place without moving them. To force it to reorder (replace instead of patch) elements, you need to provide an ordering hint with the key special attribute:
+
+<div v-for="item in items" :key="item.id"> //The key special attribute is primarily used as a hint for Vue’s virtual DOM algorithm to identify VNodes when diffing the new list of nodes against the old list.
+  {{ item.text }}
+</div>
+
+--
+
+Custom directive
+
+can register it globally or locally (inside a component)
+
+-- globally
+Vue.directive('someDirective', {
+  // some directive hooks
+  inserted() {
+    ...
+  }
+});
+
+-- locally in a component as option
+directives: {
+  someDirective:{
+    inserted() {
+      ...
+    }
+  }
+}
+
+directive can then be used v-someDirective
+
+we define what a directive should do via Directive Hooks
+
+bind(el,binding,vnode)
+inserted(el,binding,vnode)
+update(el,binding,vnode,oldVnode)
+componentUpdated(el,binding,vnode,oldVnode)
+unbind(el,binding,vnode)
+
+el is the element the directive is bound to
+binding is an object containing some readonly properties
+vnode - virtual node by Vue's compiler
+oldVnode - old virtual node
+
+we usually manipulate (write to) el and read from binding object
+
+
+----
+
+Custom Filters
+
+much like a custom directive, we can build our own filter, the concept is the same as Angular's filter
+its to transform a data to something else
+
+Vue.filter('to-lowercase', function(value){
+  ... value is the data input...
+
+  return value.toLowerCase();
+
+});
+
+// locally in component as options
+
+filters: {
+  toUppercase(value) {
+    
+    return value.toUpperCase();
+  }
+}
+
+// use in template
+
+{{ message | toUppercase  }}
+
+<div :someAttr="value | filter"></div>
+
+in a lot of cases, a computed property is the better solution
+because filter gets rerun everytime the dom rerenders
+while a computed property only reruns when it's dependencies is updated
+
+----
+Mixins
+
+portion of javascript code that can be extracted and reused multiple times in different components
+
+we can create a separate .js file with
+
+export const someMixin = { 
+ data(){
+    ..
+  },
+  methods:{
+    ..
+  }
+.. and the usual options for a Vue instance
+}
+
+And import the file in our target Vue instance
+import { someMixin1 } from  './mixin.js';
+
+// and in component option
+.. mixins: [someMixin1] // can put multiple in the array
+
+take note that mixin also have lifecycle hooks, the content of mixin will get loaded _first_, and the component _last_, those that r in conflict will be overwritten by the component content
+
+we can access mixin data/methods directly, the mixin code is replicated for each component hence they can be modified safely (without affecting each other)
+
+--
+A global mixin is rarely used and will _mix_ itself into every component/instance
+
+Vue.mixin({
+  created(){
+    // things here will run first in every component & instance
+  }
+});
+
+a global mixin will be called first before component mixin and finally the component itself
+
+-----
+Animation using transition
+
+basic:
+works on conditional rendering or display (v-if or v-show)
+
+wrap a component with <transition> tag
+
+<transition name="fade">
+  <p v-if="show">hello</p>
+</transition>
+
+// add the transition css classes, by default they are appended with 'v'
+
+// the *-enter-* transitions are to show element
+v-enter (first frame of entering) <-- used to define starting state
+v-enter-active (in between entering) <-- used to define duration, delay or easing curve
+v-enter-to (last frame of entering) <-- used to define ending state
+
+// the *-leave-* transitions are to hide elment
+v-leave (first frame of leaving) <-- same as above
+v-leave-active (in between leaving)
+v-leave-to (last frame of leaving)
+
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity .5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+  opacity: 0;
+}
+
+
+--
+we could mix transition and animation together
+
+// transition shorthand - first 2 properties are required
+div {
+  transition: [property] [duration] [timing-function] [delay];
+}
+
+can have multiple transitions by delimiting with a comma
+transition: opacity 0.3s, transform 0.4s;
+
+// animation shorthand
+@keyframes stretch {
+  /* declare animation actions here */
+}
+
+// again, only the name and duration are required
+.element {
+  animation-name: stretch;
+  animation-duration: 1.5s; 
+  animation-timing-function: ease-out; 
+  animation-delay: 0s;
+  animation-direction: alternate;
+  animation-iteration-count: infinite;
+  animation-fill-mode: none;
+  animation-play-state: running; 
+}
+
+// same as
+.element {
+  animation: 
+    stretch
+    1.5s
+    ease-out
+    0s
+    alternate
+    infinite
+    none
+    running;
+}
+--
+If mix transition and animation together, we can specify which type that Vue needs to attach event listeners in order to know when a transition has ended
+for e.g if the transition length is somehow longer than the animation, and we want the whole animation to end when the css animation ends
+<transition name="slide" type="animation">
+      <p v-if="show">Hello!</p>
+</transition>
+
+To apply transition on initial render, we could apply the appear attribute
+
+<transition appear>
+  <!-- ... -->
+</transition>
+--
+We could also specify custom transition class via
+enter-class
+enter-active-class
+enter-to-class (2.1.8+)
+leave-class
+leave-active-class
+leave-to-class (2.1.8+)
+
+for example we could use with the animated.css library
+<transition 
+    appear
+    enter-active-class="animated zoomInUp"
+    leave-active-class="animated zoomOutUp"
+>
+    <p v-if="show">Hello!</p>
+</transition>
+
+--
+if we have multiple elements with same tag, we need to specify the key attribute for transition to distinguish that they are both different, else the animation wont work
+
+we might also prefer to change the default mode of transition (which is everything rendered at the same time) to
+in-out (new in, then old out)
+out-int (old out, then new in)
+so one gets rendered _after_ another
+<transition :name="animationMode" appear mode="out-in">
+  <p v-if="show" key="come">Hello!</p>
+  <p v-else key="go">Bye!</p>
+</transition>
+
+---
+We could use javascript hooks (more powerful but slower rendering compared to just css)
+
+<transition
+  v-on:before-enter="beforeEnter"
+  v-on:enter="enter"
+  v-on:after-enter="afterEnter"
+  v-on:enter-cancelled="enterCancelled"
+
+  v-on:before-leave="beforeLeave"
+  v-on:leave="leave"
+  v-on:after-leave="afterLeave"
+  v-on:leave-cancelled="leaveCancelled"
+  :css="false" // tell Vue js not to use for css
+>
+  <!-- ... -->
+</transition>
+
+
+// ...
+methods: {
+  // --------
+  // ENTERING
+  // --------
+
+  beforeEnter: function (el) {
+    // ...
+  },
+  // the done callback is optional when
+  // used in combination with CSS
+  enter: function (el, done) {
+    // ...
+    done() // need to callback done because this it the 'active' part of the animation and needs to end asynchronously, if no done(), it would be triggered synchronously
+  },
+  afterEnter: function (el) {
+    // ...
+  },
+  enterCancelled: function (el) {
+    // ...
+  },
+
+  // --------
+  // LEAVING
+  // --------
+
+  beforeLeave: function (el) {
+    // ...
+  },
+  // the done callback is optional when
+  // used in combination with CSS
+  leave: function (el, done) {
+    // ...
+    done()
+  },
+  afterLeave: function (el) {
+    // ...
+  },
+  // leaveCancelled only available with v-show
+  leaveCancelled: function (el) {
+    // ...
+  }
+}
+
+---
+Animating GROUP of items like list
+
+<transition-group>
+
+by default it adds a <span> element tag wrapper, to overwrite it, use tag="ul" for e.g
+
+it also adds the v-move css class to specify what animation/transition to happen to list items
+which are 'moving' during the animation. As animation of the target item might affects neighbour items.
+
+
+----
+HTTP request
+
+3rd party library:
+vue-resource (vue plugin)
+  - works as a plugin, extends the functionality of existing Vue instance
+  - global options
+      Vue.http.options.root = '/root';
+      Vue.http.headers.common['Authorization'] = 'Basic YXBpOnBhc3N3b3Jk';
+  - interceptors
+      Vue.http.interceptors.push(function(request, next){
+        console.log(request);
+        next(resp=>{  // next can actually be omitted if we just want to intercept request
+            console.log(resp);
+        });
+      });
+ - resources
+      instead of using this.$http.get or .post
+      we can define reusable resource routes and use some default actions:
+      get: {method: 'GET'},
+      save: {method: 'POST'},
+      query: {method: 'GET'},
+      update: {method: 'PUT'},
+      remove: {method: 'DELETE'},
+      delete: {method: 'DELETE'}
+      // instead of doing the below, we could define resource as this.$resource('data.json')
+      //   this.$http.post('data.json', this.user).then(resp=>{
+      //       console.log(resp);
+      //   }, err=>{
+      //       console.log(err);
+      //   });
+      
+      this.resource.save({}, this.user).then(resp=>{
+            console.log(resp);
+        }, err=>{
+            console.log(err);
+      });
+      support custom defined actions as well
+  - support URI template
+      var resource = this.$resource('someItem{/id}');
+
+      // GET someItem/1
+      resource.get({id: 1}).then(response => {
+        this.item = response.body;
+      });
+Axios    
+To access this.$http like in vue-resource, you can just set Vue.prototype.$http = axios
+
+hence we can setup some basic config in main.js, for e.g. the base url
+use axios create (to create custom instance) and append more config
+
+Vue.prototype.$http = axios.create({
+    baseURL: 'https://vue-update-f26a7.firebaseio.com/',
+    headers: {
+      ...
+    }
+  });
+
+Vue.prototype.$http.header.post['Content-Type'] = 'application/x-www-form-urlencoded';
+
+or we can set config directly to the axios global instance
+axios.defaults.baseURL = 'https://api.example.com';
+axios.defaults.headers.common['Authorization'] = AUTH_TOKEN;
+axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+
+..
+interceptors
+need to ALWAYS return config/response such that the next handler can continue
+// Add a request interceptor
+axios.interceptors.request.use(function (config) {
+    // Do something before request is sent
+    return config;
+  }, function (error) {
+    // Do something with request error
+    return Promise.reject(error);
+  });
+
+// Add a response interceptor
+axios.interceptors.response.use(function (response) {
+    // Do something with response data
+    return response;
+  }, function (error) {
+    // Do something with response error
+    return Promise.reject(error);
+  });
+
+ 
+----
+Routing
+
+3rd party library, vue-router:
+first define the routes, perferably in a separate routes.js file, exported as constant
+// routes.js
+const routes = [
+  { path: '/foo', component: Foo },
+  { path: '/bar', component: Bar }
+]
+
+--
+//App.vue
+import VueRoute from 'vue-router';
+import {routes} from './routes.js';
+
+..
+
+App.use(VueRouter);
+
+const router = new VueRouter({
+  routes, // short for `routes: routes`
+  mode: 'history' // default is 'hash',
+  .. // more available at https://router.vuejs.org/api/#router-construction-options
+});
+
+// Make sure to inject the router with the router option to make the
+// whole app router-aware.
+const app = new Vue({
+  router
+}).$mount('#app');
+
+// HTML template
+<div>
+ <router-link to="/foo">Go to Foo</router-link> // will render an anchor tag
+ <router-link to="/bar">Go to Bar</router-link>
+  
+  <!-- route outlet -->
+  <!-- component matched by the route will render here -->
+  <router-view></router-view>
+</div>
+
+
+// with the router injected at Root component, we gain access to this.$route object (current active Route) inside any component
+
+this.$route.path
+this.$route.params
+this.$route.query
+..
+..
+
+--
+
+We also get this.$router (the router instance)
+We can navigate in code (imperative navigating) by this.$router.push('/');
+
+--
+One problem with navigating to the same component but with different param --> the same Vue instance wont be recreated again. So if we cannot just assign a param property into data()
+
+data(){
+  return {
+      id: this.$route.params.id // this wont get refreshed the second time it's called
+  }
+},
+computed:{
+  newId(){
+      return this.$route.params.id; // this will, but it's limited to returning one new var
+  }
+},
+watch: {
+  '$route'(to, from){ // we can get the to route and from route
+      this.id = to.params.id; // using watch enables us to write more processing logic
+  }
+},
+}
+
+--
+another way is to make use of 'props' property when configuring a route
+
+props?: boolean | Object | Function,
+
+{ path: '/hello/:name', component: Hello, props: true }, // boolean, route.params will be passed, hence refreshed
+{ path: '/static', component: Hello, props: { name: 'world' }}, // static values (when value are known before hand)
+{ path: '/dynamic/:years', component: Hello, props: dynamicPropsFn }, // custom logic defined beforehand to map route param to props
+// dynamicPropsFn has to return a { name: '..' }
+
+..
+//Hello.vue
+
+export default {
+  props: { 
+    name: {  //<-- props name here will be dynamic and depend on the incoming value(s)
+      type: String,
+      default: 'Vue!'
+    }
+  }
+}
+
+--
+Named routes - a path can be named and later access via name in template or code
+
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/user/:userId',
+      name: 'user',
+      component: User
+    }
+  ]
+})
+
+<router-link :to="{ name: 'user', params: { userId: 123 }}">User</router-link>
+..
+router.push({ name: 'user', params: { userId: 123 }})
+--
+Named router views
+
+can name the router view, and assign them to different components
+<router-view class="view one"></router-view>
+<router-view class="view two" name="a"></router-view>
+<router-view class="view three" name="b"></router-view>
+..
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/',
+      components: { //<-- use components property
+        default: Foo,
+        a: Bar,
+        b: Baz
+      }
+    }
+  ]
+})
+
+--
+Query parameters
+
+router.push({ name: 'user', params: { userId: 123 }, query: {a: 100, b: 200}})
+/user/123?a=100&b=200
+
+accessed via this.$route.query
+
+--
+Redirection + catch all
+{ path: '*', redirect: { name: 'home'}}
+
+--
+Hash anchor (scrolling to specific element id on page)
+
+<router-link :to="{ 
+name: 'user', 
+params: { userId: 123 }}",
+hash: '#data' // id of some element to scroll to
+>User
+</router-link>
+
+but it wont auto scroll to that element (if accessed via browser it would, but not programmatically)
+To use autoscroll, we have to define the scroll behaviour in VueRouter
+https://router.vuejs.org/guide/advanced/scroll-behavior.html#async-scrolling
+
+----
+Route Guards
+
+Global Before Guard
+use for generic checks, will get executed everytime routing occurs
+
+const router = new VueRouter({ ... })
+
+router.beforeEach((to, from, next) => {
+  // ...
+})
+
+router.afterEach((to, from)=>{
+  // ...
+})
+
+Pre-Route guard
+More commonly used
+
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/foo',
+      component: Foo,
+      beforeEnter: (to, from, next) => {
+        // ...
+      }
+    }
+  ]
+})
+
+In-component guard:
+They are used like a lifecycle hook
+beforeRouteEnter(to, from, next) // called before the route renders this component, so this function doesnt have access to 'this' component instance because it hasnt been created yet.
+// to really access the instance we can pass the vue model in the next() callback
+next(vm => {
+  vm.data ...
+});
+
+beforeRouteUpdate(to, from, next) 
+// called when this component is rerendered due to route changes (maybe dynamic param change for e.g.)
+// has access to 'this' component instance
+
+beforeRouteLeave(to, from, next) 
+// called just before this component is navigated away
+// has access to 'this' component instanc3
+
+----
+Lazy Loading
+
+With Webpack 2+ code splitting feature and Vue's async component ability, we could lazily load a component as follows:
+
+const User = () => import('./components/user/User'); // this is a Webpack dynamic import syntax to indicate a code split
+const UserStart = () => import(/* webpackChunkName: "group-user" */ './components/user/UserStart'); // can group chucks together by defining a webpackChunkName
+const UserDetail = () => import(/* webpackChunkName: "group-user" */ './components/user/UserDetail');
+const UserEdit = () => import(/* webpackChunkName: "group-user" */ './components/user/UserEdit');
+
+// components are used as usual in routes config
+const router = new VueRouter({
+  routes: [
+    { path: '/user', component: User },
+    ...
+  ]
+})
+
+--------
+State Management
+
+Vuex
+
+The Vuex Pattern
+(Central)Store<--change state synchronously--Mutations <-- components can also commit a mutation
+      |                                         ^
+    return                                      |
+      |                                      commit   
+      V                                         |
+   Getters                                   Actions <-- asynchronously commit mutations
+      |                                         |
+      V                                         |
+  Accessed by components              Dispatched by components
+
+import Vuex from 'vuex';
+
+Vue.use(Vuex); // have to use it as a plugin
+
+export const store = new Vuex.Store({
+    state: { // define a state here
+        counter: 0 
+    },
+    getters: { // something like computed properties for Vuex, used to do pre-calculation for state
+        doubleCounter: state => {
+            return state.counter*2;
+        }
+    }
+});
+
+new Vue({
+  render: h => h(App),
+  store // store has to be defined at the instance
+}).$mount('#app');
+
+--
+Store can be accessed as such:
+
+this.$store.state.counter;
+this.$store.state.getters.doubleCounter; // some pre-calculated property
+
+we can also pass arguments to getters by returning a function
+this is useful when we want to query an array
+getters: {
+  // ...
+  getTodoById: (state) => (id) => {
+    return state.todos.find(todo => todo.id === id)
+  }
+}
+
+store.getters.getTodoById(2)
+
+--
+
+Since we usually use our getters and states in the computed property of a component,
+Vuex has helper functions mapGetters and mapState for us
+
+import {mapGetters} from 'vuex';
+
+computed: {
+...mapGetters([
+  'doubleCounter'
+])
+}
+
+we can then use in our template as {{ doubleCounter }} as per computed property
+similarly for mapState
+computed: mapState([
+  // map this.count to store.state.count
+  'count'
+])
+
+to map under different name, use an object
+
+...mapGetters({
+  // map `this.doneCount` to `this.$store.getters.doneTodosCount`
+  doneCount: 'doneTodosCount'
+})
+
+--
+Mutations (think of as setter but not quite)
+It's similar to events:each mutation has a string type and a handler
+We are actually calling the event _type_ which execute based on the handler function we defined
+
+ mutations: {
+    increment (state) { // increment is the event type
+      // mutate state
+      state.count++
+    }
+  }
+
+..
+store.commit('increment') // we use 'commit' here to call the type
+
+We can commit with a payload
+
+mutations: {
+  increment (state, payload) {
+    state.count += payload.amount
+  }
+}
+
+store.commit('increment', {
+  amount: 10
+})
+
+Similar as getters having help mapGetters, mutations have mapMutations
+
+methods: {
+      // increment() {
+      //     this.$store.commit('increment');
+      // },
+      // decrement() {
+      //     this.$store.commit('decrement');
+      // },
+      ...mapMutations([
+          'increment',
+          'decrement'
+      ])
+  }
+
+----
+Actions
+Able to commit mutations asynchronously
+
+const store = new Vuex.Store({
+  state: {
+    count: 0
+  },
+  mutations: {
+    increment (state) {
+      state.count++
+    }
+  },
+  actions: {
+    increment (context) {
+      context.commit('increment')
+    },
+     incrementAsync ({ commit }) {
+        setTimeout(() => {
+          commit('increment')
+        }, 1000)
+      }
+  }
+})
+
+an action handler receive a context object which exposes { commit, state, getters and dispatch }
+BUT context is not an instance of the store itself
+// dispatch with a payload
+store.dispatch('incrementAsync', {
+  amount: 10
+})
+
+// dispatch with an object
+store.dispatch({
+  type: 'incrementAsync',
+  amount: 10
+})
+
+actions has mapActions for in-component usage
+methods: {
+    ...mapActions([
+      'increment', // map `this.increment()` to `this.$store.dispatch('increment')`
+
+      // `mapActions` also supports payloads:
+      'incrementBy' // map `this.incrementBy(amount)` to `this.$store.dispatch('incrementBy', amount)`
+    ]),
+    ...mapActions({
+      add: 'increment' // map `this.add()` to `this.$store.dispatch('increment')`
+    })
+  }
+
+we can chain dispatch with then
+store.dispatch('actionA').then(() => {
+  // ...
+})
+// if so mean the action has to return a new promise
+actions: {
+  actionA ({ commit }) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        commit('someMutation')
+        resolve()
+      }, 1000)
+    })
+  }
+}
+
+// we could make use of async/await, assuming gotData and gotOtherData return promises
+actions: {
+  async actionA ({ commit }) {
+    commit('gotData', await getData())
+  },
+  async actionB ({ dispatch, commit }) {
+    await dispatch('actionA') // wait for `actionA` to finish
+    commit('gotOtherData', await getOtherData())
+  }
+}
+
+-- it is a good practice to always use (only) actions for both sync and async code
+..
+Modules
+We could split different business logic related state management into different modules
+We separate the parts out into a specific file, import it back into the global store via the option 'modules'
+
+//moduleA.js
+export const moduleA = {
+  state: { ... },
+  mutations: { ... },
+  actions: { ... },
+  getters: { ... }
+}
+..
+//in root store.js
+const store = new Vuex.Store({
+  modules: {
+    a: moduleA,
+    b:..
+  }
+}
+
+The downside then is that, for state, we had to get via module name
+store.state.a // -> `moduleA`'s state
+store.state.b // -> `moduleB`'s state
+
+So the better idea seems to be using getters (i.e. do not access state directly!)
+
+By default, actions, mutations and getters inside modules are still registered under the global namespace
+So any action,mutation and getter cannot have the same name!
+We can defined a 'namespaced' property to TRUE for a module, THEN all getters, actions and mutations under this module would have to be pre-fixed by the module name
+modules: {
+    account: {
+      namespaced: true,
+
+      // module assets
+      state: { ... }, // module state is already nested and not affected by namespace option
+      getters: {
+        isAdmin () { ... } // -> getters['account/isAdmin'] // need to prefixed with 'account'
+      },
+      actions: {
+        login () { ... } // -> dispatch('account/login')
+      },
+      mutations: {
+        login () { ... } // -> commit('account/login')
+      },
+    }
+
+nested modules (child modules) will inherits namespace from parent module, UNLESS their namespace is also set to true
+then it would be 'parent name/child name/handler name', etc
+the mapState, map.. etc would then have to be refactored to reflect the namespace
+
+computed: {
+  ...mapState('some/nested/module', {
+    a: state => state.a,
+    b: state => state.b
+  })
+},
+methods: {
+  ...mapActions('some/nested/module', [
+    'foo', // -> this.foo()
+    'bar' // -> this.bar()
+  ])
+}
+
+if need to dispatch or commit _another_ namespaced from within this namespaced module, we can use the root option. This then dispatch or commits at root level.
+
+dispatch('somenamesapce/someOtherAction', null, { root: true }) // -> 'someOtherAction'
+commit('somenamespace/someMutation', null, { root: true }) // -> 'someMutation'
+
+if need to get state/getters from _another_ namespaced module
+someGetter (state, getters, rootState, rootGetters) {
+someAction ({ dispatch, commit, getters, rootGetters }) {
+
+there are more advance ways to read root state/getters and dispatch root actions/mutations, checkout out https://vuex.vuejs.org/guide/modules.html
+
+------
+Form validation
+using Vuelidate
+
+its a Vue plugin so
+
+//main.js
+import Vuelidate from 'vuelidate';
+
+Vue.use(Vuelidate);
+
+vuelidate provides validation property for Vue instance
+
+//for e.g.
+export default {
+  data() {
+    return {
+      name: '',
+      age: 0
+    }
+  },
+  validations: {
+    name: { // attribute here must match the one defined in data
+      required,
+      minLength: minLength(4)
+    },
+    age: {
+      between: between(20, 30)
+    }
+  }
+}
+..
+$v is available as the validator object, for e.g. we can access $v.name and $v.age
+
+we can hook up straight to $v in template
+<input class="form__input" v-model.trim="$v.name.$model"/>
+
+OR to gain better control (of $error), we can make use of $v methods:https://vuelidate.netlify.com/#sub-v-methods
+
+ <input
+      type="email"
+      id="email"
+      @blur="$v.email.$touch()" // only invalidates (set $dirty to true) when blur (when we leave the input field)
+      v-model="email">
+
+***
+as long as the validator name attribute matches a data model, $invalid will be active (as in invalidation is always happening when the model changes)
+so IF we are using $v.name.$invalidate for e.g. (if we want to invalidate right away even before user input)  by right we do not need to 'hook up' anything as per described before
+$error is simply $dirty && !$pending && $invalid
+
+..
+if we access $v.name, we can see all properties for this validator object
+"$v.name":
+  "required": false // validator property would be false if not satisfied
+  "minLength": true
+  "$model": ""
+  "$invalid": true
+  "$dirty": false
+  "$anyDirty": false
+  "$error": false
+  "$anyError": false
+  "$pending": false
+    "$params":
+      "required":
+        "type": "required"
+      "minLength":
+        "type": "minLength"
+        "min": 4
+
+hence, we could detect error by checking whether a validator property is false
+<div class="error" v-if="!$v.name.required">Field is required</div>
+
+full list of validators: https://vuelidate.netlify.com/#validators
+
+---
+To validate password and confirm password fields for equality
+We can use sameAs
+password: {
+  required,
+  minLen: minLength(6)
+},
+confirmPassword: {
+  sameAs: sameAs('password')
+}
+sameAs also take in a function (useful for more custom comparison)
+sameAs: sameAs(vm => { // vm is the current vue instance
+  return vm.password
+})
+
+--
+there are also others 'cross' fields validators like requiredIf('someotherfields or callbackfunction') or requiredUnless(...)
+
+---
+To disable the submit button due to any error in current $v instance, we can do 
+
+<button type="submit" :disabled="$v.$invalid">Submit</button> // disabled at get go or use $v.error 
+
+---
+we can define a custom validator, return true or false for correct or false validation
+email: {
+    required,
+    email,
+    unique: val => {
+        return val != 'test@test.com';
+    }
+},
+
+---
+we can define a validator which returns a promise for async validation
+2 things to take note:
+1. to return true when value is null or empty (coz it's not this validator's job)
+2. EVERY changes (to the model) will send one request for validation (hence again reinforce point 1.)
+3. Especially for sign up/sign in forms, quering the db for validation _before_ the user even logs in, means the db has to open up the read security
+  - this asyn validation maybe useful for other types of forms (once login)
+
+To deal with 2, we would need some kinda throttling to inputs
+
+unique: val => {
+    // standalone validator ideally should not assume a field is required; it is the job of other validator
+    if (val === '') return true;
+    return axios.get('users.json?orderBy="email"&equalTo="' + val + '"').then(res => {
+        return Object.keys(res.data).length === 0;
+    });
+}
+
+-----
+Nuxt
+SSR
+Pre-Rendering - convert vue files into html (good for free static hosting)
+code-splitting (lazy loading)
+
+Rendering mode
+- Universal  -> SSR + Client side navigation
+- Single Page App -> only Client side navigatino
+
+Directory structure:
+assets
+components
+layouts
+ - to change the look and feel of page (overall outline for the app)
+ - think of it as app.vue
+ - Vue component + Nuxt options: middleware and head
+middleware
+ - define functions that can be run before a page or a group of pages
+page
+ - view and routes
+ - Nuxt will read the files here and automatically create the routes (and also code splitting)
+plugins
+ - place to register plugins globally
+ - or to initiate global functions or constants
+static
+ - place files to be mapped to the server root
+store
+ - vuex store file
+
+--
+LifeCycle hooks
+Only beforeCreate and created hooks are called both, from client-side and server-side. All other hooks are called only from the client-side.
+
+IMPORTANT: The CONTEXT
+The context provides additional objects/params from Nuxt to Vue components. The context is available in special nuxt lifecycle areas like asyncData, fetch, plugins, middleware, modules, and nuxtServerInit
+
+There are a bunch of useful params (including all installed plugins) provided by the context which is useful for configurting middleware, plugins or used in-component.
+
+--
+AsyncData
+This is called everytime before loading the page component
+We can use this to fetch some data and Nuxt will merge it with the component data
+export default {
+  asyncData ({ params }) { //<--given a context https://nuxtjs.org/api/context
+    return axios.get(`https://my-api/posts/${params.id}`)
+    .then((res) => {
+      return { title: res.data.title }
+    })
+  }
+}
+
+Fetch
+If we are using Vuex store, we can use _fetch_ to populate the store
+Note: we dont have access to the component instance yet inside fetch because it is called before initiating the component
+
+<template>
+  <h1>Stars: {{ $store.state.stars }}</h1>
+</template>
+
+<script>
+export default {
+  fetch ({ store, params }) {
+    return axios.get('http://my-api/stars')
+    .then((res) => {
+      store.commit('setStars', res.data)
+    })
+  }
+}
+</script>
+
+--
+We can have multiple layouts, hence Nuxt provides the ability to specify _global_ css file
+in nuxt.config.js
+
+css:[
+  '~/assets/myFile.css'  // the tilde ~ or alias @ are the alias for the root directory 
+]
+
+--
+Routing
+we use <nuxt-link> just like how we use <router-link>
+
+Routes are magically defined based on the directory structure under pages/
+
+we can pre-validate a route param first in the component before rendering:
+export default {
+  validate ({ params }) {
+    // Must be a number
+    return /^\d+$/.test(params.id)
+  }
+}
+
+we can define a custom 404 or 500 page by adding a layouts/error.vue file
+https://nuxtjs.org/guide/views/#error-page
+
+call error page programatically: 
+error({ statusCode: 404, message: 'Post not found' })
+
+---
+Vuex store
+Every .js file inside store directory is transformed as a namespaced module, index being the root module
+The state has to be exported as a function
+export const state = () => ({
+...
+})
+
+---
+Vue-meta
+Use to se title, description or meta data for SEO
+Use different meta to target different platforms
+For e.g. for twitter link to reflect our page properly
+head () {
+    return {
+      title: 'Home Page',
+      meta: [
+        { name: 'twitter:title', content: 'Next fundamentals test by Alvin' },
+        { name: 'twitter:description', content: 'Nuxt + Vue schooled' },
+        { name: 'twitter:image', content: 'https://i.imgur.com/UYP2umJ.png' },
+        { name: 'twitter:card', content: 'summary_large_image' }
+      ]
+    }
+  }
+
+----
+Routing guards
+
+Consider using middleware for the routes
+1. create a middleware under the middleware folder
+export default function ({ store, redirect }) {
+  // If the user is not authenticated or not admin
+  if (!store.getters['authentication/isAuthenticated'] || !store.getters['user/isAdmin']) {
+    return redirect('/')
+  }
+}
+
+2. Either use it per component (or page/page-groups) or apply it globally for all pages under nuxt.config.js
+router: {
+  middleware: '..'
+}
+
+3. can be string, array or function
+

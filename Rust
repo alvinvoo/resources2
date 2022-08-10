@@ -1,0 +1,3734 @@
+rustup - toolchain manager (manage rust itself)
+rustup update - check for updates
+cargo - package manager - all rust programs are stored in ~/.cargo/bin
+rustc - rust compiler
+rustup doc - bring up the local documentation
+ 
+
+in the project directory, do 
+cargo init - to create project with Cargo.toml
+or to create new directory, do
+cargo new 'project name'
+cargo check - to check the code without compilation, much faster
+cargo build - to build (not run) - for debug
+cargo build --relase - to build for production
+
+cargo run - to compile and run the project
+
+after compilation, the program is available under target/debug or release
+
+cargo update - to update dependencies versions
+cargo doc --open - build documention provided by all local dependecies and open on browser
+----
+
+rust variables are immutable by default (i.e. cannot reassign it to other values)
+need to add quantifier 'mut' to make it mutable
+
+variable naming convention is same as ruby's, with underscore
+
+let mut age = 37;
+
+// age used in somewhere
+
+age = 38;
+
+a constant declaration is always immutable
+the datatype for a variable must be explicitly defined
+const MAX_POINTS: u32 = 100_000
+
+Rust’s naming convention for constants is to use all uppercase with underscores between words, and underscores can be inserted in numeric literals to improve readability
+
+Shadowing is allowd, the same name variable will be shadowed by the subsequent definition. Variable type
+can be changed (overwritten) in the subsequent shadows.
+
+// allow
+let spaces = "   ";
+let spaces = spaces.len();
+
+// error, variable type cannot be changed like this
+let mut spaces = "   ";
+spaces = spaces.len();
+
+
+----
+
+Data types
+
+Primitive Types
+Integers: u8, i8, i16, u32, i32, u64, i64, u128, i128 (number of bits they take in memory)
+Floats: f32, f64
+Boolean (bool)
+Charaters (char)
+
+Tuples -> Group values together of different types (data structure). Max 12 elements.
+Arrays -> fixed length
+Vectors -> Growable arrays
+&str -> Immutable fixed-length string (literal) in memory
+String -> Growable, heap-allocated data structure
+
+----
+
+use debug print to print out data types like tuples, arrays and vectors as a whole (in formatted string)
+println!("{:?}", sometuplevariable);
+
+for self defined structs, annotate with #[derive(Debug)] to debug print
+
+#[derive(Debug)] // for debug printing with {:?}
+struct Rectangle {
+    width: u32,
+    height: u32
+}
+
+----
+
+Memory safety properties
+
+-> No null pointer dereferences
+-> No dangling pointers
+  -> No iterator invalidation
+  -> No use-after-free
+  -> No double frees
+-> No out-of-bounds accesses
+  -> No buffer overflows
+-> No data races  (during some concurrency runs, derefence to a certain type might find unexpected data)
+
+Rust has _true_ memory safety
+
+forced initialization + *restricted aliasing + *ownership = memory safety (check at compile time)
+
+the pointers to memory can't be aliased under certain condition
+
+**
+restricted aliasing
+mainly 3 options (n immutable or 1 mutable)
+
+say here x is aliasing (referencing) to the address of v[0]
+v -> v[0] <- x
+1) n immutable - all r immutable, you can't change the thing being alias
+v[0] <- x
+2) 1 mutable 
+v -> v[0]
+3) 1 mutable - so either x is aliasing to v[0], and v[0] can be mutated or v is aliasing to v[0]
+
+**
+ownership - who is responsible for giving/freeing memory address & for references to be created
+
+Ownership, Restricted Aliasing
+Single Owner, can give away (move to new owner), can be borrowed (as a reference to address - i.e. as pointer), can copy (?? need the 'copy' trait)
+
+for e.g.
+fn.m(self) { .. };
+x.m(); // self is moved here
+x.m(); // error
+
+fn m(&self) { .. }
+x.m();
+x.m(); // no issue, self is merely being 'referenced' or 'borrowed'
+
+**
+race freedom
+at most one writer to a memory location at a time
+
+**
+concurrency
+// dynamic - memory safe guarantees at run time (for e.g. mutex lock)
+// static - memory safe guarantees at compile time - Rust can only take care of this
+impossible with strictly 'safe' Rust - Rust cannot tell dynamic (vs static) mutable references (if have multiple writer pointing to same reference )
+provided by libraries that use 'unsafe' escape hatch
+
+interior mutability
+have a function that takes a shared (immutable) reference and returns a mutable reference
+fn f(value: &T) -> &mut T; // dynamically ensuring aliasing restrictions using 'unsafe' inside f function
+// so this turns a static reference of 'value' to a mutable reference of 'value', which safe Rust would not allow
+
+// something to read up upon
+
+mod Mutex:
+
+fn lock(value: &Mutex<T>) -> Locked<&mut T> {
+  unsafe {
+    while !atomic_cmp_xchng(value.locked, false, true) {
+      // tries to set value.locked from false to true
+      // if cannot set, just keep waiting until lock is released
+    }
+
+    Locked(&mut *value) // then lock it, returning the mutable reference
+  }
+}
+
+fn destructor(Locked<&mut T>) {
+  // use Rust's destructor to turn the lock from true to false
+  unsafe {
+    assert!(atomic_cmp_xchng(value.locked, true, false));
+  }
+}
+
+// use the mutex lock like so
+let a = Mutex(0); // get a mutable reference of 0
+
+Thread 1: a.lock(a)++;
+Thread 2: a.lock(a)++;
+
+======= Relearning ======
+
+println! is a macro (macro has `!` behind)
+println is a function 
+
+for integer type inference, Rust defaults to an i32
+
+Ruse 'panic' when a program exits with an error
+
+-- let vs const --
+let are by default immutable, but can be made mutable using `mut`
+Constants are ALWAYS immutable
+when using `const` keyword, the type of the value must be annotated
+Constants are valid for the entire time a program runs
+
+we can shadow a variable using the same variable's name
+fn main() {
+    let x = 5; // CANNOT mark a variable as `mut`, 
+
+    let x = x + 1; // by using let without `mut`, we are creating a new variable again
+
+    let x = x * 2; // we can change the type of the value but resue the same name
+
+    println!("The value of x is: {}", x); // 12
+}
+
+let spaces = "   ";
+let spaces = spaces.len(); //  we can change the type of the value but resue the same name
+
+-- data types --
+Scalar
+ - represents a single value
+ - integers, floating-point numbers, Boolean and characters
+Compound
+ - 
+
+
+
+INTEGER types in Rust
+-----------------------
+Length	Signed	Unsigned
+8-bit	i8	    u8
+16-bit	i16	    u16
+32-bit	i32	    u32
+64-bit	i64	    u64
+128-bit	i128	u128
+arch	isize	usize   // arch - architecture - depending on the machine, either 32 or 64 bits
+
+signed variant -(2^(n - 1)) to 2^(n - 1) - 1 inclusive where n is the number of bits
+e.g. i8 = -(2⁷) to (2⁷ - 1), which equals to -128 to 127
+unsigned variant 0 to 2^n - 1
+e.g. u8 = 0 to (2⁸ - 1), which equals to 0 to 255
+
+
+Integer literals in Rust
+-----------------------
+Number literals	Example
+Decimal	98_222  (98,222) // the _ underscore is just a visual aid separator
+Hex	0xff
+Octal	0o77
+Binary	0b1111_0000
+Byte (u8 only)	b'A'
+
+Integer overflow:-
+Rust includes checks for integer overflow #[deny(overflowing_literals)]
+
+FLOATING types
+fn main() {
+    let x = 2.0; // f64
+
+    let y: f32 = 3.0; // f32
+
+    // addition
+    let sum = 5 + 10;
+
+    // subtraction
+    let difference = 95.5 - 4.3;
+
+    // multiplication
+    let product = 4 * 30;
+
+    // division
+    let quotient = 56.7 / 32.2;
+
+    // remainder
+    let remainder = 43 % 5;
+}
+
+BOOLEAN
+fn main() {
+    let t = true;
+
+    let f: bool = false; // with explicit type annotation
+}
+
+CHAR
+Rust's char type is 4 bytes in size and represents a Unicode Scalar Value (more than ASCII)
+Chinese, Japanese, and Korean characters; emoji; and zero-width spaces are all valid char values in Rust
+fn main() {
+    let c = 'z'; // with Single quote, Double quote is for string
+    let z = 'ℤ';
+    let heart_eyed_cat = '😻'; 
+}
+
+----
+COMPOUND types
+Tuple
+- have fixed length: once declared, cannot grow or shrink in size
+fn main() {
+    let tup: (i32, f64, u8) = (500, 6.4, 1);
+
+    let (x, y, z) = tup; // pattern matching destructuring
+
+    println!("The value of y is: {}", y);
+
+    let x: (i32, f64, u8) = (500, 6.4, 1);
+
+    let five_hundred = x.0; // accesing tuple element by using period (.)
+
+    let six_point_four = x.1;
+
+    let one = x.2;
+}
+
+Array
+- have fixed length
+- data allocated on the stack
+fn main() {
+    let a = [1, 2, 3, 4, 5];
+
+    // annotate with the type of each element and then the number of elements
+    let a: [i32; 5] = [1, 2, 3, 4, 5];
+
+    // this is like writing: let a = [3, 3, 3, 3, 3];
+    let a = [3; 5];
+    
+    // an array is a single chunk memory allocated on stack and can accessed
+    // using indexing
+    let first = a[0];
+    let second = a[1];
+}
+
+
+
+==== Function ====
+
+Function bodies are made up of a series of statements optionally ending in an expression.
+Statements are instructions that perform some action and do not return a value. Expressions evaluate to a resulting value. 
+
+assignment does not returns the value of assignment
+let x = (let y = 6);  // is wrong!
+// this is different from C or Ruby, where assignment returns the value of
+// assignment
+x = y = 6
+
+
+the block that we use to create new scopes {} is an expression
+
+    let y = { // this is a block
+        let x = 3;
+        x + 1 // evaluates to 4, note there's no semicolon at the end
+        // if with semicolon, it is turned into a statement
+    }; // here need semicolon and turn this into a statment
+
+
+the empty tuple (), represent `nothing` in Rust
+
+fn actually is a primitive type called 'function pointers'
+they point to the code (reference to the code), not the data
+
+
+fn main() {
+    let x = plus_one(5);
+
+    println!("The value of x is: {}", x);
+}
+
+fn plus_one(x: i32) -> i32 {
+    x + 1; // this will throw error, due to the semicolon turning this into a statment
+}
+
+  |
+7 | fn plus_one(x: i32) -> i32 {
+  |    --------            ^^^ expected `i32`, found `()`
+  |    |
+  |    implicitly returns `()` as its body has no tail or `return` expression
+8 |     x + 1;
+  |          - help: consider removing this semicolon
+
+
+Keyword `return` also can be used as per normal language
+
+fn foo() -> i32 {
+    return 3;
+}
+assert_eq!(foo(), 3);
+
+-----
+
+fn foo() -> i32 {
+    3
+}
+assert_eq!(foo(), 3);
+
+-----
+
+`return` returns from function _immediately_
+
+
+==== Loops ====
+loop, while and for
+
+loop - forever loop, until a `break` statement is met
+
+range - (start..end), contains all values with x >= start and x < end
+
+if want to inclusive of the end use ..=
+
+(start ..= end) x >= start and x <= end
+
+-----
+Stack vs Heap
+Other primitive data types are stored on Stack
+String is a complex data type that is stored on Heap
+
+"hello" <-- just string literal
+String type
+String::from("hello") <-- String type
+
+string literals are fast and efficient, immutable
+String type can be mutable, allocated memory on heap
+
+String memory is automatically returned back to the allocator once out of scope
+Rust calls a special function `drop` to clean up
+Rust calls drop automatically at the closing curly bracket.
+
+A String has 2 parts
+1. a ptr, len and capacity (received from allocator) that's stored in Stack
+2. the `ptr` piotns to a position in the head which stores the String's value
+
+    let s1 = String::from("hello");
+    let s2 = s1;
+in OTHER programming languages, when we assign s1 to s2 like above, we are merely assigning the `pointer` of s1 to s2
+they would both point to the same value location in heap
+
+BUT in Rust, to prevent 'double free error', after assignment to s2, Rust invalidates the first variable, s1. Its called a 'move'. s1 was moved to s2.
+
+With only s2 valid, when it goes out of scope, it alone will free the memory.
+Rust will never automatically create “deep” copies of your data.
+
+let s1 = String::from("hello");
+let s2 = s1.clone(); // copy heap data
+//s1 is still valid here
+
+Copy and Drop traits ?
+
+So seems like x's value is copied into y becoz primitive types have the Copy trait
+let x = 5;
+let y = x;  // so this has Copy trait and is 'copied' over naturally
+
+primitive types like:
+All the integer types, such as u32.
+The Boolean type, bool, with values true and false.
+All the floating point types, such as f64.
+The character type, char.
+Tuples, if they only contain types that are also Copy. For example, (i32, i32) is Copy, but (i32, String) is not.
+
+so String has Drop traits? Coz it was dropped naturally after the scope.
+
+
+Ownership in Functions
+------------------------
+taking and giving ownerships in functions
+
+
+once a String is passed into a function, its not longer valid in current scope
+
+{
+    let s = String::from("hello");  // s comes into scope
+
+    takes_ownership(s);             // s's value moves into the function...
+    //println!("taking ownership: {}", s); // throw compilation error
+
+    let x = 5;                      // x comes into scope
+
+    makes_copy(x);                  // x would move into the function, but i32 is Copy and 
+                                    // can still be used after
+}
+
+-- return as tuple
+fn main() {
+    let s1 = String::from("hello");
+
+    let (s2, len) = calculate_length(s1);
+
+    println!("The length of '{}' is {}.", s2, len);
+}
+
+fn calculate_length(s: String) -> (String, usize) {
+    let length = s.len(); // len() returns the length of a String
+
+    (s, length) // its troublesome to return the String in a tuple here
+}
+
+------------------------
+references and borrowing
+Here is how to define and use a calculate_length function that has a reference to an object as a parameter instead of taking ownership of the value:
+
+fn main() {
+    let s1 = String::from("hello");
+
+    let len = calculate_length(&s1); 
+    //&s1 syntax lets us create a reference that refers to the value of s1 but does not own it
+    //becoz the function does not take ownership, the value it points to is not
+    //dropped after
+
+    println!("The length of '{}' is {}.", s1, len); 
+    // we dont need to 'give back' ownership from the calculate_length
+    // becoz we never had ownership to begin with
+    // this is called 'borrowing'
+}
+
+fn calculate_length(s: &String) -> usize { // & reference as a parameter, so `s` is NOT borrowed here
+    s.len()
+}
+
+the & are references (operator)
+the * are derefence operator
+
+references are also immutable by default
+
+use &mut for mutable_references:
+fn mutable_references() {
+    let mut s = String::from("hello");
+
+    println!("orignal s {}", s); // hello
+
+    change(&mut s); // can only have ONE mutable reference to a particular data in a particular scope
+
+    println!("s is mutabled! {}", s); // hello, world
+}
+
+fn change(some_string: &mut String) {
+    some_string.push_str(", world");
+}
+
+*Restriction: You can have only one mutable reference to a particular piece of data in a particular scope
+*This is to prevent _potential_ data race (race condition) at runtime
+
+    let mut s = String::from("hello");
+
+// in the same scope, this will fail
+    let r1 = &mut s;
+    let r2 = &mut s;
+
+// but the below works
+    {
+        let r1 = &mut s;
+    } // r1 goes out of scope here, so we can make a new reference with no problems.
+
+    let r2 = &mut s;
+
+------
+*---- cannot combine mutable and immutable references together
+
+let mut s = String::from("hello");
+
+let r1 = &s; // no problem
+let r2 = &s; // no problem
+let r3 = &mut s; // BIG PROBLEM - Above users of an immutable reference don’t expect the values to suddenly change out from under them
+
+println!("{}, {}, and {}", r1, r2, r3);
+
+------
+// but the below no problem
+let r1 = &s; // no problem
+let r2 = &s; // no problem
+println!("{} and {}", r1, r2);
+// r1 and r2 are no longer used after this point
+
+let r3 = &mut s; // no problem
+r3.push_str(" babay");
+println!("{}", r3);
+
+
+------
+Dangling pointers do not work in Rust
+
+fn main() {
+    let reference_to_nothing = dangle();
+}
+
+fn dangle() -> &String { // dangle returns a reference to a String
+
+    let s = String::from("hello"); // s is a new String
+
+    &s // we return a reference to the String, s
+} // Here, s goes out of scope, and is dropped. Its memory goes away.
+  // Danger!
+
+----------------
+**The Rules of References:
+
+1. At any given time, you can have either one mutable reference or any number of immutable references.
+2. References must always be valid.
+
+=====================
+String Slices (type: &str)
+// immutable references (borrow)
+
+// different from String
+// a String is an owned type
+// a &str is a reference type
+
+    let s = String::from("hello world");
+
+    let hello = &s[0..5];
+    let world = &s[6..11]; // length is ending_index - starting_index = 5
+    // this is due to its 'half open' [start..end), where ending point is not
+    // included
+
+// its considered IMMUtable borrow, becoz a string slice is still PART of the
+// original string, its just taking references at different points
+
+let s = String::from("hello");
+
+let slice = &s[0..2];
+let slice = &s[..2]; // equivalent as above
+
+--
+let s = String::from("hello");
+
+let len = s.len();
+
+let slice = &s[3..len];
+let slice = &s[3..]; // equivalent as above
+
+--
+let s = String::from("hello");
+
+let len = s.len();
+
+let slice = &s[0..len];
+let slice = &s[..]; // entire string
+
+----------
+String literals are String slices
+
+let s = "Hello, world"; // s is of type &str (immutable reference)
+
+// array can also be sliced
+let a = [1, 2, 3, 4, 5];
+
+let slice = &a[1..3]; // this has type &[i32]
+// this stores a reference (pointer) and a length too
+
+------------
+HOW TO CREATE CUSTOM TYPES in Rust: Structs and Enums
+
+Structs
+
+// struct definition
+struct User {
+    username: String,
+    email: String,
+    sign_in_count: u64,
+    active: bool,
+}
+
+// tuple structs without named fields
+struct Color(i32, i32, i32);
+struct Point(i32, i32, i32);
+
+fn main(){ 
+    // struct initialization
+    let mut user1 = User {
+        email: String::from("someone@example.com"),
+        username: String::from("someusername123"),
+        active: true,
+        sign_in_count: 1,
+    };
+
+    // field assignment - variable must be mut
+    user1.email = String::from("anotheremail@example.com");
+
+    let user2 = User {
+        email: String::from("another@example.com"),
+        username: String::from("anotherusername567"),
+        ..user1 // struct update syntax
+    };
+    
+    let black = Color(0, 1, 2);
+    let origin = Point(0, 3, 4);
+
+    println!("black 1: {}", black.1);
+}
+
+--------------
+Methods vs Functions
+
+Methods are different from functions in that they’re defined within the `context` of a struct (or an enum or a trait object), and their first parameter is always self, which represents the instance of the struct the method is being called on.
+
+#[derive(Debug)]
+struct Rectangle {
+    width: u32,
+    height: u32,
+}
+
+// implementation block
+impl Rectangle {
+    fn area(&self) -> u32 { // if we want to change instance passed, we use &mut self
+        self.width * self.height
+    }
+
+    // method with another parameter
+    fn can_hold(&self, other: &Rectangle) -> bool {
+        self.width > other.width && self.height > other.height
+    }
+}
+
+// can have another block - its valid syntax
+impl Rectangle {
+
+    ...
+}
+
+fn main() {
+    let rect1 = Rectangle {
+        width: 30,
+        height: 50,
+    };
+
+    let rect2 = Rectangle {
+        width: 10,
+        height: 40,
+    };
+    let rect3 = Rectangle {
+        width: 60,
+        height: 45,
+    };
+
+    println!(
+        "The area of the rectangle is {} square pixels. {}",
+        rect1.area(), // method syntax, implicit immutable borrowing
+        (&rect1).area() // same as above,
+    );
+    // method with another argument
+    println!("Can rect1 hold rect2? {}", rect1.can_hold(&rect2));
+    println!("Can rect1 hold rect3? {}", rect1.can_hold(&rect3));
+}
+
+Rust automatically adds in &, &mut, or * so object matches the signature of the method
+The fact that Rust makes borrowing implicit for method receivers is a big part of making ownership ergonomic in practice.
+
+--Associated Functions--
+Struct 'methods' that DONT take self as parameter
+They dont have an instance of the struct to work with
+For e.g. String::from is an associated function
+Associated functions are often used for constructors that will return a new instance of the struct.
+
+impl Rectangle {
+    ...
+
+    // associated function / constructor
+    // namespace functionality that is particular to this struct but without needing the instance
+    fn square(size: u32) -> Rectangle {
+        Rectangle {
+            width: size,
+            height: size,
+        }
+    }
+}
+
+fn main() {
+    ...
+
+    println!("A square rectangle {:?}", Rectangle::square(2));
+}
+
+-----
+Enums
+
+Enum can encode meaning along with data
+
+enum IpAddrKind {
+    V4, // a variant of enum
+    V6,
+}
+
+// we create instances of the two variants like so
+let four = IpAddrKind::V4;
+let six = IpAddrKind::V6;
+
+We can associate data type to each of the variant of the enum
+
+// This new definition of the IpAddr enum says that both V4 and V6 variants will have associated String values:
+enum IpAddr {
+    V4(String),
+    V6(String),
+}
+
+let home = IpAddr::V4(String::from("127.0.0.1"));
+
+let loopback = IpAddr::V6(String::from("::1"));
+
+// Enums is to store VARIANTS (of the same field (property))
+// Structs is to store different properties of a object model
+
+// we can express different types and amount of associated data with enum
+enum IpAddr {
+    V4(u8, u8, u8, u8),
+    V6(String),
+}
+
+let home = IpAddr::V4(127, 0, 0, 1);
+
+let loopback = IpAddr::V6(String::from("::1"));
+
+// You can put any kind of data inside an enum variant: strings, numeric types, or structs, for example. You can even include another enum
+
+-----
+example
+
+enum Message {
+    Quit,
+    Move { x: i32, y: i32 }, // struct-like variant
+    Write(String), // tuple-like variant
+    ChangeColor(i32, i32, i32),
+}
+
+// the enum has four variants with different types
+// we cannot use one struct to hold these data
+
+// we can do it like below but each struct will have their own type and we 
+// couldn't easily define a function which will take ALL of these messages
+// 'kinds' in
+struct QuitMessage; // unit struct
+struct MoveMessage { 
+    x: i32,
+    y: i32,
+}
+struct WriteMessage(String); // tuple struct
+struct ChangeColorMessage(i32, i32, i32); // tuple struct
+
+// enum implementation body 
+impl Message {
+    fn call(&self) {
+        // method body would be defined here
+    }
+}
+
+let m = Message::Write(String::from("hello"));
+m.call();
+
+In short, Rust' enum let us use Rust’s type system to encode more information than just the data into our program.
+
+--------
+Option Enum (like Haskell's Maybe)
+
+enum Option<T> { // <T> is a generic type parameter
+    Some(T),
+    None,
+}
+
+included in the prelude, can use Some and none directly without Option:: prefix
+
+when we haven Option<T> type, we have to worry about possibly not having a value, and the compiler will make sure we handle that case before using the value.
+
+In order to have a value that can possibly be null, you must explicitly opt in by making the type of that value Option<T>. Then, when you use that value, you are required to explicitly handle the case when the value is null. Everywhere that a value has a type that isn’t an Option<T>, you can safely assume that the value isn’t null. 
+
+In general, in order to use an Option<T> value, you want to have code that will handle each variant. You want some code that will run only when you have a Some(T) value, and this code is allowed to use the inner T. You want some other code to run if you have a None value, and that code doesn’t have a T value available. The `match expression` is a control flow construct that does just this when used with enums: it will run different code depending on which variant of the enum it has, and that code can use the data inside the matching value.
+
+
+-------
+Match control flow
+
+enum Coin {
+    Penny,
+    Nickel,
+    Dime,
+    Quarter(UsState),
+}
+
+fn value_in_cents(coin: Coin) -> u8 {
+    match coin {
+        Coin::Penny => {
+            println!("Lucky penny!");
+            1
+        }
+        Coin::Nickel => 5, // one match arm
+        Coin::Dime => 10,
+        Coin::Quarter(state) => {
+            println!("State quarter from {:?}!", state);
+            25
+        },
+    }
+}
+
+fn plus_one(x: Option<i32>) -> Option<i32> {
+    match x {
+        None => None,
+        Some(i) => Some(i + 1),
+    }
+}
+
+Combining match and enums is useful in many situations. You’ll see this pattern a lot in Rust code: match against an enum, bind a variable to the data inside, and then execute code based on it.
+
+// the _ placeholder (catch-all)
+let some_u8_value = 0u8;
+match some_u8_value {
+    1 => println!("one"),
+    3 => println!("three"),
+    5 => println!("five"),
+    7 => println!("seven"),
+    _ => (), // () is the unit value, nothing will happen here
+}
+
+
+--if let-- concise control, non-exhaustive
+
+if let Some(3) = some_u8_value {
+    println!("three"); // execute only if some_u8_value matches Some(3)
+}
+
+`if let` as syntax sugar for a match that runs code when the value matches one pattern and then ignores all other values.
+
+this is NOT a binary comparison like ==
+i.e. the below DOESNT work!
+if Some(3) == some_u8_value {
+    println!("three"); // execute only if some_u8_value matches Some(3)
+}
+
+`if let` seems to only takes in 2 values comparisons
+
+---
+let mut count = 0;
+match coin {
+    Coin::Quarter(state) => println!("State quarter from {:?}!", state),
+    _ => count += 1,
+}
+
+// same as below 
+
+let mut count = 0;
+if let Coin::Quarter(state) = coin {
+    println!("State quarter from {:?}!", state);
+} else {
+    count += 1;
+}
+
+--------MODULE SYSTEM----------
+Packages: A Cargo feature that lets you build, test, and share crates
+Crates: A tree of modules that produces a library or executable
+Modules and use: Let you control the organization, scope, and privacy of paths
+Paths: A way of naming an item, such as a struct, function, or module
+
+src/main.rs is the crate root of a binary crate with the same name as the package
+if the package directory contains src/lib.rs, the package contains a library crate with the same name as the package, and src/lib.rs is its crate root
+
+
+modules body can be separated into same name file and just include the mod file_name in the main lib file and Cargo can auto-detect (import) the Crate (module) body
+
+-- modules --
+like file system directory tree
+
+// to create library crate
+cargo new --lib restaurant
+
+src/lib.rs
+
+mod front_of_house {
+    mod hosting {
+        fn add_to_waitlist() {}
+
+        fn seat_at_table() {}
+    }
+
+    mod serving {
+        fn take_order() {}
+
+        fn serve_order() {}
+
+        fn take_payment() {}
+    }
+}
+
+// root module is named `crate`
+// this is a module tree
+crate
+ └── front_of_house
+     ├── hosting
+     │   ├── add_to_waitlist
+     │   └── seat_at_table
+     └── serving
+         ├── take_order
+         ├── serve_order
+         └── take_payment
+
+we use path to navigate this module tree:
+
+1. absolute path - use `crate`
+2. relative path - use self or super 
+
+pub fn eat_at_restaurant() {
+    // Absolute path
+    crate::front_of_house::hosting::add_to_waitlist();
+
+    // Relative path
+    front_of_house::hosting::add_to_waitlist();
+}
+
+modules (actually ALL ITEMS, except enums in rust) by default are `private`
+
+Items in a parent module can’t use the private items inside child modules, but items in child modules can use the items in their ancestor modules. Use `pub` keyword to expose.
+
+//struct by default is private, all fields inside by default are private as well
+    pub struct Breakfast {
+        pub toast: String,
+        seasonal_fruit: String,
+    }
+
+// enums are exception, all variants inside are made public if the enum is
+// public
+mod back_of_house {
+    pub enum Appetizer {
+        Soup,  // all pub
+        Salad, // all pub
+    }
+}
+
+pub fn eat_at_restaurant() {
+    let order1 = back_of_house::Appetizer::Soup;
+    let order2 = back_of_house::Appetizer::Salad;
+}
+
+-- `use` keyword --
+
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+// absolute path
+use crate::front_of_house::hosting;
+// same effect below, just refer to self
+//use self::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+
+-- `as` keyword --
+use std::fmt::Result;
+use std::io::Result as IoResult;
+
+fn function1() -> Result {
+    // --snip--
+}
+
+fn function2() -> IoResult<()> {
+    // --snip--
+}
+
+-- re-exporting with `pub use` --
+
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+// use crate::front_of_house::hosting; is only valid for this scope
+pub use crate::front_of_house::hosting; // external code can refer to hosting::add_to_waitlist
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+
+
+-- nested paths --
+// --snip--
+use std::{cmp::Ordering, io}; // instead of separate use individual of them
+// --snip-
+use std::io::{self, Write}; // if we want std::io and std::io::Write
+
+// glob operator (*)
+use std::collections::*;
+
+-- mod auto load--
+
+mod front_of_house;  
+//Using a semicolon after mod front_of_house rather than using a block tells Rust to load the contents of the module from another file with the same name as the module.
+
+-----------------------
+COLLECTIONS - the data these collections point to is stored on heap
+
+vector, string and hash map
+
+Vector - https://doc.rust-lang.org/std/vec/struct.Vec.html
+
+// vector can only store values of the same type
+let v: Vec<i32> = Vec::new(); // empty vector of type i32
+
+// to create a Vec<T> that has initial values
+// use macro vec!
+let v = vec![1, 2, 3]; // Rust infer type of v as Vec<i32>
+
+// push method add values
+let mut v = Vec::new();
+
+v.push(5);
+v.push(6);
+v.push(7);
+v.push(8);
+
+//use &[index] or .get(index) method to get element (reference)
+
+let third: &i32 = &v[2]; // gives us a reference
+// index out of bounds will panic
+
+v.get(2)
+// returns Option<&i32> so, either Some(element) or
+// index out of bounds will return None
+
+// wont compile, cannot have immutable and mutable reference in the same scope
+let mut v = vec![1, 2, 3, 4, 5];
+let first = &v[0]; // even like this is seemingly unrelated to addition of new element
+v.push(6);
+println!("The first element is: {}", first);
+
+Adding a new element onto the end of the vector might require allocating new memory and copying the old elements to the new space, if there isn’t enough room to put all the elements next to each other where the vector currently is. In that case, the reference to the first element would be pointing to deallocated memory.
+
+-----------
+let v = vec![100, 32, 57];
+for i in &v {
+    println!("{}", i);
+}
+
+let mut v = vec![100, 32, 57];
+for i in &mut v {
+    *i += 50;  // using dereference operator (*) to get to the value in i before changing
+}
+
+----
+since Vector can only store values of same type
+use an Enum to store elements of different type in vector 
+
+enum SpreadsheetCell {
+    Int(i32),
+    Float(f64),
+    Text(String),
+}
+
+let row = vec![
+    SpreadsheetCell::Int(3),
+    SpreadsheetCell::Text(String::from("blue")),
+    SpreadsheetCell::Float(10.12),
+];
+
+
+When you’re writing a program, if you don’t know the exhaustive set of types the program will get at runtime to store in a vector, the enum technique won’t work. Instead, you can use a trait object.
+
+----------
+String (think of a collection of bytes)
+Strings are UTF-8 encoded
+Actually a wrapper over Vec<u8>
+
+String is an 'owned' type
+&str is a 'borrowed' type - 'borrowed' here means reference as well
+
+// similar to vector
+let mut s = String::new();
+
+// below are different ways to create String
+let data = "initial contents";
+
+let s = data.to_string();
+
+// the method also works on a literal directly:
+let s = "initial contents".to_string();
+
+let s = String::from("initial contents");
+
+// UTF-8 encoded
+let hello = String::from("안녕하세요");
+let hello = String::from("你好");
+let hello = String::from("Olá");
+let hello = String::from("Здравствуйте");
+let hello = String::from("Hola");
+
+--
+Updating a String
+
+let mut s = String::from("foo");
+s.push_str("bar"); // push_str takes a string slice
+// "bar" a string literal is also a string slice
+
+s.push('l'); // takes a single character
+
+let s1 = String::from("Hello, ");
+let s2 = String::from("world!");
+let s3 = s1 + &s2; // note s1 has been moved here and can no longer be used
+// This consumes the String on the left-hand side and re-uses its buffer (growing it if necessary). Appending a copy of s2. It is NOT making a copy.
+
+// add operator signature, first param is a String; second is a string slice
+fn add(self, s: &str) -> String {..}
+
+if want to reuse s1 afterwards, use s1.clone()
+
+note also on &s2.. this is NOT actually a &str, its a &String, but Rust can do deref coercion and turns &s2 into &s2[..]
+
+-- format! --
+let s1 = String::from("tic");
+let s2 = String::from("tac");
+let s3 = String::from("toe");
+
+// format! for more complex concatenation
+// format! doesnt take ownership of s1 as well
+let s = format!("{}-{}-{}", s1, s2, s3);
+
+---
+
+String 'character' cannot be accessed by indexing
+let hello = "Здравствуйте";
+let answer = &hello[0]; // doesnt work!
+
+Becoz UTF-8 encoding can go up to 4 bytes for foreign characters like chinese, hindi etc. Hard to know what index 0 means.
+
+use string slices to get specific character
+
+so, 
+let answer = &hello[0..4] 
+// answer will be Зд
+
+
+-- iterate over Strings as Chars --
+to get individual Unicode scalar values
+
+for c in "नमस्ते".chars() {
+    println!("{}", c);
+}
+
+// or the 18 bytes that makes up this string
+for b in "नमस्ते".bytes() {
+    println!("{}", b);
+}
+
+
+---
+String slices as parameters
+
+We do not want to own String that was passed as parameters into some function, so its better to use string slices
+
+fn some_fn(x: &str, y: &str) -> &str {..
+
+
+-----
+HASH MAPS
+
+least used of the common collections; need to `use` from the std::collections::HashMap
+has less support as well; no built-in macro to construct them
+
+like vectors, hash maps are homogeneous: All keys must be same type, all values must be same type
+
+
+let mut scores = HashMap::new();
+
+let field_name = String::from("Blue");
+let field_value = 10;
+
+scores.insert(field_name, field_value);
+// field_name and field_value are moved and invalid here onwards
+
+scores.insert(String::from("Yellow"), 50);
+
+println!("scores {:?}", scores);
+
+// use get
+let blue_score = scores.get("Blue");
+// result will be Some(&10)
+
+// can iterate for each K-V pair
+for (key, value) in &scores {
+    // take note that key and value here are 
+    // &String and &i32 since its from referencing &score
+    println!("{}: {}", key, value);
+}
+
+--- Updating a Hash map --
+
+1.  Overwriting an existing value
+
+    let mut scores = HashMap::new();
+
+    scores.insert(String::from("Blue"), 10);
+    scores.insert(String::from("Blue"), 25); // calling insert second time replaces the value
+
+
+2. Only insert if doest not already have a value
+
+    let mut scores = HashMap::new();
+    scores.insert(String::from("Blue"), 10);
+
+    scores.entry(String::from("Yellow")).or_insert(50);
+    scores.entry(String::from("Blue")).or_insert(50); // blue will not be replaced, still 10
+
+`entry` return an enum called Entry that represents a value that might or might not exist.
+`or_insert` will insert new value if there's no such key
+it will also return a mut reference (&mut v) to the value in the entry 
+
+3. Update a value based on old value (using entry)
+
+let text = "hello world wonderful world";
+
+let mut map = HashMap::new();
+
+for word in text.split_whitespace() {
+    let count = map.entry(word).or_insert(0);  // 0 is i32
+    // here count is a &mut v, where v i32
+    *count += 1; // deref the count to get: mut v 
+}
+
+println!("{:?}", map);
+// again, the order here is not fixed
+// {"world": 2, "hello": 1, "wonderful": 1}
+
+
+------------------
+Errors handling
+
+panic!("crash and burn"); //to panic
+
+// handling potential failure with Result Type 
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+The T and E are generic type parameters
+
+Result method: unwrap_or_else can help on the match callback nightmare
+if return Result is Ok variant, then return Ok value
+else computes return value from a closure
+
+fn advance_main() {
+    let f = File::open("hello.txt").unwrap_or_else(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            File::create("hello.txt").unwrap_or_else(|error| {
+                panic!("Problem creating the file: {:?}", error);
+            })
+        } else {
+            panic!("Problem opening the file: {:?}", error);
+        }
+    });
+}
+
+Result method: unwrap will 
+1. if Ok, return Ok variant value
+2. if Err, call panic! macro
+let f = File::open("hello.txt").unwrap();
+
+Result method: expect lets us specify error message when Err
+let f = File::open("hello.txt").expect("Failed to open hello.txt");
+
+----
+Propagating Errors
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let f = File::open("hello.txt");
+
+    let mut f = match f {
+        Ok(file) => file,
+        Err(e) => return Err(e), // return io::Error back to the calling code
+    };
+
+    let mut s = String::new();
+
+    match f.read_to_string(&mut s) {
+        Ok(_) => Ok(s),
+        Err(e) => Err(e), // return io::Error to the calling code as well (didnt say `return` explicitly, 
+        // because this is the last expression in the function
+    }
+
+    // so the errors are propagated upward, back to the calling code
+}
+
+The ? Operator
+works like match, will return Err from the function if any
+fn read_username_from_file2() -> Result<String, io::Error> {
+    let mut f = File::open("hello.txt")?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+
+// can concat, even more succint
+fn read_username_from_file3() -> Result<String, io::Error> {
+    let mut s = String::new();
+
+    File::open("hello.txt")?.read_to_string(&mut s)?;
+
+    Ok(s)
+}
+
+// or use helper method read_to_string from std::fs
+fn read_username_from_file4() -> Result<String, io::Error> {
+    fs::read_to_string("hello.txt")
+}
+
+We’re only allowed to use the ? operator in a function that returns Result or Option or another type that implements std::ops::Try.
+
+// to use ? in main, we need to return Result<T, E>
+// Box<dyn Error> means “any kind of error.”
+// dyn means `dynamic`
+use std::error::Error;
+use std::fs::File;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let f = File::open("hello.txt")?;
+
+    Ok(())
+}
+
+--
+
+Panicking when the (function) contract is violated makes sense because a contract violation always indicates a caller-side bug and it’s not a kind of error you want the calling code to have to explicitly handle.
+
+-------------------
+Generics
+
+fn largest<T>(list: &[T]) -> &T {
+
+definition: The function largest is generic over some type T. This function has one parameter named list, which is a slice of values of type T. The largest function will return a reference to a value of the same type T.
+
+--over structs
+
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+struct Point<T, U> {
+    x: T,
+    y: U,
+}
+
+--over enums
+enum Option<T> {
+    Some(T),
+    None,
+}
+
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+-- over impl definitions
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+
+fn main() {
+    let p = Point { x: 5, y: 10 };
+
+    println!("p.x = {}", p.x());
+}
+
+-- over method definitions
+struct Point<T, U> {
+    x: T,
+    y: U,
+}
+
+impl<T, U> Point<T, U> { // Generics definition for impl is different than the method below 
+// it goes with the Struct definition
+    // careful of the `self`, and `other` below, that means 
+    // the parameters are moved to new Point
+    // Generic parameters V and W are only relevant to the method mixup
+    // below
+    fn mixup<V, W>(self, other: Point<V, W>) -> Point<T, W> { 
+        Point {
+            x: self.x,
+            y: other.y,
+        }
+    }
+}
+
+fn main() {
+    let p1 = Point { x: 5, y: 10.4 };
+    let p2 = Point { x: "Hello", y: 'c' };
+
+    let p3 = p1.mixup(p2);
+
+    println!("p3.x = {}, p3.y = {}", p3.x, p3.y); // 5, c
+}
+
+Rust uses monomorphization when compiling generics.
+Monomorphization is the process of turning generic code into specific code by filling in the concrete types that are used when compiled.
+
+-------------------
+Traits
+Trait definitions are a way to group `method signatures` together to define a set of behaviors necessary to accomplish some purpose.
+
+Traits in Rust like Eq, Ord .. the equivalent in Haskell is type class
+
+In each Traits there some methods that needs to be implemented if a Struct (Type) in Rust
+extends it, like in Ord, the Struct needs to implement the `cmp` method
+
+like abstract function
+
+impl <TraitName> for <StructName> {
+    ...
+    <trait method implementation>
+}
+
+pub trait Summary {
+    //fn summarize(&self) -> String;
+    fn summarize(&self) -> String {
+        // default implementation
+        String::from("(Read more...)")
+    }
+}
+
+pub struct NewsArticle {
+    pub headline: String,
+    pub location: String,
+    pub author: String,
+    pub content: String,
+}
+
+impl Summary for NewsArticle {
+    fn summarize(&self) -> String {
+        format!("{}, by {} ({})", self.headline, self.author, self.location)
+    }
+}
+
+----
+Traits as Parameters (as Generics)
+pub fn notify(item: &impl Summary) { 
+    // as long as the parameter (item) type implements Summary trait
+    // its acceptable.
+    println!("Breaking news! {}", item.summarize());
+}
+
+--impl Trait syntax is a syntax sugar for a `trait bound`
+pub fn notify<T: Summary>(item: &T) {
+    println!("Breaking news! {}", item.summarize());
+}
+
+// use depending on situations
+pub fn notify(item1: &impl Summary, item2: &impl Summary) {
+// this is better for multiple parameters that have the same trait bound
+pub fn notify<T: Summary>(item1: &T, item2: &T) {
+
+--Multiple trait bounds
+// if item MUST implement Summary AND Display
+pub fn notify(item: &(impl Summary + Display)) {
+
+pub fn notify<T: Summary + Display>(item: &T) {
+
+`where` clause for multiple trait bounds
+// cluttered
+fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 {
+// good, function signature is compact and more readable
+fn some_function<T, U>(t: &T, u: &U) -> i32
+    where T: Display + Clone,
+          U: Clone + Debug
+{
+
+--
+Trait as Return types
+
+// the Tweet return implements Summary trait
+fn returns_summarizable() -> impl Summary {
+    Tweet {
+        username: String::from("horse_ebooks"),
+        content: String::from(
+            "of course, as you probably already know, people",
+        ),
+        reply: false,
+        retweet: false,
+    }
+}
+
+--
+Trait bounds to conditional implement methods
+
+use std::fmt::Display;
+
+struct Pair<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Pair<T> {
+    fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+}
+
+// only implement cmp_display for Pair if the T type implements Display +
+// PartialOrd
+impl<T: Display + PartialOrd> Pair<T> {
+    fn cmp_display(&self) {
+        if self.x >= self.y {
+            println!("The largest member is x = {}", self.x);
+        } else {
+            println!("The largest member is y = {}", self.y);
+        }
+    }
+}
+
+-- 
+Blanket implementations
+- conditionally implement a trait for any type that implements another trait
+
+// as long as T impl Display Trait, ToString is also impl for T
+impl<T: Display> ToString for T {
+    // --snip--
+}
+
+// so any type that implements Display Trait will be able to use to_string
+let s = 3.to_string();
+// appear in 
+--------------------
+Lifetimes (a type of generic)
+to ensure actual references used at runtime will be valid
+
+EVERY reference has a lifetime!
+
+The borrow checker
+{
+    let r;
+
+    {
+        let x = 5;
+        r = &x; // borrowed value does not live long enough
+    }
+
+    println!("r: {}", r); // borrow later used here
+}
+
+
+// below is valid
+{
+    let x = 5;
+    let r = &x;
+    println!("r: {}", r);
+}                         
+
+Generic lifetime paramters
+&i32        // a reference
+&'a i32     // a reference with an explicit lifetime (parameter 'a)
+&'a mut i32 // a mutable reference with an explicit lifetime (parameter 'a)
+
+If a function has parameter 1 that refers to an i32 with lifetime 'a and paramter 2 that refers to an i32 with lifetime 'a, the lifetime annotation indicate that references 1 and 2 must both live as long as that generic lifetime 'a.
+When we specify the lifetime parameters in this function signature, we’re not changing the lifetimes of any values passed in or returned. We’re specifying that the borrow checker should reject any values that don’t adhere to these constraints.
+
+// lifetime annotation below denotes that all references in the signature must have the same
+// lifetime 'a
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+
+fn main() {
+    let string3 = String::from("long string out of scope");
+    {
+        let string1 = String::from("abcd");
+        let string2 = "xyz";
+
+        let result = longest(string1.as_str(), string2);
+        println!("The longest string is {}", result);
+
+        let result = longest(string3.as_str(), string2);
+        println!("The longest string is {}", result);
+
+        // this works becoz result only needs something that lifetime is end of this inner scope
+        //  string3 life ends outscope and string2 life ends innerscope
+    }
+}
+
+fn this_will_fail(){
+    let string1 = String::from("long string is long");
+    let result;
+    {
+        let string2 = String::from("xyz");
+        result = longest(string1.as_str(), string2.as_str());// borrowed string2 does not live long enough
+    }
+    println!("The longest string is {}", result); // borrowed used here : more explicitly, lifetime mismatched in the function
+    // string2 lifetime has to be same as result's lifetime 
+}
+
+---
+Lifetime Annotations in Struct Definition
+
+//This annotation means an instance of ImportantExcerpt can’t outlive the reference it holds in its part field
+//if a struct hold references, then lifetime annotation on EVERY reference is a MUST
+struct ImportantExcerpt<'a> {
+    part: &'a str,
+}
+
+fn main() {
+    let novel = String::from("Call me Ishmael. Some years ago...");
+    let first_sentence = novel.split('.').next().expect("Could not find a '.'");
+    let i = ImportantExcerpt {
+        part: first_sentence,
+    };
+}
+
+---
+Due to historical reasons, a lot of lifetime annotations are implicit and can be inferred by the borrow checker
+
+// for e.g.
+// instead of fn first_word<'a>(s: &'a str) -> &'a str { ..
+fn first_word(s: &str) -> &str {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &s[0..i];
+        }
+    }
+
+    &s[..]
+}
+
+---
+Lifetimes on function or method parameters are called input lifetimes
+on return values, output lifetimes
+
+Three lifetime elision (omission) rules for compiler to figure out:
+1. For inputs. Each parameter that is a reference gets its own lifetime parameter
+fn foo<'a, 'b>(x: &'a i32, y: &'b i32)
+fn foo<'a, 'b, 'c>(x: &'a i32, y: &'b i32, z: &'c i32)
+...
+
+2. For output on function or method. If there is exactly one input lifetime parameter, that lifetime is assigned to all output lifetime parameters: fn foo<'a>(x: &'a i32) -> &'a i32
+
+3. For output on method. If there are multiple input lifetime parameters, but one of them is &self or &mut self because this is a method, the lifetime of self is assigned to all output lifetime parameters. This third rule makes methods much nicer to read and write because fewer symbols are necessary.
+
+Anything ambiguous out of these 3 rules will give error.
+
+--
+struct ImportantExcerpt<'a> {
+    part: &'a str,
+}
+
+//if struct is lifetime annotated, then must annotate the impl as well - becoz the lifetime are
+//part of the struct's type
+impl<'a> ImportantExcerpt<'a> {
+    fn level(&self) -> i32 { // first lifetime elision rule applies
+        3
+    }
+}
+
+impl<'a> ImportantExcerpt<'a> {
+    fn announce_and_return_part(&self, announcement: &str) -> &str { // third rules apply
+        println!("Attention please: {}", announcement);
+        self.part
+    }
+}
+
+--
+Static Lifetime
+'static, which means that this reference can live for the entire duration of the program. All string literals have the 'static lifetime
+
+let s: &'static str = "I have a static lifetime.";
+
+careful when applying 'static to references, we might not want them to live that long
+
+--------
+
+Rust attributes
+
+#[derive(Debug)] // deriving traits, Debug is a trait
+#[derive(PartialEq, Debug)] // deriving PartialEq and Debug traits
+// used on struts and enums
+
+#[test]
+// used on functions
+
+#[should_panic]
+// indicate function should panic
+
+// place this on mod tests - so cargo compile and run test only during `cargo test`, not during `cargo build`
+#[cfg(test)]
+ mod tests {
+    use super::*; // grab outer module Rectangle
+
+    #[test] // place this attribute to every test function
+    fn larger_can_hold_smaller() {
+        let larger = Rectangle {
+            width: 8,
+            height: 7,
+        };
+        let smaller = Rectangle {
+            width: 5,
+            height: 1,
+        };
+
+        assert!(larger.can_hold(&smaller)); // testing true and false
+    }
+}
+
+//assert equal
+assert_eq!(4, add_two(2));
+
+//assert not equal
+assert_ne!(5, add_two(2));
+
+//assert with a custom message
+assert!( // assert with a message
+    result.contains("Carol"),
+    "Greeting did not contain name, value was `{}`", 
+    result
+);
+
+#[test]
+#[should_panic]
+fn greater_than_100() {
+    Guess::new(200); // here function panics
+}
+
+//should panic expecting a substring from the panic message
+#[test]
+#[should_panic(expected = "Guess value must be less than or equal to 100")]
+fn greater_than_100() {
+    Guess::new(200);
+}
+
+// the below will be ignore when `cargo test`
+#[ignore]
+fn expensive_test_tobe_ignore(){
+}
+
+can also use Result<T, E> in tests
+#[test]
+fn it_works() -> Result<(), String> {
+    if 2 + 2 == 4 {
+        Ok(())
+    } else {
+        Err(String::from("two plus two does not equal four"))
+    }
+}
+//if Err failure,  will panicked at 'assertion failed: `(left == right)`
+
+
+Tests are run in parallel in default,
+if there are test cases which dependant on each other
+// use this to enforce them to run single threaded and consecutively
+cargo test -- --test-threads=1
+
+// to show output even for successful tests
+cargo test -- --show-output
+// to filter by name
+cargo test some_name.. 
+// to run only ignored test
+cargo test -- --ignored
+
+----
+UNIT TEST
+Rust's `unit test` are usually within the same src/lib.rs
+Private function can be tested, since they are within the same file
+cfg(test) prevents 'cargo build' from including the test code in binary build
+
+
+pub fn add_two(a: i32) -> i32 {
+    internal_adder(a, 2)
+}
+
+fn internal_adder(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn internal() {
+        assert_eq!(4, internal_adder(2, 2));
+    }
+}
+
+--
+INTEGRATION TESTS (are external to the library)
+can only call functions that are part of library's public API
+
+put under tests/, alongside src/
+
+only after all Unit Tests passed, then integration test will run
+
+to run ONLY the integration tests, use `cargo test --test <integration test filename>`
+
+create tests/common/mod.rs to hold all common testing functionsl like setup or teardown
+Rust will understand the naming convention of this filename and ignore the output of this file
+
+We dont test binary crate (main.rs), all functionalities should reside in lib.rs and those can be tested
+
+BUT! if we put #[test] in main.rs... cargo test can run on it too :)
+---
+Some guidelines when writing a binary program
+
+1.Split your program into a main.rs and a lib.rs and move your program’s logic to lib.rs.
+2. As long as your command line parsing logic is small, it can remain in main.rs.
+3. When the command line parsing logic starts getting complicated, extract it from main.rs and move it to lib.rs.
+
+*Note: Using primitive values when a complex type would be more appropriate is an anti-pattern known as primitive obsession.
+
+Box<dyn Error> means “any kind of error that implements the Error trait.”
+This gives us flexibility to return error values that may be of different types in different error cases. The dyn keyword is short for “dynamic.”
+
+--
+println! can only print to standard output (stdout)
+
+use `eprintln!` to print to standard error stream (stderr)
+
+----------
+Closure
+
+let expensive_closure = |num| {
+    println!("calculating slowly...");
+    thread::sleep(Duration::from_secs(2));
+    num
+};
+
+Closures don’t require you to annotate the types of the parameters or the return value like fn functions do
+Closures aren't used in an exposed interface like functions do: they’re stored in variables and used without naming them and exposing them to users of our library.
+
+// but we can annotate them anyways
+let expensive_closure = |num: u32| -> u32 {
+    println!("calculating slowly...");
+    thread::sleep(Duration::from_secs(2));
+    num
+};
+
+fn  add_one_v1   (x: u32) -> u32 { x + 1 }
+let add_one_v2 = |x: u32| -> u32 { x + 1 };
+let add_one_v3 = |x|             { x + 1 };
+let add_one_v4 = |x|               x + 1  ; // if only have one expr, can remove curly brackets
+
+---
+let example_closure = |x| x;
+
+let s = example_closure(String::from("hello")); // the first time calling will lock down the type
+let n = example_closure(5); // this will have error
+
+---
+Storing closures (in struct) using generic parameters and Fn trait
+so the result can be stored once excuted at least once
+this is called Memoization (or lazy evaluation)
+
+std::ops::Fn trait is implemented (automaticaly) on closures which take immutable references
+instances of Fn can be called repeatedly without mutating state (since only borrowing)
+All closures implement at least one of the traits: Fn, FnMut, or FnOnce.
+
+struct Cacher<T>
+where
+    T: Fn(u32) -> u32,
+{
+    calculation: T,
+    value: Option<u32>,
+}
+
+---
+Closure can capture surrouding environment in the same scope
+
+fn main() {
+    let x = 4;
+
+    let equal_to_x = |z| z == x; // Fn trait, borrowed immutably
+
+    let y = 4;
+
+    assert!(equal_to_x(y));
+}
+
+How closure deals with the captured values are inferred based on the 3 traits below:
+1. FnOnce consumes the variables it captures from its enclosing scope, known as the closure’s environment. To consume the captured variables, the closure must take ownership of these variables and move them into the closure when it is defined. The Once part of the name represents the fact that the closure can’t take ownership of the same variables more than once, so it can be called only once.
+2. FnMut can change the environment because it mutably borrows values.
+3. Fn borrows values from the environment immutably.
+
+// FnOnce - to take ownership forcibly
+fn main() {
+    let x = vec![1, 2, 3];
+
+    let equal_to_x = move |z| z == x; // to move forcibly and take ownership
+
+    //println!("can't use x here: {:?}", x); // after move, x not available here anymore
+
+    let y = vec![1, 2, 3];
+
+    assert!(equal_to_x(y));
+}
+
+--------
+Iterators
+In Rust, iterators are lazy (they have no effect until you call methods that consume the iterator to use it up.)
+
+
+let v1 = vec![1, 2, 3];
+
+let v1_iter = v1.iter(); // this iterator does nothing
+
+for val in v1_iter { // until a for loop is called on it
+    // the loop took ownership of v1_iter(implicitly)
+    println!("Got: {}", val);
+}
+
+---
+pub trait Iterator {
+    type Item; // associated type with this trait
+
+    fn next(&mut self) -> Option<Self::Item>;
+
+    // methods with default implementations elided
+}
+
+implementing Iterator also requires the said struct to define an `Item` type, which is return
+from the `next` method
+
+#[test]
+fn iterator_demonstration() {
+    let v1 = vec![1, 2, 3];
+
+    let mut v1_iter = v1.iter(); 
+    // need mutable here, becoz `next` method changes the internal state
+    of the iterator
+
+    assert_eq!(v1_iter.next(), Some(&1)); // calling `next` consumes the iterator
+    assert_eq!(v1_iter.next(), Some(&2)); // the values from `next` are immutable reference
+    assert_eq!(v1_iter.next(), Some(&3)); // mean, this does not take ownership of the vector values
+    assert_eq!(v1_iter.next(), None);
+}
+
+`iter` take a (borrowed) reference from v1
+if we want an iterator that takes ownership of v1, and returns owned values, we call `into_iter`
+if we want to iterate over mutable references (references that the iterator closure will mutate,
+    we use `iter_mut`)
+
+--
+What are 'associated type'?
+A `type placeholder` with a trait such that the trait method definitions can use these placeholder types in their signatures.
+The implementor of the trait will specify the concrete type that will take this placeholder type place.
+
+In above, the type Item is a placeholder type, and the next method’s definition shows that it will return values of type Option<Self::Item>. Implementors of the Iterator trait will specify the concrete type for Item, and the next method will return an Option containing a value of that concrete type.
+
+// when impl Interator.. need to specify the concrete type for Item
+impl Iterator for Counter {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // --snip--
+
+--
+Consuming Adaptor
+sum is a `consuming adaptor`
+#[test]
+fn iterator_sum() {
+    let v1 = vec![1, 2, 3];
+
+    let v1_iter = v1.iter();
+
+    let total: i32 = v1_iter.sum(); // sum() takes ownership of iterator v1_iter
+
+    // after this cannot use v1_iter anymore
+    //println!("hullo? {}", v1_iter.sum::<i32>());
+
+    assert_eq!(total, 6);
+}
+
+Iterator Adaptor
+allow to change an iterator (chain + transform) into different kinds of iterators
+but becoz iterators are lazy, need to call on at least one consuming adaptor (last one?)
+to get the results
+
+#[test]
+fn iterator_map() {
+    let v1: Vec<i32> = vec![1, 2, 3];
+
+    // does nothing
+    //v1.iter().map(|x| x + 1);
+    
+    let v2: Vec<_> = v1.iter().map(|x| x + 1).collect(); // collect consumes the iter
+    assert_eq!(vec![2, 3, 4], v2);
+}
+
+---
+Option's map consumes self by taking ownership
+
+// note the 'self'
+pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Option<U> 
+
+let maybe_some_string = Some(String::from("Hello, World!"));
+// `Option::map` takes self *by value*, consuming `maybe_some_string`
+let maybe_some_len = maybe_some_string.map(|s| s.len());
+
+//println!("doesnt work, maybe_some_string is already consumed {:?}", maybe_some_string);
+
+assert_eq!(maybe_some_len, Some(13));
+
+--
+use as_ref() on Option if want to change the content / value of Option into a reference
+
+let text: Option<String> = Some("Hello, world!".to_string());
+// First, cast `Option<String>` to `Option<&String>` with `as_ref`,
+// then consume *that* with `map`, leaving `text` on the stack.
+let text_length: Option<usize> = text.as_ref().map(|s| {
+    s.len()
+});
+println!("still can print text: {:?}", text);
+println!("text_length: {:?}", text_length);
+
+---
+Implementing Iterator for a Struct only need to implement the `next` (required) method
+
+Iterator has a bunch of provided methods
+file:///home/alvinvoo/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/std/iter/trait.Iterator.html
+
+zip<u>(self, other: U)
+If either iterator returns None, next from the zipped iterator will return None. If the first iterator returns None, zip will short-circuit and next will not be called on the second iterator.
+
+Iterators are one of Rust's 'zero-cost abstractions'
+
+Iterators and closures make code seem like it’s higher level but don’t impose a runtime performance penalty for doing so.
+
+-------------
+Cargo + crates.io
+
+Cargo.toml - build and release profiles
+
+[profile.dev]
+opt-level = 0 // optimization to the code
+
+[profile.release]
+opt-level = 3
+
+--
+Publishing a Crate to Crates.io
+Documentation Comments
+
+ - use three slashes ///
+ - support Markdown notation
+ - generate HTML documentation
+
+/// Adds one to the number given.
+///
+/// # Examples
+///
+/// ```
+/// let arg = 5;
+/// let answer = my_crate::add_one(arg);
+///
+/// assert_eq!(6, answer);
+/// ```
+pub fn add_one {
+    ...
+}
+
+`cargo doc` will build and deploy html doc to target/doc
+`cargo doc --open` will build the html doc and open it in a browser
+
+useful markdown headings
+# Examples
+# Panics
+# Errors
+# Safety
+
+running `cargo test` will test the doc examples as well!
+this is to ensure the example in the documentation doesnt go out of sync when the code 
+changes
+
+use //! to descript the crate or module which contains the comments
+
+/// Adds//! # My Crate
+//!
+//! `my_crate` is a collection of utilities to make performing certain
+//! calculations more convenient. one to the number given.
+
+--
+Re-exporting library mods to global crate level
+so public can use it easily like `use <crate_name>::<type_name>`
+
+//! # Art
+//!
+//! A library for modeling artistic concepts.
+
+pub use self::kinds::PrimaryColor; //can use like `use art::PrimaryColor`
+pub use self::kinds::SecondaryColor;
+pub use self::utils::mix; //can use like `use art::mix`
+
+pub mod kinds {
+    pub enum PrimaryColor {
+        ...
+    }
+
+    pub enum SecondaryColor {
+        ...
+    }
+}
+
+pub mod utils {
+    use crate::kinds::*;
+
+    pub fn mix(c1: PrimaryColor, c2: PrimaryColor) -> SecondaryColor {
+        ...
+    }
+}
+
+Crates.io does NOT delete the code that's uploaded to it, but it allows author to 'yank' a version out, such that any future Cargo.lock would never use that yanked version
+
+cargo publish - to push to crates.io
+cargo yank --vers 1.0.1 // yank
+cargo yank --vers 1.0.1 --undo  // undo yank
+
+---------
+Cargo Workspace
+
+first create a folder as a 'workspace'
+add a Cargo.toml, specifying the members (main, libs) of this workspace
+the members are supposed to depend on each other
+--
+[workspace]
+
+members = [
+    "adder",
+    "add-one",
+]
+
+after cargo build, there should be only one /target at the root dir
+
+to run the binary, need the `-p`: 
+cargo run -p adder
+
+`-p` for package here
+
+--
+add in dependencies in bin's Cargo.toml
+
+[dependencies]
+add-one = { path = "../add-one" }
+add-two = { path = "../add-two" }
+--
+Even though filename/key in dependencies is add-one, but 
+// notice the dash in filename translates to 
+// underscore in core
+// becoz Rust doesnt support kebab case namespace
+use add_one;
+
+add_one::add_one(num);
+
+--
+run test by
+cargo test
+or
+cargo test -p <crate-name>
+
+--------
+cargo install can only install binary crates from crates.io
+
+for crate libraries, usually include as dependencies in Cargo.toml
+
+-------------
+Smart pointers
+
+A normal pointer in Rust is a reference, which contains an address in memory which points (refers) to some other data.
+References are pointers that only borrow data
+
+Smart pointers are data structures that not only act like a pointer but also have additional metadata and capabilities.
+In many cases, smart pointers own the data they point to.
+For e.g. String and Vec<T> in Rust
+- own some memory
+- have metadata (like capacity)
+- usually implemented using struct
+- have Deref (allow instance of smart pointer to behave like a reference) and Drop traits
+
+3 most common smart pointers in standard library:
+Box<T> for allocating values on the heap
+Rc<T>, a reference counting type that enables multiple ownership
+Ref<T> and RefMut<T>, accessed through RefCell<T>, a type that enforces the borrowing rules at runtime instead of compile time
+
+
+--
+
+std::boxed::Box
+Box<T> - A pointer type for heap allocation
+Boxes allow you to store data on the heap rather than the stack. What remains on the stack is the pointer to the heap data.
+This is known as 'indirection' - instead of storing a value directly, we’ll change the data structure to store the value indirectly by storing a pointer to the value (in the heap) instead.
+The pointer size is known at compile time.
+
+
+Box are useful to store type whose size can't be known at compile time
+One of this type is the 'recursive type'
+
+#[derive(Debug)]
+enum List {
+    //Cons(i32, List),// instead of holding List directly with unknown size at compile time, we use Box<List>
+    Cons(i32, Box<List>),
+    Nil,
+}
+
+use crate::List::{Cons, Nil}; // reexport so later code can use Cons and Nil directly
+
+fn main() {
+    //let b = Box::new(5); // b (pointer) is stored in stack; value 5 is allocated on the heap
+    //println!("b = {}", b);
+    let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));
+    println!("{:#?}", list);
+}
+//at here, both pointer and data it points to are deallocated
+Cons(
+        1,
+        Cons(
+            2,
+            Cons(
+                3,
+                Nil,
+                ),
+            ),
+    )
+
+---
+Deref trait
+std::ops::Deref
+Used for immutable dereferencing operations, like *v
+Implementing Deref for smart pointers makes accessing the data behind them convenient
+Deref should only be implemented for smart pointers
+
+use std::ops::Deref;
+
+struct MyBox<T>(T); // a struct which holds a tuple only
+
+impl<T> MyBox<T> {
+    fn new(x: T) -> MyBox<T> {
+        MyBox(x)
+    }
+}
+
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+    // note a reference to the value is returned instead of the value becoz we dont want to take
+    // ownership of the inner value inside the box
+}
+
+..
+    let x = 5;
+    let y = MyBox::new(x);
+    assert_eq!(5, x);
+    assert_eq!(5, *y);
+    // behind the scene, Rust runs *(y.deref())
+
+--
+Deref Coercions
+Rust will analyse the types and use Deref::deref as many times as necessary to get a reference that matches the parameter's type
+
+let m = MyBox::new(String::from("Rust"));
+hello(&m); // 
+// deref coercions
+//1. Rust ran &(m.deref()) -> gets &(String::from("Rust"))
+//2. Since String is a smart pointer which implements Deref as well with Target as `str`
+//3. Rust ran deref again to turn &String into &str, which is what hello() needs
+
+--
+Strings implement Deref<Target=str>
+fn takes_str(s: &str) { }
+
+let s = String::from("Hello");
+
+takes_str(&s);// just by using &, it can Deref coerce &String into &str
+
+Rust does deref coercion when it finds types and trait implementations in three cases:
+
+1. From &T to &U when T: Deref<Target=U>
+2. From &mut T to &mut U when T: DerefMut<Target=U>
+3. From &mut T to &U when T: Deref<Target=U>
+
+For case 3. Rust can coerce a mut ref to an immutable one, but the reverse is not possible. Borrowing rules state that for mut ref, it must be the only ref to the data. Converting mut ref to immutable ref doesn't break this rule
+
+--
+Trait Drop
+
+#[derive(Debug)]
+struct CustomSmartPointer {
+    data: String,
+}
+
+impl Drop for CustomSmartPointer {
+    fn drop(&mut self) {
+        println!("Dropping CustomSmartPointer with data `{}`!", self.data);
+    } // the 'real' destructor drop is automatically executed here
+}
+
+fn main() {
+    let c = CustomSmartPointer {
+        data: String::from("my stuff"),
+    };
+    let d = CustomSmartPointer {
+        data: String::from("other stuff"),
+    };
+
+    println!("CustomSmartPointers created.");
+
+    force_drop_before_scope_ends();
+}
+// auto dropping `d`, followed by `c` once out of scope
+
+fn force_drop_before_scope_ends(){
+    let e = CustomSmartPointer {
+        data: String::from("their stuff"),
+    };
+
+    drop(e); // std::mem::drop - drop will be called here first
+    // take note, this is not e.drop()
+    // the trait Drop's drop() cannot be called explicitly, it is only automatically called by
+    // Rust, else, there might be double free error
+    // e is gone (moved) here
+    println!("CustomSmartPointers their stuff created?");
+}
+
+--------
+Reference Counting
+Rc<T> - A pointer for single-threaded reference-counting
+
+Used when a single value might have multiple owners (shared ownership)
+The value should only be cleaned up when the last owner 'leaves'
+
+Rc's clone() will make a clone of the Rc pointer and increase the strong reference count
+strong_count() will return the usize of strong count
+Rc<T> is immutable reference, that is, it allows sharing of data for reading only.
+
+fn display_count() {
+    let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Nil)))));
+    println!("count after creating a = {}", Rc::strong_count(&a));
+    let b = Cons(3, Rc::clone(&a));
+    println!("count after creating b = {}", Rc::strong_count(&a));
+    {
+        let c = Cons(4, Rc::clone(&a));
+        println!("count after creating c = {}", Rc::strong_count(&a));
+    }
+    // the Drop trait decreases reference count once out of scope
+    println!("count after c goes out of scope = {}", Rc::strong_count(&a));
+}
+//count after creating a = 1
+//count after creating b = 2
+//count after creating c = 3
+//count after c goes out of scope = 2
+//
+//once a & b goes out of scope, RC<List> will be cleanup entirely
+
+--
+Pattern - how to mutate data? even when there are immutable references to the data (like mutiple Rc<T> owners?)
+RefCell<T> uses Interior mutability Pattern - Mutating the value inside an immutable type 
+
+Allows you to mutate data even when there are immutable references to that type 
+
+use RefCell<T> to enforce borrowing rules at Runtime (instead of Compiletime)
+RefCell<T> uses unsafe code inside it's struct
+RefCell<T> only for single-threaded scenarios
+
+1. Rc<T> enables multiple owners of the same data; Box<T> and RefCell<T> have single owners.
+2. Box<T> allows immutable or mutable borrows checked at compile time; Rc<T> allows only immutable borrows checked at compile time; RefCell<T> allows immutable or mutable borrows checked at runtime.
+3. Because RefCell<T> allows mutable borrows checked at runtime, you can mutate the value inside the RefCell<T> even when the RefCell<T> is immutable.
+
+// breaking this rule
+    let x = 5;
+    let y = &mut x; // cannot borrow this as mutable as it is an immutable value 
+
+
+RefCell's borrow_mut() will return a RefMut (a mutable reference - only ONE RefMut can be borrowed at one time)
+RefCell's borrow() will return a Ref (a immutable reference - multiple immutable Ref can be borrowed at one time)
+
+Both RefMut<T> and Ref<T> implements Deref
+
+If we try to borrow_mut() twice with the same RefCell, program will panic! with `already borrowed: BorrowMutError` at runtime
+*Code would incur a small runtime performance penalty as a result of keeping track of the borrows at runtime rather than compile time
+
+If we have an Rc<T> that holds a RefCell<T>, we can get a value that can have multiple owners and that we can mutate.
+
+...
+    let value = Rc::new(RefCell::new(5));
+
+    let a = Rc::new(Cons(Rc::clone(&value), Rc::new(Nil))); // value is clone so that `value` can maintain ownership to be mutated later
+
+    let b = Cons(Rc::new(RefCell::new(3)), Rc::clone(&a));
+    let c = Cons(Rc::new(RefCell::new(4)), Rc::clone(&a));
+
+    // value mutated below
+    // when calling a method (to a pointer), auto-dereferencing is applied 
+    // so we dont need to do *(*value).borrow_mut()
+    *value.borrow_mut() += 10;
+
+    println!("a after = {:?}", a);
+    println!("b after = {:?}", b);
+    println!("c after = {:?}", c);
+
+a after = Cons(RefCell { value: 15 }, Nil)
+b after = Cons(RefCell { value: 3 }, Cons(RefCell { value: 15 }, Nil))
+c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))
+
+------
+Reference cycle
+
+Rust allows memory leaks by using Rc<T> and RefCell<T>: it’s possible to create references where items refer to each other in a cycle. This creates memory leaks because the reference count of each item in the cycle will never reach 0, and the values will never be dropped.
+
+fn main() {
+    let a = Rc::new(Cons(5, RefCell::new(Rc::new(Nil))));
+
+    println!("a initial rc count = {}", Rc::strong_count(&a));
+    println!("a next item = {:?}", a.tail());
+
+    // join a to b's tail
+    let b = Rc::new(Cons(10, RefCell::new(Rc::clone(&a))));
+
+    println!("a rc count after b creation = {}", Rc::strong_count(&a));
+    println!("b initial rc count = {}", Rc::strong_count(&b));
+    println!("b next item = {:?}", b.tail());
+
+    // create a 'reference cycle' by joining b back to a's tail
+    if let Some(link) = a.tail() {
+        *link.borrow_mut() = Rc::clone(&b);
+    }
+
+    println!("b rc count after changing a = {}", Rc::strong_count(&b)); // 2
+    println!("a rc count after changing a = {}", Rc::strong_count(&a)); // 2
+
+    // Uncomment the next line to see that we have a cycle;
+    // it will overflow the stack
+    //println!("a next item = {:?}", a.tail());
+    //thread 'main' has overflowed its stack
+    //fatal runtime error: stack overflow
+    //Aborted (core dumped)
+}
+// memory leak after this
+// b will be dropped first, which decrease the rc count by 1
+// but a still referencing to b, so the memory Rc<List> has on the heap wont be dropped, it will
+// sit there with count of 1, forever
+// Rc<T> is cleaned up only when its strong_count is 0
+// (memory leak)
+
+If you have RefCell<T> values that contain Rc<T> values or similar nested combinations of types with interior mutability and reference counting, you must ensure that you don’t create cycles.
+
+---
+Preventing Reference Cycles
+Turning Rc<T> into Weak<T>
+
+Rc::downgrade(&Rc<T>) to obtain Weak pointer
+This increases weak_count by 1
+Rc<T> uses weak_count to keep track of Weak<T> references
+weak_count doesnt need to be 0 for Rc<T> instance to be cleaned up
+
+Weak is a version of Rc that holds a 'non-owning reference' to the managed allocation. The allocation is accessed by calling `upgrade` on the Weak pointer, which returns an Option<Rc<T>>.
+
+Weak will not prevent the value stored in allocation from being dropped, it makes no guarantees about the value still being present. But it does prevent the allocation itself (reference) from being deallocated.
+
+It is used to prevent circular references between Rc pointers, since mutual owning references would never allow either Rc to be dropped. For example, a tree could have strong Rc pointers from parent nodes to children, and Weak pointers from children back to their parents.
+
+
+------
+Concurrency
+
+Concurrent programming, where different parts of a program execute independently, 
+Parallel programming, where different parts of a program execute at the same time
+
+1. How to create threads to run multiple pieces of code at the same time
+2. Message-passing concurrency, where channels send messages between threads
+3. Shared-state concurrency, where multiple threads have access to some piece of data
+4. The Sync and Send traits, which extend Rust’s concurrency guarantees to user-defined types as well as types provided by the standard library
+
+Rust standard library implements the 1:1 threading model (one operating system thread per one language thread)
+
+---
+1. Thread that run multiple pieces of code at the same time
+
+Potential problems:
+a. Race conditions, where threads are accessing data or resources in an inconsistent order
+b. Deadlocks, where two threads are waiting for each other to finish using a resource the other thread has, preventing both threads from continuing
+c. Bugs that happen only in certain situations and are hard to reproduce and fix reliably
+
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+    // spawn returns a thread::JoinHandle
+    let handle = thread::spawn(|| { // runs separately, no guarantees pf getting completed
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+
+    // if put here means, will run finish the above spawned thread first before the below
+    handle.join().unwrap();
+
+    for i in 1..5 {
+        println!("hi number {} from the main thread!", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+
+    // main thread waits for the spawned thread is finished
+    //handle.join().unwrap();
+}
+
+fn thread_outlive(){
+    let v = vec![1, 2, 3];
+
+    // we use the `move` keyword to move `v` inside the thread
+    // becoz a thread might outlive the the borrowed v 
+    let handle = thread::spawn(move || {
+        println!("Here's a vector: {:?}", v);
+    });
+
+    //println!("v not here anymore {:?}", v);
+
+    handle.join().unwrap();
+}
+
+//The join handle will implicitly detach the child thread upon being dropped. In
+//this case, the child thread may outlive the parent (unless the parent thread
+//is the main thread)
+
+// join method is to join (the child thread to this function returning?)
+// In other words, all operations performed by that thread are ordered before all operations that happen after join returns.
+
+--
+2. Message-passing concurrency, where channels send messages between threads
+
+for e.g. one thread to generate values and send them down a channel, and another thread that will receive the values and print them out.
+
+std::sync::mpsc::channel
+mpsc - multiple producer, single consumer
+
+fn main() {
+    // tx - struct Sender
+    // rx - struct Receiver
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || { // use move to own tx
+        let val = String::from("hi");
+        tx.send(val).unwrap();
+    });
+
+    //drop(tx);
+
+    let received: String = rx.recv().unwrap(); 
+    // recv() will block and wait until a value is sent down - 
+    // 1. if nothing is sent, will block indefinitely
+    // 2. if tx is dropped (closed), will return err
+    //
+    println!("Got: {}", received);
+    //let received: String = rx.try_recv().unwrap(); 
+    // try_recv() will NOT block and return immediately
+    //
+    
+    //sending_mul_values();
+
+    mul_senders();
+}
+
+fn mul_senders(){
+    // or multple producers
+    let (tx, rx) = mpsc::channel();
+
+    let tx1 = mpsc::Sender::clone(&tx);
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx1.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("more"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+        ];
+
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    // output order from the threads are non deterministic
+    for received in rx { // rx implements Trait IntoIterator
+        println!("Got: {}", received);
+    }
+}
+
+-------
+3. Shared-state concurrency, where multiple threads have access to some piece of data
+Mutex - mutual exclusion
+will block threads waiting for the lock to become available
+
+Mutex<T> is a smart pointer
+
+use std::sync::Mutex;
+
+fn main() {
+    let m = Mutex::new(5);
+
+    {
+        // lock() returns smart pointer MutexGuard wrapped in LockResult 
+        // the MutexGuard implements Deref and Drop
+        // Deref to point to inner data; Drop to release lock when MutexGuard goes
+        // out of scope
+        let mut num = m.lock().unwrap();
+        *num = 6;
+    }
+
+    println!("m = {:?}", m);
+}
+
+lock is blocking
+try_lock is non blocking
+
+can use try_lock to mitigate situations where two threads are waiting for each other to acquire one more lock 
+
+--
+Multiple threads ownerships
+
+Rc<T> is for single-threaded reference-counting only, it's not safe to share across threads. It doesn’t use any concurrency primitives to make sure that changes to the count can’t be interrupted by another thread 
+
+We use Atomic Reference Counter (Arc <T>) in concurrent situations.
+
+Atomics are concurrency primitives
+std::sync::atomic (module, notice the small caps) which implements the Sync trait
+
+std:marker::Sync
+Types for which it is safe to share references between threads.
+file:///home/alvinvoo/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/std/marker/trait.Sync.html
+
+Standard library types arent implemented to use Arc<T> by default becoz thread safety comes with a performance penalty.
+
+fn multi_owners() {
+    // use Arc instead of Rc for atomic thread safety
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        //&counter is borrowed immutably by Arc's clone
+        //remember clone increases the counter
+        //but Mutex allows *num to be modified mutably, as the Cell family does
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("Result: {}", *counter.lock().unwrap());
+}
+
+--------
+4. The Sync and Send traits
+Transference of Ownership Between Threads with Send
+
+std::marker::Send (for transference)
+Send marker trait indicates that ownership of the type implementing Send can be transferred between threads. 
+Almost every Rust type is Send, but there are some exceptions, including Rc<T>: 
+This cannot be Send because if you cloned an Rc<T> value and tried to transfer ownership of the clone to another thread, _both threads might update the reference count at the same time_. 
+Rc<T> is for single thread usage where we dont want to pay the thread-safe performance penalty
+
+std::marker::Sync (for reference)
+The Sync marker trait indicates that it is safe for the type implementing Sync to be referenced from multiple threads.
+Any type T is Sync if &T (a reference to T) is Send, meaning the reference can be sent safely to another thread
+T - Sync if
+&T - Send -> can be sent to another thread
+Exception:
+Rc<T>, RefCell<T>, Cell<T>
+Mutex<T> is Sync but need to be placed in Arc
+
+--------
+Trait object
+
+dyn is a prefix of a trait object's type
+different from impl Trait (for <some struct>), the compiler doesnt know the concrete type being passed
+contains 2 pointers, 1 to the data (instance of the <some struct>)
+another 1 to a map of method call names to function points (virtual method table or v table)
+at run-time, when a method needs to be called on the dyn Trait, the vtable is consulted to get the function pointer and then that function pointer is called.
+
+Box<dyn Trait> - means the 2 points are on allocated the heap (Box)
+
+The indirection adds runtime cost. Methods called by dynamic dispatch generally cannot be inlined by the compiler.
+
+The code that results from monomorphization is doing static dispatch, which is when the compiler knows what method you’re calling at compile time. This is opposed to dynamic dispatch, which is when the compiler can’t tell at compile time which method you’re calling. In dynamic dispatch cases, the compiler emits code that at runtime will figure out which method to call.
+
+Benefit: For a struct that uses a generic type parameter with trait bounds, a generic type parameter can only be substituted with one concrete type at a time, whereas trait objects allow for multiple concrete types to fill in for the trait object at runtime. 
+--
+pub trait Draw {
+    fn draw(&self);
+}
+
+pub struct Screen {
+    //Box<dyn Draw> is a trait object
+    pub components: Vec<Box<dyn Draw>>,
+}
+
+// final `run` method to draw everything on Screen
+impl Screen {
+    pub fn run(&self) {
+        for component in self.components.iter() {
+            component.draw(); // component can be any Struct that implements Draw
+        }
+    }
+}
+
+// the components in Screen MUST implement the Draw trait; else compile time
+// error
+
+struct SelectBox {
+    width: u32,
+    height: u32,
+    options: Vec<String>,
+}
+
+impl Draw for SelectBox {
+    fn draw(&self) {
+        // code to actually draw a select box
+    }
+}
+
+fn main() {
+    let screen = Screen {
+        components: vec![
+            // the values here MUST implement the traits that the trait objects need
+            Box::new(SelectBox {
+                width: 75,
+                height: 10,
+                options: vec![
+                    String::from("Yes"),
+                    String::from("Maybe"),
+                    String::from("No"),
+                ],
+            }),
+            Box::new(Button {
+                width: 50,
+                ...
+            }),
+        ],
+    };
+
+    // when trait object is used
+    // due to dynamic dispatch, Rust no longer knows the concrete type
+    // that's implementing this trait
+    screen.run();
+}
+
+---
+A trait is object safe if all the methods defined in the trait have the following properties:
+
+1. The return type isn’t Self. (who is Self?)
+2. There are no generic type parameters. (what is the type?)
+
+Becoz one a trait object is used, Rust no longer knows the concrete type that's implementing the trait (dynamic dispatch at runtime)
+
+----
+State patterns (OOP concept)
+//The advantages of the state pattern: each method on State Object is the same no matter its state value. Each state is responsible for its own rules.
+// reminds me of FSM?
+
+VS
+Encoding state into the type system (more Rust style)
+
+see the 2 examples - blog_oop_style vs blog_rust_style_2
+
+------
+Patterns and Matching
+A pattern consists of some combination of the following:
+
+1. Literals
+2. Destructured arrays, enums, structs, or tuples
+3. Variables
+4. Wildcards
+5. Placeholders
+
+--
+if let - shorter way to write match that matches only one case
+else if
+else if let
+
+    if let Some(color) = favorite_color {
+        println!("Using your favorite color, {}, as the background", color);
+    } else if is_tuesday {
+        println!("Tuesday is green day!");
+    } else if let Ok(age) = age {
+        if age > 30 {
+            println!("Using purple as the background color");
+        } else {
+            println!("Using orange as the background color");
+        }
+    } else {
+        println!("Using blue as the background color");
+    }
+
+--
+while let
+    let mut stack = Vec::new();
+
+    stack.push(1);
+    stack.push(2);
+    stack.push(3);
+
+    while let Some(top) = stack.pop() { // continues to run as long as matches Some(*)
+        println!("{}", top);
+    }
+
+--
+for .. in ..
+    let v = vec!['a', 'b', 'c'];
+
+    for (index, value) in v.iter().enumerate() {
+        println!("{} is at index {}", value, index);
+    }
+//a is at index 0
+//b is at index 1
+//c is at index 2
+
+--
+let statements pattern
+
+let PATTERN = EXPRESSION;
+let (x, y, z) = (1, 2, 3);
+
+--
+function (or closure) parameters pattern
+fn print_coordinates(&(x, y): &(i32, i32)) {
+    println!("Current location: ({}, {})", x, y);
+}
+
+fn main() {
+    let point = (3, 5);
+    print_coordinates(&point);
+}
+
+------
+Patterns come in two forms: refutable and irrefutable.
+1. Patterns that will match for any possible value passed are irrefutable.
+    for e.g. let statements
+        we cannot have this: let Some(x) = some_option_value; 
+        becoz some_option_value might be None
+        let statements must use irrefutable pattern
+        nor this:
+            if let x = 5 { // match arms must use refutable pattern, except for last arm, which
+                should match any remaining values with irrefutable pattern
+                println!("{}", x);
+            };
+2. Patterns that can fail to match for some possible value are refutable.
+
+--
+Match ranges of values with ..=
+
+    let x = 5;
+
+    match x {
+        1..=5 => println!("one through five"), // it's like 1 | 2 | 3 | 4 | 5 (inclusive of 5)
+        _ => println!("something else"),
+    }
+
+    // Ranges are only allowed with numeric or char values
+    let x = 'c';
+
+    match x {
+        'a'..='j' => println!("early ASCII letter"),
+        'k'..='z' => println!("late ASCII letter"),
+        _ => println!("something else"),
+    }
+
+---
+Destructuring to break apart values
+
+Structs:
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn main() {
+    let p = Point { x: 0, y: 7 };
+
+    let Point { x: a, y: b } = p;
+    assert_eq!(0, a);
+    assert_eq!(7, b);
+
+//  below is a more convenient shorthand
+//  let Point { x, y } = p;
+//  assert_eq!(0, x);
+//  assert_eq!(7, y);
+}
+
+let p = Point { x: 0, y: 7 };
+
+match p {
+    Point { x, y: 0 } => println!("On the x axis at {}", x), // we can match literal values as well
+    Point { x: 0, y } => println!("On the y axis at {}", y),
+    Point { x, y } => println!("On neither axis: ({}, {})", x, y),
+}
+
+Enums:
+enum Color {
+    Rgb(i32, i32, i32),
+    Hsv(i32, i32, i32),
+}
+
+enum Message {
+    Quit,
+    Move { x: i32, y: i32 },
+    Write(String),
+    ChangeColor(Color),
+}
+
+// destructuring nested enums
+fn main() {
+    let msg = Message::ChangeColor(Color::Hsv(0, 160, 255));
+
+    match msg {
+        Message::ChangeColor(Color::Rgb(r, g, b)) => println!(
+            "Change the color to red {}, green {}, and blue {}",
+            r, g, b
+        ),
+        Message::ChangeColor(Color::Hsv(h, s, v)) => println!(
+            "Change the color to hue {}, saturation {}, and value {}",
+            h, s, v
+        ),
+        _ => (),
+    }
+}
+
+--
+the underscore
+
+    let s = Some(String::from("Hello!"));
+
+    if let Some(_s) = s { // the s value will still be moved into _s
+        println!("found a string");
+    }
+
+    //println!("{:?}", s); // this is invalid: s doesnt exist here anymore
+
+-
+    let s = Some(String::from("Hello!"));
+
+    if let Some(_) = s { // but using _ by itself doesnt bind to the value; here s doesnt get moved
+        println!("found a string");
+    }
+
+    println!("{:?}", s);
+
+--
+the .. (to ignore rest of values)
+
+    struct Point {
+        x: i32,
+        y: i32,
+        z: i32,
+    }
+
+    let origin = Point { x: 0, y: 0, z: 0 };
+
+    match origin {
+        Point { x, .. } => println!("x is {}", x),
+    }
+
+--
+Match Guards
+additional 'if' condition specified after the pattern in a match arm
+match guard 'if conditional..' is NOT a pattern, and doesnt introduce new variables
+
+    let num = Some(4);
+
+    match num {
+        Some(x) if x < 5 => println!("less than five: {}", x),
+        Some(x) => println!("{}", x),
+        None => (),
+    }
+
+@ at operator lets us create a variable that holds a value at the same time we’re testing that value to see whether it matches a pattern. i.e. saved the `id` value in a variable
+
+    enum Message {
+        Hello { id: i32 },
+    }
+
+    let msg = Message::Hello { id: 5 };
+
+    match msg {
+        Message::Hello {
+            id: id_variable @ 3..=7, 
+            // will test whether id is in range 3..=7 while bind it to id_variable
+            // can shorthand to: id @ 3..=7
+        } => println!("Found an id in range: {}", id_variable),
+        Message::Hello { id: 10..=12 } => { // didnt save the value
+            println!("Found an id in another range")
+        }
+        Message::Hello { id } => println!("Found some other id: {}", id), // matching pattern, hence the id can be reused
+    }
+-----------------
+Unsafe Rust
+
+unsafe keyword with a new block, which grants the ability to use below 5 unsafe operations:
+1. Dereference a raw pointer
+2. Call an unsafe function or method
+3. Access or modify a mutable static variable
+4. Implement an unsafe trait
+5. Access fields of unions
+
+unsafe doesnt turn off borrow check or any Rust safety checks, it only grants access to the above
+5 features (which are not checked by the compiler for memory safety)
+
+Wrapping unsafe code in a safe abstraction prevents uses of unsafe from leaking out into all the places that you or your users might want to use the functionality implemented with unsafe code, because using a safe abstraction is safe.
+
+--
+1. Dereference a Raw Pointer 
+Raw pointers (or called Primitive Type pointer)
+ 
+file:///home/alvinvoo/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/std/primitive.pointer.html
+immutable - *const T  (The asterisk is part of the type name)
+mutable - *mut T
+
+properties:
+1. Are allowed to ignore the borrowing rules by having both immutable and mutable pointers or multiple mutable pointers to the same location
+2. Aren’t guaranteed to point to valid memory
+3. Are allowed to be null
+4. Don’t implement any automatic cleanup
+
+    let mut num = 5;
+
+    // we can use both immutable and mutable together with raw pointers
+    let r1 = &num as *const i32;  // casting to raw pointers
+    let r2 = &mut num as *mut i32; // these 2 raw pointers are vaild becoz they are created directly from references
+
+we can create raw pointers in safe code but we can't dereference raw pointers outside of unsafe block
+
+2. Calling Unsafe function 
+look at unsafe_rust repo
+--
+Externs:
+// external functions are unsafe by default since Rust cannot verify thier safety
+// Within the extern "C" block, we list the names and signatures of external functions from another language we want to call. The "C" part defines which application binary interface (ABI) the external function uses: the ABI defines how to call the function at the assembly level.
+
+extern "C" {
+    fn abs(input: i32) -> i32;
+}
+
+fn main() {
+    unsafe {
+        println!("Absolute value of -3 according to C: {}", abs(-3));
+    }
+}
+
+-
+How to call Rust functions from C:
+// We make the call_from_c function accessible from c code, after it’s compiled to a shared library and linked from c:
+// No mangling tells Rust compiler not to mangle(change) the function name 
+#[no_mangle]
+pub extern "c" fn call_from_c() {
+    // no unsafe here: coz its Rust functions
+    println!("just called a rust function from c!");
+}
+
+-------
+3. Accessing or Modifying a Mutable Static Variable 
+Global variables are called static variables in Rust
+
+names of static variables are in capital SNAKE_CASE
+
+// static keyword - with 'static lifetime
+static HELLO_WORLD: &str = "Hello, world!";
+
+fn main() {
+    println!("name is: {}", HELLO_WORLD);
+}
+-- 
+// annotate with `mut` and use `unsafe` block to write and read
+// read and write to a global variable might be fine in a single thread; but
+// will have data races when having multi-thread accessing iit
+static mut COUNTER: u32 = 0;
+
+fn add_to_count(inc: u32) {
+    unsafe {
+        COUNTER += inc;
+    }
+}
+
+fn main() {
+    add_to_count(3);
+
+    unsafe {
+        println!("COUNTER: {}", COUNTER);
+    }
+}
+
+// a constant is also a global variable that is valid throughout the program
+// can be copied, but can only be read
+const MAX_POINTS: u32 = 100_000;
+
+4. Implementing an unsafe trait 
+A trait is unsafe when at least one of its methods has some invariant that the compiler can’t verify.
+unsafe trait Foo {
+    // methods go here
+}
+
+unsafe impl Foo for i32 {
+    // method implementations go here
+}
+
+fn main() {}
+
+5. Accessing fields of a Union
+Unions are primary used to interface with unions in C code
+https://doc.rust-lang.org/reference/items/unions.html
+the size of a union is determined by the size of its largest field, it is easy to overwrite existing fields
+
+-----
+Default Generic Type Parameters 
+<PlaceholderType=ConcreteType>
+// for e.g.
+trait Something<T=i32>{
+    ...
+}
+
+module std::ops - Overloadable operators
+implementing these traits allows us to overload some operators
+
+use std::ops::Add;
+/*
+ *
+pub trait Add<Rhs = Self> { // (default type parameters) Rhs generic type by default is Self
+    type Output;
+    fn add(self, rhs: Rhs) -> Self::Output;
+ *
+ */
+
+#[derive(Debug, PartialEq)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+impl Add for Point { // letting Rhs be default; which is Point
+    type Output = Point;
+
+    fn add(self, other: Point) -> Point {
+        Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+fn main() {
+    assert_eq!(
+        Point { x: 1, y: 0 } + Point { x: 2, y: 3 },
+        Point { x: 3, y: 3 }
+    );
+}
+
+------
+Fully Qualified Syntax:
+<Type as Trait>::function(receiver_if_method, next_arg, ...);
+// `receiver_if_method` here refers to &self (if its method)
+
+trait Pilot {
+    fn fly(&self); // this is a method
+}
+
+impl Pilot for Human {
+    fn fly(&self) {
+        ..
+    }
+}
+
+impl Human {
+    fn fly(&self) {
+        println!("*waving arms furiously*");
+    }
+}
+
+let person = Human;
+Pilot::fly(&person); // explicitly specifying which trait method we want to call 
+
+--
+trait Animal {
+    fn baby_name() -> String; // this is a associated function
+}
+
+struct Dog;
+
+impl Dog {
+    fn baby_name() -> String { // type (struct) with the associated function of the same name
+        String::from("Spot")
+    }
+}
+
+impl Animal for Dog {
+    fn baby_name() -> String {
+        String::from("puppy")
+    }
+}
+
+println!("A baby dog is called a {}", Dog::baby_name());
+//println!("A baby dog is called a {}", Animal::baby_name()); // Animal is a trait; so cannot infer type here
+println!("A baby dog is called a {}", <Dog as Animal>::baby_name());// fully qualified syntax to specify that we want baby_name function from Animal trait as implemented on Dog
+
+----------
+Supertraits
+
+use std::fmt;
+
+trait OutlinePrint: fmt::Display { // Display here is the supertrait such that OutlinePrint can use to_string
+    fn outline_print(&self) {
+        let output = self.to_string();
+        let len = output.len();
+        println!("{}", "*".repeat(len + 4));
+        println!("*{}*", " ".repeat(len + 2));
+        println!("* {} *", output);
+        println!("*{}*", " ".repeat(len + 2));
+        println!("{}", "*".repeat(len + 4));
+    }
+}
+
+// but type implementing OutlinePrint must implement Display as well (which require the `fmt` method)
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+impl OutlinePrint for Point {} // if just this alone, compiler will complain that it needs to implement trait std::fmt::Display (which requires the `fmt` method)
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+fn main() {
+    //println!("Hello, world!");
+    let p = Point { x: 12, y: 14 };
+
+    p.outline_print();
+}
+
+--------------
+Newtype pattern - to implement external traits on external types
+
+use std::fmt;
+
+struct Wrapper(Vec<String>);// Wrapper here is a Newtype
+
+impl fmt::Display for Wrapper {  // lets say the Display trait and Vec<T> are defined OUTSIDE of our crate; we define a local Wrapper struct to hold Vec<T>, and implement Display on Wrapper which then makes use of the Vec<T> value by accessing the tuple 0 index
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+        write!(f, "[{}]", self.0.join(", "))
+    }
+}
+
+fn main() {
+    let w = Wrapper(vec![String::from("hello"), String::from("world")]);
+    println!("w = {}", w);
+}
+
+any struct with a tuple is a Newtype
+for e.g.
+struct Millimeters(u32);
+
+Newtype benefits:
+1. type safety - statically enforcing value / units of value, couldn't call a function with paramter type Milimeters with u32 or Meter 
+2. encapsulation - abstrcting implementation details of type
+
+----
+Type Aliases (Type synonyms)
+
+type Kilometers = i32;
+Values with type Kilometers will be treated the same as type i32
+
+----
+Never Type
+
+// the function bar returns never.
+// this function can never returns (diverging functions)
+fn bar() -> ! {
+        // --snip--
+}
+
+
+// use cases
+let guess: u32 = match guess.trim().parse() {
+    Ok(num) => num, // match takes u32 as the type of guess
+    Err(_) => continue, // continue has a ! type
+};
+
+impl<T> Option<T> {
+    pub fn unwrap(self) -> T {
+        match self {
+            Some(val) => val,
+            None => panic!("called `Option::unwrap()` on a `None` value"), // panic! has a ! type
+        }
+    }
+}
+
+loop { // loop has a ! type
+    print!("and ever ");
+}
+
+----
+Dynamically Sized Types (DSTs or Unsized types)
+- for values whose sizes we can only know during runtime
+
+str is a DST (not &str, which is a pointer)
+so, we store &str instead of str
+which comprises of the address of str and its length
+the size of a &str at compile time is twice the size of a usize (pointer size + str length?)
+(size of usize = if on a 32 bit target, this is 4 bytes and on a 64 bit target, this is 8 bytes) 
+
+The golden rule of dynamically sized types is that we must always put values of dynamically sized types behind a pointer of some kind.
+
+We can combine str with all kinds of pointers: for example, Box<str> or Rc<str>.
+To use traits as trait objects, we must put them behind a pointer, such as &dyn Trait or Box<dyn Trait> (or Rc<dyn Trait>)
+
+=======
+can pass function pointers (fn) as types
+
+fn add_one(x: i32) -> i32 {
+    x + 1
+}
+
+fn do_twice(f: fn(i32) -> i32, arg: i32) -> i32 {
+    f(arg) + f(arg)
+}
+
+fn main() {
+    let answer = do_twice(add_one, 5);
+
+    println!("The answer is: {}", answer);
+}
+
+difference between closure and fn:
+closure implement Fn trait (which we declare using Fn traits as trait bound)
+fn is a type
+
+Function pointers implement all three of the closure traits (Fn, FnMut, and FnOnce), so you can always pass a function pointer as an argument for a function that expects a closure. It’s best to write functions using a generic type and one of the closure traits so your functions can accept either functions or closures.
+
+enum Status {
+    Value(u32), // this initializer is actually implemented as functions returning an instance
+    Stop,
+}
+
+// so can be used like a function pointer like so
+let list_of_statuses: Vec<Status> = (0u32..20).map(Status::Value).collect();
+
+//[Value(0), Value(1), Value(2), Value(3), Value(4), Value(5), Value(6), Value(7), Value(8), Value(9), Value(10), Value(11), Value(12), Value(13), Value(14), Value(15), Value(16), Value(17), Value(18), Value(19)]
+
+--
+We can return a closure in a Trait object
+
+fn returns_closure() -> Box<dyn Fn(i32) -> i32> {
+    Box::new(|x| x + 1)
+}
+
+------------
+Macros
+
+declartive macros: macro_rules!
+
+procedural macros:
+3 types
+1. custom #[derive] macros (on structs and enums)
+2. Attribute like macros (define custom attributes on any item)
+3. Function like macros
+
+Macros can take a variable number of parameters: println!("hello") or println!("hello {}", name);
+Macro gets expanded before being compiled
+
+Downside: Marco definition more complex than function definition
+
+--
+Declarative macros:
+// works like match pattern
+// vec! macro
+#[macro_export]
+macro_rules! vec {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x);
+            )*
+            temp_vec
+        }
+    };
+}
+
+#[macro_export] annotation indicates that this macro should be made available whenever the crate in which the macro is defined is brought into scope. 
+
+the structure in the vec! body is similar to the structure of a match expression
+the `( $( $x:expr ),* )` is an arm pattern
+if the pattern matches, the associated block of code will be emitted
+
+Macro pattern syntax (different than ordinary Rust value pattern syntax)
+https://doc.rust-lang.org/reference/macros-by-example.html
+
+look at /macros code
+Rust will have newer declarative macro syntax in future
+
+--
+Procedural macros
+Act more like functions
+Accept code as input, operate on code and product some code as output
+
+use proc_macro;
+
+#[some_attribute]
+pub fn some_name(input: TokenStream) -> TokenStream {
+}
+
+1. Custom Derive Macro
+One an user's struct derived from this Macro Trait, it will get a default implmentation of the Macro Trait's function
+
+Much like #[derive(Debug)] will gives us the ? fmt for custom struct / enum
+file:///home/alvinvoo/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/std/fmt/trait.Debug.html
+
+*Rust doesnt have reflection capabilities, it cannot look up type's name at runtime
+*Macro generates code at compile time
+
+Nuance: Procedural Macros need to be in their own crate
+Convention for structuring crates and macro crates
+
+project/
+crate `foo/`
+  ->custom derive procedural macro crate `foo_derive/`
+
+Rust crates needed to manipulate code
+1. proc_macro - compiler's API - to read and manipulate code
+2. syn - parse Rust code from a string into a data structure
+https://docs.rs/syn/1.0.54/syn/index.html
+data structure is here syn::DeriveInput
+3. quote - turns syn data structures back into Rust code
+https://docs.rs/quote/1.0.7/quote/macro.quote.html
+
+see hello_macro/ repo
+
+
+2. Attribute-like Macros
+Instead of generating code for derive attribute, allow to create new attributes
+Can be applied to other items, such as functions
+
+#[route(GET, "/")] // #[route] is a procedural macro
+fn index() {
+    ..
+}
+
+// signature
+#[proc_macro_attribute] // instead of `derive`, its attribute
+pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
+// attr is the: GET, "/" part, item is the: fn index() {..} part
+
+
+3. Function-like Macros
+Define macros that looks like function calls, much like macro_rules! macros
+but instead of only match-like syntax, it takes a TokenStream and manipulates the TokenStream like proc_macro codes
+
+// can do much complicated checking and processing
+let sql = sql!(SELECT * FROM posts WHERE id=1);
+
+// signature
+#[proc_macro]
+pub fn sql(input: TokenStream) -> TokenStream {
+    ..
+}
+
+=====
+HTTP request
+Method Request-URI HTTP-Version CRLF
+headers CRLF
+message-body
+
+HTTP response
+HTTP-Version Status-Code Reason-Phrase CRLF
+headers CRLF
+message-body
+
+// HTTP response with status code 200, an OK reason, no headers and no body
+HTTP/1.1 200 OK\r\n\r\n
+
+
+---
+Thread Pool
+A thread pool is a group of spawned threads that are waiting and ready to handle a task. When the program receives a new task, it assigns one of the threads in the pool to the task, and that thread will process the task.
+A thread pool allows you to process connections concurrently, increasing the throughput of your server.
+
+== queue == [ pool with N threads ] 
+we can process up to N requests concurrently
+
+other options:
+1. fork/join model
+2. single-threaded async I/O model
+
+
+TDD
+Compiler-Driven Development 
+- basically write the client interface first before designing the public API
+- and let the compiler throw us errors in order to guide us
+
+
+
+
+
+
+
+=====
+RAII - Resource acquisition is initialization
+programming idiom
+In RAII, holding a resource is a class invariant, and is tied to object lifetime: resource allocation (or acquisition) is done during object creation (specifically initialization), by the constructor, while resource deallocation (release) is done during object destruction (specifically finalization), by the destructor. In other words, resource acquisition must succeed for initialization to succeed.
+
+question:
+what's the different between module std::slice vs Primitive Type slice?
+
+
+AST
+Abstract Syntax Tree
+how does AST works
+https://www.twilio.com/blog/abstract-syntax-trees
+
+Input -> 1. Lexical Analysis -> Tokens -> 2. Syntax Analysis -> AST -> 3. Code Generation 
+
+1. Lexical Analysis (aka Tokenization)
+Code being converted into a set of tokens (like text being broken down into words)
+
+isPanda('🐼');
+// converts into
+[
+    { type: 'Identifier', value: 'isPanda' },
+    { type: 'Punctuator', value: '(' },
+    { type: 'String', value: "'🐼'" },
+    { type: 'Punctuator', value: ')' },
+]
+
+2. Syntax Analysis (aka Parsing)
+Turning our list of tokens into data structure
+// different langauge has different AST format
+{
+ "type": "Program",
+ "start": 0,
+ "end": 14,
+ "body": [
+   {
+     "type": "ExpressionStatement",
+     "start": 0,
+     "end": 14,
+     "expression": {
+       "type": "CallExpression",
+       "start": 0,
+       "end": 13,
+       "callee": {
+         "type": "Identifier",
+         "start": 0,
+         "end": 7,
+         "name": "isPanda"
+       },
+       "arguments": [
+         {
+           "type": "Literal",
+           "start": 8,
+           "end": 12,
+           "value": "🐼",
+           "raw": "'🐼'"
+         }
+       ]
+     }
+   }
+ ],
+ "sourceType": "module"
+}
+
+3. Code generation
+Once we have AST, we can manipulate it as well as 'printing' it into different type of code (transpiler / compiler for JavaScript / Machine Code etc)
+
+This is more easily achieved with an AST because different outputs might have different formats for the same structure. It would be more difficult to generate the output with a more linear input like text or a list of tokens.
+
+checkout examples at https://astexplorer.net/
+
+
+
+--------
+Tokio
+
+async/await 
+
+Rust's async operations are lazy
+
+
+async fn say_world() {
+    println!("world");
+}
+
+#[tokio::main]
+async fn main() {
+    // Calling `say_world()` does not execute the body of `say_world()`.
+    let op = say_world();
+
+    // This println! comes first
+    println!("hello");
+
+    // Calling `.await` on `op` starts executing `say_world`.
+    op.await;
+}
+
+-the return value of an `async fn` is an anonymous type that implements the Future trait
+-asynchronous functions must be executed by a runtime
+
+#[tokio::main] function is a macro
+it transform async fn main() into a synchronous fn main() that initializes a runtime instance and executes the async main function.
+
+#[tokio::main]
+async fn main() {
+    println!("hello");
+}
+
+gets transformed into:
+
+fn main() {
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        println!("hello");
+    })
+}
+
+---
+Tokio's asynchronous code allows to work on many task concurrently
+can run many tasks concurrently on a single thread
+

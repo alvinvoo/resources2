@@ -1,0 +1,4 @@
+Microservices are built on the principle of independent and autonomous services, scalability, high cohesion with loose coupling, and fault tolerance. This will introduce challenges including complex administration and configuration. A design pattern is about describing a reusable solution to a problem in a given specific context. 
+
+
+

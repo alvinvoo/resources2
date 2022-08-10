@@ -1,0 +1,287 @@
+GIT:
+When start anew
+git config --global user.name "somebody"
+git config --global user.email "email"
+
+Create .gitignore file to include dir/files to be ignored
+
+initialize empty ".git" repo
+1. git init
+Before you commit/ when you have added new files:
+1. git add .
+Commit to git, -a include all changed files in this commit, -m record a log message
+1. git commit -am "bla bla bla"
+Check status 
+1. git status
+==Should see "nothing to commit, working dir clean"
+Pushing to server
+1. git push heroku master
+
+-------------------------
+
+Steps to push files into repo
+1. git init
+2. git add .
+3. git commit -am "..."
+4. git status
+5. create repo in github 
+6. git remote add <REMOTENAME> <github repo url -- copy from setup> 
+7. git push <REMOTENAME> master
+8. Add readme.md for description if needed
+9. git diff to see any changes I made before commited yet
+
+
+-------------------------
+How to FORK
+1. Go to the desired github page
+2. Click the 'Fork' button on top right
+3. The project will be copy on to my account
+4. Copy the URL
+5. git clone <said URL..>, this will create the project folder, so beware of this
+6. Add back the original github, i.e. parent as remote upstream - git remote add upstream <GITHUB URL>
+
+-------------------------
+GitHub pages
+
+https://help.github.com/articles/configuring-a-publishing-source-for-github-pages/
+
+------------------------
+Pull changes when the branch has been changed by a collaborator
+
+Check Git status
+git status
+Pull in changes from a remote branch
+git pull <REMOTENAME> <REMOTEBRANCH>
+See changes to the remote before you pull in
+git fetch --dry-run
+
+-------------------------
+Pull request
+-Once I have pushed a branch to a fork and made changes to the branch
+-Go to the original github page, i will see the green button to compare & pull request
+-Original author will review and merge if no issue.
+
+-------------------------
+Cleaning up unused branch
+-Switch back to main branch (not the my feature branch with changes just now)
+git checkout <MAIN BRANCH NAME>
+-merge my branch with this main branch
+git merge <BRANCHNAME>
+-delete my feature branch
+git branch -d <BRANCHNAME>
+-delete branch on my remote GitHub
+git push <REMOTENAME> --delete <BRANCHNAME>
+
+lastly,
+-pull from original upstream where the pull request was merged
+git pull upstream gh-pages
+-push back the changes to my remote GitHub if i want to sync between the original and my fork
+git push <REMOTE FORK NAME> gh-pages
+
+-------------------------
+How to BRANCH
+You can create and switch to a branch in one line
+git checkout -b <BRANCHNAME>
+Create a new branch
+git branch <BRANCHNAME>
+Move onto a branch
+git checkout <BRANCHNAME>
+List the branches
+git branch
+Rename a branch you're currently on
+git branch -m <NEWBRANCHNAME>
+Verify what branch you're working on
+git status
+
+
+------------------------
+useful commands:
+1. in the git enabled folder, 
+git config -l to see all configurations
+2. git remote -v to see all remotes
+3. To force remove local changes, do `git checkout -f`
+
+------------------------------------
+Configuring Git
+
+Check Git version
+git --version
+Set your name
+git config --global user.name "Your Name"
+Set your email
+git config --global user.email youremail@example.com
+Set your Github account (case sensitive)
+git config --global user.username uSeRnAmE
+Git Basics
+
+Turn Git on for a folder
+git init
+Check status of changes to a repository
+git status
+View changes to files
+git diff
+Add a file's changes to be committed
+git add <FILENAME>
+To add all files changes
+git add .
+To commit (aka save) the changes you've added with a short message describing the changes
+git commit -m "your commit message"
+Copy a repository to your computer
+git clone <URL>
+Git Branches
+
+Create a new branch
+git branch <BRANCHNAME>
+Move onto a branch
+git checkout <BRANCHNAME>
+You can create and switch to a branch in one line
+git checkout -b <BRANCHNAME>
+List the branches
+git branch
+Rename a branch you're currently on
+git branch -m <NEWBRANCHNAME>
+Git Remotes
+
+Add remote connections
+git remote add <REMOTENAME> <URL>
+Set a URL to a remote
+git remote set-url <REMOTENAME> <URL>
+View remote connections
+git remote -v
+Pulling in Git
+
+Pull in changes
+git pull
+Pull in changes from a remote branch
+git pull <REMOTENAME> <REMOTEBRANCH>
+See changes to the remote before you pull in
+git fetch --dry-run
+Push & Merge in Git
+
+Push changes
+git push <REMOTENAME> <BRANCHNAME>
+Merge a branch into current branch
+git merge <BRANCHNAME>
+Deleting Remotes and Branches in Git
+
+Delete a local branch
+git branch -D <BRANCHNAME>
+Delete a remote branch
+git push <REMOTENAME> --delete <BRANCHNAME>
+
+-------------------
+
+To list all commits
+git log
+To list details of each commits items
+git log --name-only
+
+--------------------
+
+To untrack file.. lets say you forgot to add .gitignore before commiting
+Step 1: Commit all your changes
+Before proceeding, make sure all your changes are committed, including your .gitignore file.
+
+Step 2: Remove everything from the repository
+To clear your repo, use:
+
+git rm -r --cached .
+rm is the remove command
+-r will allow recursive removal
+–cached will only remove files from the index. Your files will still be there.
+The rm command can be unforgiving. If you wish to try what it does beforehand, add the -n or --dry-run flag to test things out.
+
+Step 3: Re add everything
+git add .
+Step 4: Commit
+git commit -m ".gitignore fix"
+
+----------------------
+
+How to clone just a branch from somebody's repo
+
+git clone <github url> -b <branch name> --single-branch <local folder name>
+
+----------------------
+
+How to reset(undo) commits:
+
+git reset [--mixture|--soft|--hard] HEAD~[nth times]
+
+for e.g. 
+git reset --soft HEAD~1 or git reset --soft HEAD^ for same meaning, soft reset the HEAD of latest commit
+
+DO NOT USE --hard IF YOU DONT KNOW WHAT YOU ARE DOING! Reset hard will delete all the (uncommited) local modified files!
+Local modified files (in your working tree) that are in the index which was hard reset will be deleted!
+
+-https://bronzedemo-registration.liv3ly-staging.com/---
+The first rule to use reset hard is to commit all your changes first
+
+But lets say you have committed a few times with some new 'dubious-experiment' code in the master and you now want to separate out this into new branch BUT reset the master back to before these 'dubious-experiment' code. Check out below.
+
+-----
+  //commit all the changes and  branch out, you will have two branches of same stuffs
+ 
+  git branch dubious-experiment           
+  
+  M---N-----O----P---Q ("master" and "dubious-experiment")
+
+  git checkout master     //switch back to master to prepare to nuke the unwanted dubious-experiments
+
+  # Be careful with this next command: make sure "git status" is
+  # clean, you're definitely on "master" and the
+  # "dubious-experiment" branch has the commits you were working
+  # on first...
+
+  git reset --hard <SHA1sum of commit N> //reset it back to N point
+
+       ("master")
+  M---N-------------O----P---Q ("dubious-experiment")
+
+  git pull # Or something that updates "master" from
+           # somewhere else...
+
+  M--N----R---S ("master")   // continue from there onwards
+      \
+       O---P---Q ("dubious-experiment")
+
+--------------------
+
+How to unstage *files/directories*:
+
+get reset HEAD -- *filename* OR git reset HEAD -- *  <-- ALL
+
+--------------------
+How to remove stuffs from repo that's already committed
+
+add it to .gitignore
+git rm --cache *filename* (be careful!) 
+
+
+
+-------------------
+Use git fetch and git merge instead of git pull (which is essentially the combination of those 2 commands)
+
+1. git fetch upstream master
+2. try some diff as suggested below
+3. once satisfied, git merge upstream/master
+
+----
+
+To compare a local working directory against a remote branch, for example origin/master:
+
+git fetch origin master
+This tells git to fetch the branch named 'master' from the remote named 'origin'.  Git fetch will not affect the files in your working directory; it does not try to merge changes like git pull does.
+git diff --summary FETCH_HEAD
+When the remote branch is fetched, it can be referenced locally via FETCH_HEAD. The command above tells git to diff the working directory files against FETCHed branch's HEAD and report the results in summary format. Summary format gives an overview of the changes, usually a good way to start. If you want a bit more info, use --stat instead of --summary.
+git diff FETCH_HEAD -- mydir/myfile.js
+If you want to see changes to a specific file, for example myfile.js, skip the --summary option and reference the file you want (or tree).
+
+----
+
+To fetch from an open PR,
+
+//fetch into a new branch 'sometestbranch-123'
+git fetch upstream pull/123/head:sometestbranch-123
+
+what's needed here is just the pr number .i.e. 123

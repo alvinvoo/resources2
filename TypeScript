@@ -1,0 +1,236 @@
+Interfaces and Types
+prefer Interfaces for more generic structs
+Type is for specific features
+
+Interfaces:
+interface User {
+  name: string;
+  id: number;
+}
+ 
+class UserAccount {
+  name: string;
+  id: number;
+ 
+  constructor(name: string, id: number) {
+    this.name = name;
+    this.id = id;
+  }
+}
+ 
+const user: User = new UserAccount("Murphy", 1);
+
+--
+Primitive types:
+
+boolean, bigint, null, number, string, symbol, and undefined, which you can use in an interface. 
+TypeScript extends this list with 
+any (allow anything), 
+unknown (ensure someone using this type declares what the type is), 
+never (it’s not possible that this type could happen), and 
+void (a function which returns undefined or has no return value).
+
+--
+Types:
+
+Unions (type)
+type MyBool = true | false;
+
+type WindowStates = "open" | "closed" | "minimized";
+type LockStates = "locked" | "unlocked";
+type PositiveOddNumbersUnderTen = 1 | 3 | 5 | 7 | 9;
+
+// unions provide a way to handle different types
+function getLength(obj: string | string[]) {
+  return obj.length;
+}
+
+
+To learn the type of a variable, use typeof:
+Type 	Predicate
+string 	typeof s === "string"
+number 	typeof n === "number"
+boolean 	typeof b === "boolean"
+undefined 	typeof undefined === "undefined"
+function 	typeof f === "function"
+array 	Array.isArray(a)
+// type of a  is 'object' - array is an object in JS
+
+Generics (type)
+type StringArray = Array<string>;
+type NumberArray = Array<number>;
+type ObjectWithNameArray = Array<{ name: string }>;
+
+interface Backpack<Type> {
+  add: (obj: Type) => void;   // a function
+  get: () => Type;
+}
+ 
+// This line is a shortcut to tell TypeScript there is a
+// constant called `backpack`, and to not worry about where it came from.
+declare const backpack: Backpack<string>;
+ 
+// object is a string, because we declared it above as the variable part of Backpack.
+const object = backpack.get();
+ 
+// Since the backpack variable (Type) is a string, you can't pass a number to the add function.
+backpack.add(23); // wrong
+
+--
+Major difference between Type aliases vs Interfaces are that
+interfaces are open while type aliases are closed
+
+// interfaces can add new properties 
+> interface Kitten { purrs: boolean }
+undefined
+> interface Kitten { colours : boolean }
+undefined
+> let k: Kitten = {purrs:true, colours:false}
+undefined
+> k
+{ purrs: true, colours: false }
+
+// In the other case a type cannot be changed outside of
+// its declaration.
+type Puppy = { // error on Puppy
+  color: string;
+};
+
+type Puppy = { // error on Puppy
+  toys: number;
+};
+
+// 2nd difference is - Type aliases extend via & 
+// while, Interfaces extend via the `extends` keyword
+
+type BirdType = {
+  wings: 2;
+};
+
+interface BirdInterface {
+  wings: 2;
+}
+
+type Owl = { nocturnal: true } & BirdType;
+
+interface Chicken extends BirdInterface {
+  colourful: false;
+  flies: false;
+}
+
+let owl: Owl = { wings: 2, nocturnal: true };
+let chicken: Chicken = { wings: 2, colourful: false, flies: false };
+
+--
+Structural Type System (duck typing)
+
+interface Point {
+  x: number;
+  y: number;
+}
+ 
+function logPoint(p: Point) {
+  console.log(`${p.x}, ${p.y}`);
+}
+ 
+// logs "12, 26"
+const point = { x: 12, y: 26 };  
+// didnt explicitly say what Type is point; but it passes
+logPoint(point);
+
+// only need a subset of the object fields to match
+const rect = { x: 33, y: 3, width: 30, height: 80 };
+logPoint(rect); // logs "33, 3"
+
+// no difference between classes and objects conform to shapes
+class VirtualPoint {
+  x: number;
+  y: number;
+ 
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+}
+ 
+const newVPoint = new VirtualPoint(13, 56);
+logPoint(newVPoint); // logs "13, 56"
+
+--
+More on `unknown` and `never` types
+`unknown` - forces the consumer to think about typing up-front
+
+// return type is `unknown` 
+const jsonParserUnknown = (jsonString: string): unknown => JSON.parse(jsonString);
+
+// forces the user of this function to define it
+const myOtherAccount = jsonParserUnknown(`{ "name": "Samuel" }`);
+myOtherAccount.name; // error - Object is of type `unknown`
+
+// good
+type User = { name: string };
+const myUserAccount = jsonParserUnknown(`{ "name": "Samuel" }`) as User;
+myUserAccount.name;
+
+
+`never` - represent when code logically cannot happen
+
+// const neverReturns: () => never
+const neverReturns = () => {
+  // If it throws on the first line
+  throw new Error("Always throws, never returns");
+};
+
+// If you hover on the type, you see it is a () => never
+// which means it should never happen. These can still be
+// passed around like other values:
+// const myValue: never 
+const myValue = neverReturns();
+
+// Having a function never return can be useful when dealing
+// with the unpredictability of the JavaScript runtime and
+// API consumers that might not be using types:
+
+// const validateUser: (user: User) => boolean 
+const validateUser = (user: User) => {
+  if (user) {
+    return user.name !== "NaN";
+  }
+
+  // According to the type system, this code path can never
+  // happen, which matches the return type of neverReturns.
+  return neverReturns();
+};
+
+// adding another Flower option like 'Tulip' will have
+// error at _exhaustiveCheck, saying Flower is not assignable to type never
+// BECOZ it is possible for default to return with this extra flower option
+enum Flower {
+  Rose,
+  Rhododendron,
+  Violet,
+  Daisy,
+}
+
+const flowerLatinName = (flower: Flower) => {
+  switch (flower) {
+    case Flower.Rose:
+      return "Rosa rubiginosa";
+    case Flower.Rhododendron:
+      return "Rhododendron ferrugineum";
+    case Flower.Violet:
+      return "Viola reichenbachiana";
+    case Flower.Daisy:
+      return "Bellis perennis";
+
+    default:
+      const _exhaustiveCheck: never = flower;
+      return _exhaustiveCheck;
+  }
+};
+
+
+
+
+
+

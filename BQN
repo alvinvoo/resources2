@@ -1,0 +1,3339 @@
+https://mlochbaum.github.io/BQN/doc/index.html
+
+Types:
+1.Number
+2.Character (Unicode code point)
+3.Array
+4.Function
+5.1-Modifier
+6.2-Modifier
+7.Namespace
+
+First 3 types are data types and are immutable; the rest are mutable
+Function + the 2 modifiers are operation types
+Other than Array, the 6 other types are atomic types, and their values are called atoms
+
+--
+An atom has depth 0 and does not have shape
+But, primitives promote atoms by enclosing them to get rank-0 or unit array
+For e.g. Rank and Shape
+So an atom can be considered to have same dimensions as unit array: rank 0 and shape ⟨⟩
+
+    3    # Atom , Rank 0, Depth 0
+3
+    <3   # Array (Unit)  , Rank 0, Depth 1
+┌·   
+· 3  
+    ┘
+    '3'  # Atom , Rank 0, Depth 0
+'3'
+
+hierachy
+depth→rank→shape
+
+Unit Array
+A unit array is an array with no axes, Rank 0, Depth 1, Shape ⟨⟩
+same shape as an atom like 137
+    ≢ 123
+⟨⟩
+
+
+Enclose <
+
+
+
+Enclost vs Enlist:
+
+    < "enclose"
+┌·           
+· "enclose"      # wraps it in unit array
+            ┘
+
+Enlist or Pair ⋈ /Z 
+    ⋈ "enlist"    # ⟨𝕩⟩
+⟨ "enlist" ⟩     # wraps it in an array
+
+    "pa" ⋈ "ir"   # ⟨𝕨,𝕩⟩  - dyadic is Pair
+⟨ "pa" "ir" ⟩
+
+    2‿4‿1 ⋈⌜ "north"‿"south"  # Cartesian product
+┌─                             
+╵ ⟨ 2 "north" ⟩ ⟨ 2 "south" ⟩  
+  ⟨ 4 "north" ⟩ ⟨ 4 "south" ⟩  
+  ⟨ 1 "north" ⟩ ⟨ 1 "south" ⟩  
+                              ┘
+
+    ⋈¨ "+-×÷"  # Glyphs to strings
+⟨ "+" "-" "×" "÷" ⟩
+
+    'c' (+⋈-)  1‿2
+⟨ "de" "ba" ⟩
+
+    "e0" <⊸∾ "e1" <⊸∾ "e2" ⋈ "e3"
+⟨ "e0" "e1" "e2" "e3" ⟩
+#breakdown: 
+# Join always join at first-axis
+    "e1" ∾ "e2" ⋈ "e3"
+⟨ 'e' '1' "e2" "e3" ⟩
+# we can enclose it, before joining 
+    (<"e1") ∾ "e2" ⋈ "e3"
+⟨ "e1" "e2" "e3" ⟩
+# which is same as enlisting it, before joining
+    ⟨"e12"⟩ ∾ "e2" ⋈ "e3"
+⟨ "e12" "e2" "e3" ⟩
+    (⋈"e123") ∾ "e2" ⋈ "e3"
+⟨ "e123" "e2" "e3" ⟩
+# but fundamentally different, enlisting will have Rank 1 and a shape; while
+# enclosing have Rank 0 and an empty shape
+≡ (⋈"e123")
+2
+≡ (<"e123")
+2
+= (⋈"e123")
+1
+= (<"e123")
+0
+≢ (⋈"e123")
+⟨ 1 ⟩
+≢ (<"e123")
+⟨⟩
+# tedious way to join a long list; but notice how the multiple trains are working
+    6 (+ <⊸∾ - <⊸∾ × ⋈ ÷) 3
+⟨ 9 3 18 2 ⟩
+# easier way; extract out the Functions as right operand
+    {6𝕏3}¨ +‿-‿×‿÷
+⟨ 9 3 18 2 ⟩
+
+Pair vs Couple
+    "abc" ≍ "def"  # treats arguments as Cells and add a dimension (axis) 
+┌─     
+╵"abc  
+  def" 
+      ┘
+
+    "abc" ⋈ "def"  # treats arguments as elements and add depth
+⟨ "abc" "def" ⟩
+
+
+https://mlochbaum.github.io/BQN/doc/primitive.html
+
+# for spec reference
+https://github.com/mlochbaum/BQN/blob/c747cbab2847d454615712403f495f73823db917/spec/reference.bqn
+-**
+× 	\=  Multiply
+÷ 	\- 	Reciprocal 	Divide
+π 	\p 	Pi
+∞ 	\8 	Infinity
+⋆ 	\+ 	Exponential 	Power
+√ 	\_ 	Square Root 	Root
+' 		Character
+@ 		Null character
+˜ 	\` 	Swap 	Self
+⁼ 	\3 	Undo
+˙ 	\" 	Constant
+∘ 	\j 	Atop
+
+
+Swap ˜ , swap the arguments
+    2 -˜ 'd'  # Subtract from
+'b'
+    +˜ 3      # Add to itself
+6
+    ×˜ 4    # 2 ways to square a number
+16
+    2 ⋆˜ 4
+16
+--
+Undo ⁼ , undo the function
+    √⁼ 4 , undo the √ function, √x = 4, x = ?
+16
+    ⋆⁼ 10, natural e ⋆ ? = 10
+2.302585092994046
+    2 ⋆⁼ 32    # Log base 2
+5
+    2 ⋆ 2 ⋆⁼ 32
+32
+    10 ⋆⁼ 1e4  # Log base 10 of a number in scientific notation
+4
+-
+    2 ⌽ "abcde"
+"cdeab"
+
+    2 ⌽⁼ 2 ⌽ "abcde"
+"abcde"
+
+    ×˜ ¯3
+9
+    ×˜⁼ ×˜ ¯3  # It's not the same!
+3
+
+Undo doesnt always satisfy 𝕩 ≡ 𝔽⁼ 𝔽 𝕩, 
+but it does obey 𝕩 ≡ 𝔽 𝔽⁼ 𝕩
+
+That is, it gives one possible argument that could have been passed to 𝔽, just not necessarily the one that actually was. 
+
+--
+˙ , Constant
+    2 3˙ 4 # turns operand into a constant function that always return the operand
+3
+--
+∘, Atop
+it combine (or compose) 2 functions (or actually AKA 2-trains)
+it produces a derived function which uses the left operand monadically to post-processes the result of the ambivalent right operand.
+
+    3 ×˜∘+ 4  # Square of 3 plus 4
+49
+    -∘(×˜) 5  # Negative square of 5
+¯25
+
+
+--
+Arithmetic
+
+    3‿4‿5‿6 ≤ 5
+⟨ 1 1 1 0 ⟩
+
+    'c' < "acbz"
+⟨ 0 0 0 1 ⟩<∘/˘
+
+    ¯∞‿π‿∞ ≥ @‿'0'‿'?'
+⟨ 0 0 0 ⟩
+
+#Comparisons test for `atomic equality` 
+    +‿-‿×‿÷ = ⊑⟨-⟩
+⟨ 0 1 0 0 ⟩
+
+    'b' ≠ "abacba"
+⟨ 1 0 1 1 0 1 ⟩
+
+--
+Modifiers is NOT function
+Literal (characters and numbers) or a primitive (functions and modifiers), and has a fixed value. Primitive 1-modifiers have superscript characters and 2-modifiers contain unbroken circles. Other primitives are always functions.
+
+Role 	    Types
+Subject 	Number, Character
+Function 	Function
+1-modifier 	1-modifier
+2-modifier 	2-modifier
+
+Every primitive 1-modifer is a superscript character ˜⁼˙, and the remaining array-based modifiers ˘¨⌜´˝`
+
+The 2-modifiers in BQN are the combinators ∘○⊸⟜⊘, the sort-of-combinators ⌾◶⍟, and the not-at-all-combinators ⎉⚇⎊. And the functions that make that unbroken circle rule necessary are written ⌽⍉.
+
+
+
+-**
+"		String
+⟨	\(	Start list
+⟩	\)	End list
+⋄	\;	Separator
+,		Separator
+
+(zoom in if you cannot see the diamond shape ⋄)	
+⋄	,  (and also newline) are completely interchangeable	
+
+⟨
+  "putting"         # This is a comment
+  "a",              # That , wasn't needed
+  "list"
+                    # An extra newline won't hurt anything
+  "on","multiple"   # Two elements here
+  "lines"
+⟩
+
+#		Comment
+‿	\ 	Strand    (\ followed by a space)
+
+ligature ‿ has a higher precedence than either functions or operator
+
+#below 2 expressions are equivalent
+⟨2,+,-⟩
+2‿+‿-
+
+#use brackets to nest ligatures
+    0‿1‿2
+⟨ 0 1 2 ⟩
+    (0‿1)‿2
+⟨ ⟨ 0 1 ⟩ 2 ⟩
+    0‿(1‿2)
+⟨ 0 ⟨ 1 2 ⟩ ⟩
+
+--
+Data types - Number Character Array
+Operation types - Function 1-modifier 2-modifier
+Atom - Number Character, Function 1-modifier 2-modifier
+
+#arithmetic functions are pervasive
+    2 × ⟨0‿2 ⋄ 1‿3‿5⟩
+⟨ ⟨ 0 4 ⟩ ⟨ 2 6 10 ⟩ ⟩
+
+    ⟨ 10, 20‿30 ⟩ + ⟨ 1‿2, 3 ⟩
+⟨ ⟨ 11 12 ⟩ ⟨ 23 33 ⟩ ⟩
+
+-**
+list functions 
+        1-arg   2-args
+≍	\.	Solo	Couple
+∾	\,		    Join To
+⌽	\q	Reverse	Rotate
+
+modifiers
+¨	\2	Each
+´	\5	Fold
+∾	\,	Join	Join To
+
+↕	\d	Range	
+⊸	\h	Bind?	
+
+Couple
+    ≍ 4
+⟨ 4 ⟩
+    2 ≍ 4
+⟨ 2 4 ⟩
+
+Join To (Dyadic)
+Join (Monad)
+
+# Join to combine arguments along first axis
+    ⟨1,2,3⟩ ∾ "abc"
+⟨ 1 2 3 'a' 'b' 'c' ⟩
+
+    0 ∾ ⟨1,2,3⟩
+⟨ 0 1 2 3 ⟩
+
+    "plural" ∾ 's'
+"plurals"
+
+#Notice the difference between couple and join
+⟨1,2⟩ ≍ ⟨3,4⟩
+┌─     
+╵ 1 2  
+  3 4  
+      ┘
+⟨1,2⟩ ≍ ⟨3,4,5⟩
+>𝕩: Elements of 𝕩 must have matching shapes
+
+⟨1,2⟩ ∾ ⟨3,4⟩
+⟨ 1 2 3 4 ⟩
+
+#For arrays with rank 2 or more, arguments will joined "vertically"
+    ⊢ a ← 3 +⌜○↕ 4
+┌─         
+╵ 0 1 2 3  
+  1 2 3 4  
+  2 3 4 5  
+          ┘
+    ⊢ b ← 2‿4 ⥊ ↕8
+┌─         
+╵ 0 1 2 3  
+  4 5 6 7  
+          ┘
+    a ∾ b
+┌─         
+╵ 0 1 2 3  
+  1 2 3 4  
+  2 3 4 5  
+  0 1 2 3  
+  4 5 6 7  
+          ┘
+
+# Join To needs major cells to have same shape
+# in above example major cells (row wise) shape is 4
+    ⊑≢˘2‿4 ⥊ ↕8
+4
+
+Reverse / Rotate
+    ⌽ "drawer"
+"reward"
+    2 ⌽ ⟨0,1,2,3,4⟩
+⟨ 2 3 4 0 1 ⟩
+    ¯1 ⌽ "bcdea"
+"abcde"
+
+--
+like how Reverse move element in a list from front to back
+transpose ⍉ move axis from front to back
+
+   ↕2‿3‿4
+┌─
+╎ ⟨ 0 0 0 ⟩ ⟨ 0 0 1 ⟩ ⟨ 0 0 2 ⟩ ⟨ 0 0 3 ⟩
+  ⟨ 0 1 0 ⟩ ⟨ 0 1 1 ⟩ ⟨ 0 1 2 ⟩ ⟨ 0 1 3 ⟩
+  ⟨ 0 2 0 ⟩ ⟨ 0 2 1 ⟩ ⟨ 0 2 2 ⟩ ⟨ 0 2 3 ⟩
+
+  ⟨ 1 0 0 ⟩ ⟨ 1 0 1 ⟩ ⟨ 1 0 2 ⟩ ⟨ 1 0 3 ⟩
+  ⟨ 1 1 0 ⟩ ⟨ 1 1 1 ⟩ ⟨ 1 1 2 ⟩ ⟨ 1 1 3 ⟩
+  ⟨ 1 2 0 ⟩ ⟨ 1 2 1 ⟩ ⟨ 1 2 2 ⟩ ⟨ 1 2 3 ⟩
+                                          ┘
+   ⍉↕2‿3‿4
+┌─
+╎ ⟨ 0 0 0 ⟩ ⟨ 1 0 0 ⟩
+  ⟨ 0 0 1 ⟩ ⟨ 1 0 1 ⟩
+  ⟨ 0 0 2 ⟩ ⟨ 1 0 2 ⟩
+  ⟨ 0 0 3 ⟩ ⟨ 1 0 3 ⟩
+
+  ⟨ 0 1 0 ⟩ ⟨ 1 1 0 ⟩
+  ⟨ 0 1 1 ⟩ ⟨ 1 1 1 ⟩
+  ⟨ 0 1 2 ⟩ ⟨ 1 1 2 ⟩
+  ⟨ 0 1 3 ⟩ ⟨ 1 1 3 ⟩
+
+  ⟨ 0 2 0 ⟩ ⟨ 1 2 0 ⟩
+  ⟨ 0 2 1 ⟩ ⟨ 1 2 1 ⟩
+  ⟨ 0 2 2 ⟩ ⟨ 1 2 2 ⟩
+  ⟨ 0 2 3 ⟩ ⟨ 1 2 3 ⟩
+                      ┘
+   ≢⍉↕2‿3‿4
+⟨ 3 4 2 ⟩   # moved first axis to back
+
+    ≢ a23456 ← ↕2‿3‿4‿5‿6
+⟨ 2 3 4 5 6 ⟩
+
+    ≢ ⍉ a23456
+⟨ 3 4 5 6 2 ⟩
+
+# but, to exchange multiple axes, use Repeat modifier
+# can use negative power to move axes in other direction, just like how Rotate
+# works on list
+    ≢ ⍉⍟3 a23456
+⟨ 5 6 2 3 4 ⟩
+
+    ≢ ⍉⁼ a23456   # same as ⍉¯1
+⟨ 6 2 3 4 5 ⟩
+   
+   ≢⍉⍟¯1↕2‿3‿4
+⟨ 4 2 3 ⟩
+
+in fact, ≢⍉⍟k a ←→ k⌽≢a
+
+To move axes other than first, use Rank modifier
+    ≢ ⍉⎉3 a23456
+⟨ 2 3 5 6 4 ⟩  # k > 0; transpose only last k axes, in this case 4,5,6
+
+    ≢ ⍉⁼⎉¯1 a23456
+⟨ 2 6 3 4 5 ⟩  # k < 0; ignore first |k axes, in this case, ignore 2
+
+But is not friendly to use when we want to reorder multiple axes, so we have dyadic ⍉
+
+# For each index p←i⊑𝕨 in the left argument, axis i of 𝕩 is used for axis p of the result.
+# think of the 𝕨 as the NEW axes' indices
+    ≢ 1‿3‿2‿0‿4 ⍉ a23456
+⟨ 5 2 4 3 6 ⟩
+# simplify: take 
+indices 0 1 2 3 4    0 1 2 3 4 
+        1 3 2 0 4    2 3 4 5 6
+so, 𝕩's index 0's 2 goes to new axes index 1, index 1's 3, goes to 3, etc
+
+# if we want to specify all axes, the inverse transpose might be more
+# intuitive
+# it directly refer to 𝕩 (old axes) indices (instead of new axes indices)
+    ≢ 1‿3‿2‿0‿4 ⍉⁼ a23456
+⟨ 3 5 4 2 6 ⟩
+
+# BQN extension allows only some axes to be specified, and the remaining
+# unspecified axes will be placed in order into the gaps 
+
+    ≢ 0‿2‿4 ⍉ a23456  # here, only new axes indices 0,2 and 4 are specified
+⟨ 2 5 3 6 4 ⟩ 
+
+    ≢ 2 ⍉ a23456  # Restrict Transpose to the first three axes
+⟨ 3 4 2 5 6 ⟩ # only need to specify new axes index for first axis 2
+
+Interesting to note that, the monadic ⍉, is simply the dyadic Transpose with left argument of (=-1˙)
+   ≢ ⍉ ↕1‿2‿3‿4
+⟨ 2 3 4 1 ⟩
+   ≢(=-1˙)⊸⍉ ↕1‿2‿3‿4
+⟨ 2 3 4 1 ⟩
+
+# notice that (=-1˙) is a fork, it takes the = Rank of 𝕩 and minus it by 1
+1˙ returns constant 1
+so above is essentially ≢ 3⍉ ↕1‿2‿3‿4 ; means move the first one to the last index position of the new axes
+
+--
+Join
+    ∾"time"‿"to"‿"join"‿"some"‿"words"
+"timetojoinsomewords"
+
+Merge (>) does to Couple (≍): a≍b is >a‿b as Join does to Join To: a∾b is ∾a‿b. 
+While Merge and Couple combine arrays (the elements of Merge's argument, or the arguments themselves for Couple) along a new leading axis, Join and Join to combine them along the existing leading axis.
+
+# to join a separator between each words
+# prepend the separator to each string, join, then remove the leading separator
+    1↓∾' '∾¨"time"‿"to"‿"join"‿"some"‿"words"
+"time to join some words"
+
+# as long as the major cells length matches
+    ⊢ m ← (3‿1≍⌜4‿2‿5) ⥊¨ 2‿3⥊↕6
+┌─                                   
+╵ ┌─          ┌─      ┌─             
+  ╵ 0 0 0 0   ╵ 1 1   ╵ 2 2 2 2 2    
+    0 0 0 0     1 1     2 2 2 2 2    
+    0 0 0 0     1 1     2 2 2 2 2    
+            ┘       ┘             ┘  
+  ┌─          ┌─      ┌─             
+  ╵ 3 3 3 3   ╵ 4 4   ╵ 5 5 5 5 5    
+            ┘       ┘             ┘  
+                                    ┘
+    ∾ m  # Join all that together
+┌─                       
+╵ 0 0 0 0 1 1 2 2 2 2 2  
+  0 0 0 0 1 1 2 2 2 2 2  
+  0 0 0 0 1 1 2 2 2 2 2  
+  3 3 3 3 4 4 5 5 5 5 5  
+                        ┘
+
+    ⊢ n ← 2‿4‿6 ×{⟨𝕗,𝕩⟩≍⟨𝕨,𝕨𝔽⌜𝕩⟩} 5‿6‿7‿8
+┌─                           
+╵ ×         ⟨ 5 6 7 8 ⟩      
+  ⟨ 2 4 6 ⟩ ┌─               
+            ╵ 10 12 14 16    
+              20 24 28 32    
+              30 36 42 48    
+                          ┘  
+                            ┘
+
+    ≢¨ n  # Different ranks but compatible shapes
+┌─               
+╵ ⟨⟩    ⟨ 4 ⟩    
+  ⟨ 3 ⟩ ⟨ 3 4 ⟩  
+                ┘
+
+# a multiplication table
+    ∾ n
+┌─               
+╵ × 5  6  7  8   
+  2 10 12 14 16  
+  4 20 24 28 32  
+  6 30 36 42 48  
+                ┘
+
+How to `revert` back a higher rank merged array?
+   d ← 2‿2⥊↕4
+┌─     
+╵ 0 1  
+  2 3  
+      ┘
+   <˘d    # so opposite of > is <˘
+⟨ ⟨ 0 1 ⟩ ⟨ 2 3 ⟩ ⟩
+
+---
+Each
+    ⌽¨ "abcd"‿"ABCDEF"‿"01"
+⟨ "dcba" "FEDCBA" "10" ⟩
+
+    "string"‿"list"‿"array" ∾¨ 's'  # can see Each can apply to both 𝕨 𝕩 arguments
+⟨ "strings" "lists" "arrays" ⟩
+
+    "abc" ≍¨ ⌽ "abc"  #this is like a zip 
+⟨ "ac" "bb" "ca" ⟩
+
+Depth of an array is the greatest level of array nesting it attains, or, put another way, the greatest number of times you can pick an element starting from the original array before reaching an atom
+Depth 2-modifier (⚇) is a generalization of Each that allows diving deeper into an array
+
+    n ← <⎉1⍟2 4‿3‿2‿2⥊↕48
+┌─                                                                         
+╵ ⟨ ⟨ 0 1 ⟩ ⟨ 2 3 ⟩ ⟩     ⟨ ⟨ 4 5 ⟩ ⟨ 6 7 ⟩ ⟩     ⟨ ⟨ 8 9 ⟩ ⟨ 10 11 ⟩ ⟩    
+  ⟨ ⟨ 12 13 ⟩ ⟨ 14 15 ⟩ ⟩ ⟨ ⟨ 16 17 ⟩ ⟨ 18 19 ⟩ ⟩ ⟨ ⟨ 20 21 ⟩ ⟨ 22 23 ⟩ ⟩  
+  ⟨ ⟨ 24 25 ⟩ ⟨ 26 27 ⟩ ⟩ ⟨ ⟨ 28 29 ⟩ ⟨ 30 31 ⟩ ⟩ ⟨ ⟨ 32 33 ⟩ ⟨ 34 35 ⟩ ⟩  
+  ⟨ ⟨ 36 37 ⟩ ⟨ 38 39 ⟩ ⟩ ⟨ ⟨ 40 41 ⟩ ⟨ 42 43 ⟩ ⟩ ⟨ ⟨ 44 45 ⟩ ⟨ 46 47 ⟩ ⟩  
+                                                                          ┘
+    ≡ n
+3
+#n is a 4 x 3 matrix of list of list
+# apply
+    ⌽⚇¯1 n  # equivalent to ⌽¨n and ⌽⚇2 n, reverse the larger list
+┌─                                                                         
+╵ ⟨ ⟨ 2 3 ⟩ ⟨ 0 1 ⟩ ⟩     ⟨ ⟨ 6 7 ⟩ ⟨ 4 5 ⟩ ⟩     ⟨ ⟨ 10 11 ⟩ ⟨ 8 9 ⟩ ⟩    
+  ⟨ ⟨ 14 15 ⟩ ⟨ 12 13 ⟩ ⟩ ⟨ ⟨ 18 19 ⟩ ⟨ 16 17 ⟩ ⟩ ⟨ ⟨ 22 23 ⟩ ⟨ 20 21 ⟩ ⟩  
+  ⟨ ⟨ 26 27 ⟩ ⟨ 24 25 ⟩ ⟩ ⟨ ⟨ 30 31 ⟩ ⟨ 28 29 ⟩ ⟩ ⟨ ⟨ 34 35 ⟩ ⟨ 32 33 ⟩ ⟩  
+  ⟨ ⟨ 38 39 ⟩ ⟨ 36 37 ⟩ ⟩ ⟨ ⟨ 42 43 ⟩ ⟨ 40 41 ⟩ ⟩ ⟨ ⟨ 46 47 ⟩ ⟨ 44 45 ⟩ ⟩  
+                                                                          ┘
+    ⌽⚇¯2 n  # equivalent to ⌽⚇1 n, apply Each twice, reverse larger list and smaller list
+┌─                                                                         
+╵ ⟨ ⟨ 1 0 ⟩ ⟨ 3 2 ⟩ ⟩     ⟨ ⟨ 5 4 ⟩ ⟨ 7 6 ⟩ ⟩     ⟨ ⟨ 9 8 ⟩ ⟨ 11 10 ⟩ ⟩    
+  ⟨ ⟨ 13 12 ⟩ ⟨ 15 14 ⟩ ⟩ ⟨ ⟨ 17 16 ⟩ ⟨ 19 18 ⟩ ⟩ ⟨ ⟨ 21 20 ⟩ ⟨ 23 22 ⟩ ⟩  
+  ⟨ ⟨ 25 24 ⟩ ⟨ 27 26 ⟩ ⟩ ⟨ ⟨ 29 28 ⟩ ⟨ 31 30 ⟩ ⟩ ⟨ ⟨ 33 32 ⟩ ⟨ 35 34 ⟩ ⟩  
+  ⟨ ⟨ 37 36 ⟩ ⟨ 39 38 ⟩ ⟩ ⟨ ⟨ 41 40 ⟩ ⟨ 43 42 ⟩ ⟩ ⟨ ⟨ 45 44 ⟩ ⟨ 47 46 ⟩ ⟩  
+                                                                          ┘
+    ⟨'a',"bc"⟩ ≍⚇0 ⟨2‿3,4⟩ # depth of 0 means apply pervasively
+┌─                                                 
+· ⟨ ⟨ 'a' 2 ⟩ ⟨ 'a' 3 ⟩ ⟩ ⟨ ⟨ 'b' 4 ⟩ ⟨ 'c' 4 ⟩ ⟩  
+                                                  ┘
+
+when n is positive, it means, apply until THIS depth
+
+----
+Fold  \5 (Right fold)
+    +´ 2‿3‿4
+9
+    ×´ 2‿3‿4
+24
+  #alternating sum, execution order from right to left
+    -´ 1‿2‿3‿4‿5
+3
+    1-2-3-4-5
+3
+    ∾´ ⟨ "con", "cat", "enat", "e" ⟩
+"concatenate"
+# but shouldn't need the Each, just Join is enough
+    ∾ ⟨ "con", "cat", "enat", "e" ⟩
+"concatenate"
+
+# can see right fold in action
+    ⋈´ "abcd"
+⟨ 'a' ⟨ 'b' "cd" ⟩ ⟩
+
+    'a' ⋈ 'b' ⋈ 'c' ⋈ 'd'  # Expanded form
+⟨ 'a' ⟨ 'b' "cd" ⟩ ⟩
+
+# left Fold 
+    ⋈˜´ ⌽ "abcd"
+⟨ ⟨ "ab" 'c' ⟩ 'd' ⟩
+Can specify an initial element for Fold: simply pass it as 𝕨
+    +´1‿2‿3
+6
+    5+´1‿2‿3
+11
+    ∾○⥊´ ⟨2‿4≍6‿8,"abcd",0⟩
+⟨ 2 4 6 8 'a' 'b' 'c' 'd' 0 ⟩
+
+    ∾○⥊´ ⟨2‿4≍6‿8,"abcd"⟩
+⟨ 2 4 6 8 'a' 'b' 'c' 'd' ⟩
+# the one-element case, when ∾○⥊ is never applied and can't deshape anything
+    ∾○⥊´ ⟨2‿4≍6‿8⟩
+┌─     
+╵ 2 4  
+  6 8  
+      ┘
+# when initial element, ∾○⥊ is applied at least once (with the initial element
+# 'added' to the end of the list)
+    ⟨⟩ ∾○⥊´ ⟨2‿4≍6‿8⟩
+⟨ 2 4 6 8 ⟩
+
+    "end" ∾○⥊´ ⟨"start","middle"⟩
+"startmiddleend"
+
+A function P can be applied to each element of 𝕩 before operating using 𝕨P⊸F´𝕩, which is equivalent to 𝕨 F´ P¨𝕩
+
+    "STOP" ⌽⊸∾´ "ABCDE"‿"012"‿"abcd"
+"EDCBA210dcbaSTOP"
+
+----
+Insert \6 ˝ (similar to APL ⌿)
+
+    ⊢ tab ← (2+↕5) |⌜ 9+↕3
+┌─       
+╵ 1 0 1  
+  0 1 2  
+  1 2 3  
+  4 0 1  
+  3 4 5  
+        ┘
+
+#Insert works on the leading axis of the argument
+    +˝ tab
+⟨ 9 7 12 ⟩
+
+#sum each row (second axis)
+    +˝˘ tab
+⟨ 2 3 6 5 12 ⟩
+
+# a tricky case
+because +´˘ tab yields the same result but is actually unsound—if tab contains arrays then they will be merged together at the end. Remember that if you want to reduce along one axis of an array but get an array of results out, you should use Insert (possibly adding Each to work on elements instead of cells).
+
+#An Insert 𝔽˝ is roughly equals to {𝕨𝔽´<˘𝕩}
+#but it takes the argument shape into account
+    +´<˘ 0‿4⥊0
+0
+    +˝   0‿4⥊0
+⟨ 0 0 0 0 ⟩
+
+
+    "id" ⋈˝ "row0 "∾"row1 "≍"row2 "
+┌─                                      
+· "row0 " ⟨ "row1 " ⟨ "row2 " "id" ⟩ ⟩  
+                                       ┘
+breakdown:
+    "row0 "∾"row1 "≍"row2 "
+┌─       
+╵"row0   
+  row1   
+  row2 " 
+        ┘
+#and then initial "id" is paired along the first axis
+
+One trick involving Insert is ∾˝, which merges the first two axes of 𝕩 into one long axis.
+
+    ⊢ let ← ("AHW"-'A') +⌜ "aA" +⌜ ↕4
+┌─      
+╎"abcd  
+  ABCD  
+        
+ ·hijk  
+  HIJK  
+        
+ ·wxyz  
+  WXYZ" 
+       ┘
+
+    ∾˝ let
+┌─      
+╵"abcd  
+  ABCD  
+  hijk  
+  HIJK  
+  wxyz  
+  WXYZ" 
+       ┘
+
+    ≢ ∾˝ ↕3‿2‿4
+⟨ 6 4 ⟩
+
+    ≢ ∾˝ ↕0‿2‿4  # The identity is an empty cell
+⟨ 0 4 ⟩
+
+
+----
+Scan `
+    ⌈` 2‿0‿0‿4‿1
+⟨ 2 2 2 4 4 ⟩
+#traverses the array in forward (left to right) rather than reverse index order
+#includes all intermediate results of 𝔽 in its output instead of just the final one
+
+    -` 1‿2‿3‿4‿5
+⟨ 1 ¯1 ¯4 ¯8 ¯13 ⟩
+
+
+Shift  (or called Nudge - when move by 1 cell)
+» - add major cells to beginning
+« - add major cells to end
+
+    0‿0 » 3‿2‿1             # Shift Before
+⟨ 0 0 3 ⟩
+    "end" « "add to the "   # Shift After
+" to the end"
+
+    » "abcd"   # Nudge
+" abc"
+    « 1‿2‿3    # Nudge Back
+⟨ 2 3 0 ⟩
+
+
+
+
+
+--
+e.g.
+how to decode binary string to decimal: e.g. "1001" -> 9
+    2 ⋆ ↕4
+⟨ 1 2 4 8 ⟩
+
+    ⌽2⋆↕4
+⟨ 8 4 2 1 ⟩
+
+    (⌽2⋆↕4) × "1001"-'0'
+⟨ 8 0 0 1 ⟩
+
+    +´ (⌽2⋆↕4) × "1001"-'0'
+9
+
+how about given a list of binary strings?
+    '0' -˜ "01001110"‿"01100101"‿"01110010"‿"01100100"‿"00100001"
+⟨ ⟨ 0 1 0 0 1 1 1 0 ⟩ ⟨ 0 1 1 0 0 1 0 1 ⟩ ⟨ 0 1 1 1 0 0 1 0 ⟩ ⟨ 0 1 1 0 0 1 0 0 ⟩ ⟨ 0 0 1 0 0 0 0 1 ⟩ ⟩
+
+# use Bind ⊸ 	
+# to 'pack' the data
+    # like zip, take atom from LHS to zip with higher rank list on RHS e.g. 'a' ∾ "cd" ..
+    "ab" ∾¨ ⟨ "cd", "ut" ⟩ 
+⟨ "acd" "but" ⟩ 
+    # but, we can 'pack' "ab" as one thing, so "ab" ∾ "cd" instead
+    "ab"⊸∾¨ ⟨ "cd", "ut" ⟩
+⟨ "abcd" "abut" ⟩
+
+    +´¨ (⌽2⋆↕8)⊸×¨ '0' -˜ "01001110"‿"01100101"‿"01110010"‿"01100100"‿"00100001"
+⟨ 78 101 114 100 33 ⟩
+
+   # small breakdown for first element
++´ ⟨ 128 64 32 16 8 4 2 1 ⟩ × ⟨ 0 1 0 0 1 1 1 0 ⟩
+   # =78
+
+
+functions: take 1 or 2 data types as arguments
+modifiers: modify the basic behaviour of function(s)
+
+Precedence	Role	Associativity
+0       	()⟨⟩	    (none)
+1       	‿	        Non-binary
+2       	Modifier	Left-to-right
+3       	Function	Right-to-left
+
+
+--
+Tacit programming
+
+    |∘- 6
+6
+
+    7 |∘- 9
+2
+
+# |∘- is the absolute difference
+    14‿8 |∘- 19‿6
+⟨ 5 2 ⟩
+# sum of absolute differences in the Manhattan distance
+    14‿8 +´∘|∘- 19‿6
+7
+
+-**Combinators
+        1-arg   2-arg
+˜	\`	Self	Swap
+˙	\"	Constant
+∘	\j	Atop
+
+-**Comparisons
+<			    Less Than
+>			    Greater Than
+≠	\/	Length	Not Equals
+=		Rank	Equals
+≤	\<		    Less Than or Equal to
+≥	\>		    Greater Than or Equal to
+
+    3 < 4
+1
+    4 > ∞
+0
+    ∞ < @  # Characters are always considered greater than numbers
+1
+
+    'e' = "George Boole"
+⟨ 0 1 0 0 0 1 0 0 0 0 0 1 ⟩
+
+    +´ 'e' = "George Boole"
+3
+
+    'e' +´∘= "George Boole"  # With a combinator
+3
+
+-- Length and Rank
+# Length - number of elements in a list
+    ≠ "testing"
+7
+    ≠ ⟨⟩
+0
+    ≠ ⟨ π, ∘, "element" ⋄ ⟨'l',1,5,'t'⟩ ⟩
+4
+    ≠ 4
+1
+
+# Rank
+    = 0.5
+0
+    = ↕3
+1
+    = 'a'
+0
+    = "a"
+1
+
+# Depth (≡) gives the recursive nesting depth of its argument: the greatest number of times you can take an element before reaching an atom.
+    ≡ "dream"                  # An ordinary dream
+1
+    ≡ "d"‿"r"‿"e"‿"a"‿"m"      # What if the letters were strings?
+2
+    ≡ ⟨ "d"‿"r"‿"e"‿"a"‿"m" ⟩  # We have to go deeper
+3
+
+-** Whole array comparisons
+≡	\m	Depth	Match
+≢	\M	Shape	Not Match
+
+    "abcd" ≡ "abdd"
+0
+    "abc"‿"de" ≡ "abc"‿"de"
+1
+    2‿3‿4‿2 ≠ 3‿3‿2‿2  # compare individual atoms
+⟨ 1 0 1 0 ⟩
+    2‿3‿4‿2 ≢ 3‿3‿2‿2  # compare whole array
+1
+
+# How to test whether 2 arrays have same length?
+    (≠"string") = ≠"sting"  # yes.. but ugly 
+0
+
+# Introduce another composition modifier
+○	\k	Over
+
+    "string" =○≠ "sting"
+0
+
+Over calls its right operand on each argument individually. The results are then all used as arguments to the left operand. If there's only one argument, Atop and Over turn out to be the same: both of them call the right operand, then the left.
+       Atop
+    𝔽         𝔽
+    |         |
+    𝔾         𝔾
+    |       /   \
+    𝕩      𝕨     𝕩
+
+  𝔽∘𝔾 𝕩     𝕨 𝔽∘𝔾 𝕩     => 𝔽 (𝕨 𝔾 𝕩)
+
+       Over
+
+    𝔽         𝔽
+    |       /   \
+    𝔾      𝔾     𝔾
+    |      |     |    
+    𝕩      𝕨     𝕩
+
+  𝔽○𝔾 𝕩     𝕨 𝔽○𝔾 𝕩    => (𝔾 𝕨) 𝔽 (𝔾 𝕩)
+
+--
+Before and after
+⊸	\h	Before/Bind
+⟜	\l	After/Bind
+
+Before 𝔽⊸𝔾 𝕩, 𝕨 𝔽⊸𝔾 𝕩   # Left 𝔽 executes first
+After 𝔽⟜𝔾 𝕩, 𝕨 𝔽⟜𝔾 𝕩    # Right 𝔾  executes first
+
+https://mlochbaum.github.io/BQN/doc/primitive.html
+
+After	  Before
+2 ⋆⟜- 3	  2  ⋆⊸-  3
+2 ⋆ - 3	  (⋆ 2) - 3
+
+    4 -⊸⌽ " before"  # Rotate to the right by four
+"fore be"
+    4 ⌽⁼  " before"  # Okay this time Undo is better
+"fore be"
+#actually can also be simply
+¯4⌽" before"
+
+# for one argument case, the one argument is used in both input positions
+e.g.
+↕8 gives us eight equally-spaced numbers, but to rescale them we'd want to divide by 8. That's (↕8)÷8, but it's nicer to use Before again.
+
+    ↕⊸÷ 8   #one argument case, same as (↕8)⊸÷8
+⟨ 0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 ⟩
+
+    ¬⊸× ↕⊸÷ 8    #  ¬⊸× is y = x × ( 1 - x)
+⟨ 0 0.109375 0.1875 0.234375 0.25 0.234375 0.1875 0.109375 ⟩
+
+# The below are all same
+Before		    After
+2⊸⋆ 5	2 ⋆ 5	⋆⟜5 2
+
+only slight confusion is the 'After' case, the `5 2` is treated as the 5˙2, with 2 being the data type input
+this 2 only gets used in LHS, hence it becomes
+2 ⋆ 5˙2  = 2 ⋆ 5 = 32
+
+--
+*Side note
+Constant modifier ˙
+
+"hi"˙ 5
+"hi"
+
+4˙5
+4
+
+Swap modifier also exhibit this property
+    "const"˜ 5
+"const"
+    @ "const"˜ 6
+"const"
+
+The modifier ˜ applies its operand function to the arguments, after swapping them around or whatever. In this case, the operand function is a data type (not a function or modifier), so it ignores those arguments
+
+so, the below works, as applying data type as operand will ignore the argument
+    1⊸+ 5 # also (1 5) + 5 = 1 + 5
+6
+    +⟜1 5 # also, 5 + (1 5) = 5 + 1
+6
+
+--
+Exercise:
+
+# how to do tacit programming which accepts 8 as an argument?
+    (↕8) ÷ 7
+⟨ 0 0.1428571428571428 0.2857142857142857 0.4285714285714285 0.5714285714285714 0.7142857142857143 0.8571428571428571 1 ⟩
+
+    -⟜1 8
+7
+
+    ↕⊸÷⟜(-⟜1) 8
+⟨ 0 0.1428571428571428 0.2857142857142857 0.4285714285714285 0.5714285714285714 0.7142857142857143 0.8571428571428571 1 ⟩
+
+# some deconstruction
+    ↕⊸ ÷ ⟜ F 8
+# 8 gets 'dup/bind over' to LHS by middle right bind⟜
+    8 ↕⊸ ÷  F 8
+# 8 ↕⊸ left bind becomes (↕ 8)
+    (↕ 8) ÷  F 8
+    (↕ 8) ÷  7
+
+# the big expression above can also be shorten into a 3-train (a fork)
+    (↕÷-⟜1) 8
+⟨ 0 0.1428571428571428 0.2857142857142857 0.4285714285714285 0.5714285714285714 0.7142857142857143 0.8571428571428571 1 ⟩
+
+# basically execute (f g h) 8 => (f 8) g (h 8)
+# (↕ 8) ÷ ((-⟜1) 8)
+# when a bunch of isolated functions / modifiers are jammed together, the
+# association is from left to right
+--
+the APL ⍴ , shape, reshape operator is split into 
+
+   1-arg   2-arg
+⥊  deshape reshape  (\z)
+≢  shape   not match (\M)
+
+↕4‿5
+┌─                                         
+╵ ⟨ 0 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 2 ⟩ ⟨ 0 3 ⟩ ⟨ 0 4 ⟩  
+  ⟨ 1 0 ⟩ ⟨ 1 1 ⟩ ⟨ 1 2 ⟩ ⟨ 1 3 ⟩ ⟨ 1 4 ⟩  
+  ⟨ 2 0 ⟩ ⟨ 2 1 ⟩ ⟨ 2 2 ⟩ ⟨ 2 3 ⟩ ⟨ 2 4 ⟩  
+  ⟨ 3 0 ⟩ ⟨ 3 1 ⟩ ⟨ 3 2 ⟩ ⟨ 3 3 ⟩ ⟨ 3 4 ⟩  
+                                          ┘
+≢↕4‿5
+⟨ 4 5 ⟩
+
+4‿2⥊↕4‿5
+┌─                 
+╵ ⟨ 0 0 ⟩ ⟨ 0 1 ⟩  
+  ⟨ 0 2 ⟩ ⟨ 0 3 ⟩  
+  ⟨ 0 4 ⟩ ⟨ 1 0 ⟩  
+  ⟨ 1 1 ⟩ ⟨ 1 2 ⟩  
+                  ┘
+⥊4‿2⥊↕4‿5
+⟨ ⟨ 0 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 2 ⟩ ⟨ 0 3 ⟩ ⟨ 0 4 ⟩ ⟨ 1 0 ⟩ ⟨ 1 1 ⟩ ⟨ 1 2 ⟩ ⟩
+
+--
+Train
+BQN trains are same as Dyalog APL with the addition of Nothing (·)
+
+--
+Dot product
+
+
+# uses the Atop ∘ in BQN.. doesnt need a special . syntax like in APL
+1‿2‿3 +´∘× 4‿5‿6
+32
+
+# favourite 3 x 4 matrix
+3‿4⥊↕12
+┌─           
+╵ 0 1  2  3  
+  4 5  6  7  
+  8 9 10 11  
+            ┘
+
+--
+Define ← \[
+A variable cannot be defined twice in the same scope
+
+    pi‿e‿ten ← ⟨ π, ⋆1, 10 ⟩
+⟨ 3.141592653589793 2.718281828459045 10 ⟩
+
+    ten × pi
+31.41592653589793
+
+    three ≍ ten - three ← 3
+⟨ 3 7 ⟩
+
+    three ← 4
+ERROR
+
+Change (Reassign) ↩ \'
+
+    three ↩ 4
+
+    three = 3   # Wait why did I do that
+0
+
+    3 = three ↩ 3
+1
+
+    four ↩ 3    # four isn't defined yet
+ERROR
+
+If you're coming from a typical curly-brace language, you'd say that ← both declares and assigns a variable, while ↩ only assigns it.
+-
+    a ← 4            # First it's a number
+    a
+4
+
+    a ↩ 4‿5‿6        # Now it's a list!
+    a
+⟨ 4 5 6 ⟩
+
+    a ↩ a - 1
+    a
+⟨ 3 4 5 ⟩
+
+    a -↩ 1 # shorthand - modified assignment, looks like -= or +=
+⟨ 2 3 4 ⟩
+
+    a ∾˜↩ 0‿1 # a ← a ∾˜ 0‿1
+⟨ 0 1 2 3 4 ⟩
+
+--
+1‿2 (4⊸-) ∘ ⊣ @
+⟨ 3 2 ⟩
+  
+#remember Atop
+
+   𝔽   (4⊸-)
+   |
+   𝔾   ⊣    # left identity, only return left arg if there's one
+  / \
+ 𝕨   𝕩
+1‿2  @
+--
+#so, how about function with only one argument?
+    a ⌽∘⊣↩ @
+⟨ 4 3 2 1 0 ⟩
+# but BQN has a simpler syntax
+# sort of like a reversed way of saying: "a reversed is"
+    a ⌽↩
+⟨ 0 1 2 3 4 ⟩
+
+    a 4⊸-↩           # And back again
+⟨ 4 3 2 1 0 ⟩
+# no need parentheses on the 2-train (4⊸-) becoz modifiers bind stronger
+than assignment character
+
+# with this
+    -⟜4⌾(¯2⊸↑) a
+⟨ 4 3 2 ¯3 ¯4 ⟩
+# we can reassign like this
+    a -⟜4⌾(¯2⊸↑)↩
+⟨ 4 3 2 ¯3 ¯4 ⟩
+
+
+--
+Role
+
+Spelling	       Role	        Purpose
+lowercase	       Subject	    Argument or operand
+Uppercase	       Function	    Function call or operand
+_leftUnderscore	   1-modifier	1-modifier call
+_twoUnderscores_   2-modifier	2-modifier call
+
+The role only depends on the first character of the name, and the last one if the first one was an underscore.
+
+---
+Variable are case insensitive
+
+three ← 3
+
+ThReE
+3
+
+---
+Function assignment
+
+    Base2 ← +⟜(2⊸×)´∘⌽
+
+    Base2 1‿0‿1‿0
+10
+
+    Base2 "01010001"-'0'
+81
+
+    @ + Base2¨ '0' -˜ "01000010"‿"01010001"‿"01001110"
+"BQN"
+
+--
+    Base2
++⟜(2⊸×)´∘⌽
+
+    base2 ↩ 16   # Change it to a number
+
+    Base2
+16
+
+    Base2 6  # constant function
+16
+
+---
+Modifiers
+⌾	\K	Under (only 2-arg, right arg is a function)
+⊑	\I	First	Pick
+
+⊑ "BQN"
+'B'
+1 ⊑ "BQN"
+'Q'
+
+    ⊢ a ← 'a' + ⥊⟜(↕×´) 4‿5
+┌─       
+╵"abcde  
+  fghij  
+  klmno  
+  pqrst" 
+        ┘
+    2‿0 ⊑ a
+'k'
+    1‿¯1 ⊑ a
+'j'
+
+# Pick accepts a list of indices
+# a is 2D matrix
+    ⟨2‿0, 1‿¯1, 3‿1, ¯1‿¯1⟩ ⊑ a
+"kjqt"
+
+--
+    ⟨2,1,0,¯1⟩ ⊑ "abc"  # 𝕩 doesn't have rank 4! i.e 𝕩 need to be 4D
+ERROR
+
+    ⟨2,1,0,¯1⟩ ⥊¨⊸⊑ "abc"
+"cbac"
+
+#Breakdown
+    (⥊¨⟨2,1,0,¯1⟩) ⊑ "abc"
+#note, ⥊2 = ⟨2⟩
+    ⟨ ⟨ 2 ⟩ ⟨ 1 ⟩ ⟨ 0 ⟩ ⟨ ¯1 ⟩ ⟩ ⊑ "abc"
+"cbac"
+
+    ⟨2,1,0,¯1⟩ ⊏ "abc"  # Better way `⊏` is select 
+"cbac"
+
+    ⟨2‿0, ⟨⟨1‿¯1, 3‿1⟩, ¯1‿¯1⟩⟩ ⊑ a
+⟨ 'k' ⟨ "jq" 't' ⟩ ⟩
+
+    (⟨2‿0, 1‿¯1⟩≍⟨3‿1, ¯1‿¯1⟩) ⊑ a
+┌─    
+╵"kj  
+  qt" 
+     ┘
+
+    (⟨2‿0, <1‿¯1⟩≍⟨<3‿1, ¯1‿¯1⟩) ⊑ a  # `<` is encase
+┌─             
+╵ 'k'   ┌·     
+        ·'j'   
+            ┘  
+  ┌·    't'    
+  ·'q'         
+      ┘        
+              ┘
+---
+difference
+   2‿0⊏↕4‿5 # select major axis
+┌─
+╵ ⟨ 2 0 ⟩ ⟨ 2 1 ⟩ ⟨ 2 2 ⟩ ⟨ 2 3 ⟩ ⟨ 2 4 ⟩
+  ⟨ 0 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 2 ⟩ ⟨ 0 3 ⟩ ⟨ 0 4 ⟩
+                                          ┘
+   2‿0⊑↕4‿5 # pick element
+⟨ 2 0 ⟩
+
+   ⟨<2,<0⟩⊏↕4‿5 # like this also can, but awkward
+┌·
+· ⟨ 2 0 ⟩
+          ┘
+
+
+--
+Under ⌾	
+    8⌾⊑ "BQN"        # Change the first element to 8
+⟨ 8 'Q' 'N' ⟩
+
+↑	\r Prefixes Take
+↓	\c Suffixes Drop
+--
+Use before combinator ⊸ to make a standalone function (2 or 3-train)
+
+2 ↑ "abcde"
+"ab"
+#what if i want to single out (2 ↑) as a function itself?
+Func1 ← 2 ↑
+Second-level parts of a train must be functions
+Func1 ← 2 ↑
+        ^
+# this happens becoz we are defining a 2-train, but `2` here is not a
+# function
+Func2 ← ÷× #this works, 2 functions here
+Func2 100 #take the sign of the right arg and then the reciprocal of it
+1
+2 Func2 5 # 1 ÷ (2 × 5)
+0.1
+
+#so, we can use the before combinator ⊸
+#becoz 2⊸ will execute first and give 2
+Func1 ← 2⊸↑
+Func1 "abcde"
+"ab"
+
+#some variations
+Func1 ← 2⟜↑   # the right `after` part execute first, and then 2 just const
+Func1 "abcde"
+2
+Func1 ← 2˙↑  # its same as this
+Func1 "abcde"
+2
+
+Prefixes / Suffixes (different from APL)
+    ↑ ↕5
+⟨ ⟨⟩ ⟨ 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 1 2 ⟩ ⟨ 0 1 2 3 ⟩ ⟨ 0 1 2 3 4 ⟩ ⟩
+
+    ↓ ↕5
+⟨ ⟨ 0 1 2 3 4 ⟩ ⟨ 1 2 3 4 ⟩ ⟨ 2 3 4 ⟩ ⟨ 3 4 ⟩ ⟨ 4 ⟩ ⟨⟩ ⟩
+
+--
+Back to Under ⌾	
+Right operand - some selection functions
+    8⌾⊑ "BQN"        # Change the first element to 8
+⟨ 8 'Q' 'N' ⟩
+    ↕7
+⟨ 0 1 2 3 4 5 6 ⟩
+
+    4 ↑ ↕7           # The first four elements
+⟨ 0 1 2 3 ⟩
+
+    ⌽⌾(4⊸↑) ↕7       # And reverse them
+⟨ 3 2 1 0 4 5 6 ⟩
+
+    ⌽⌾(¯4⊸↑) ↕7      # Or reverse the last four
+⟨ 0 1 2 6 5 4 3 ⟩
+
+# ⌾ seems to take either a data value (which it replaces) or an operation on the Left (i.e an operand)
+
+# 2 2-trains below
+    2⊸⌽⌾(1⊸⊑) "xyz"‿"ABCDE"‿"wxyz"‿"yz"
+⟨ "xyz" "CDEAB" "wxyz" "yz" ⟩
+
+    2⊸⌽⌾(2⊸↓) "XYabcde"
+"XYcdeab"
+
+# slice a list at point 2, length 2
+    2 ↑ 4 ↓ "abcdefgh"
+"ef"
+
+# convert that slice to Uppercase
+# ('A'-'a')⊸+ is a 2-trains
+    ('A'-'a')⊸+ ⌾ (2 ↑ 4⊸↓)  "abcdefgh"
+"abcdEFgh"
+# "ef" - 32 = "EF"
+--
+What Under is actually doing
+1.
+F⌾G y	Under: apply G, then F, then undo G
+(1⊸+) ⌾ (1⊸-) ↕3
+⟨ ¯1 0 1 ⟩
+# first apply (1⊸-) ↕3
+# 1 - ⟨ 0 1 2 ⟩
+⟨ 1 0 -1 ⟩
+# then apply (1⊸+) on this
+⟨ 2 1 0 ⟩
+# then Undo G on this
+# (1⊸-)⁼ ⟨ 2 1 0 ⟩
+⟨ ¯1 0 1 ⟩
+# for Undo, need to think of
+𝕩 ≡ 𝔽 𝔽⁼ 𝕩
+# that is, the {..} block needs to give an ans which satisfy 
+# the below eq
+⟨ 2 1 0 ⟩ ≡ (1⊸-) {(1⊸-)⁼ ⟨ 2 1 0 ⟩} 
+# so the ans is ⟨ ¯1 0 1 ⟩
+
+2.
+x F⌾G y	Under: apply F○G, then undo G # notice is F Over G
+# that means, G⁼ [(G x) F (G y)]
+e.g.
+2 ×⌾(1⊸-) ↕3
+⟨ 2 1 0 ⟩
+
+G←1⊸-
+F←×
+
+(G 2) F (G ↕3) 
+⟨ ¯1 0 1 ⟩
+
+G⁼ ¯1‿0‿1
+⟨ 2 1 0 ⟩
+
+
+--
+Difference btw Pick and Take
+
+1⊑"abced"
+'b'  # pick an element based on index
+
+1↑"abced"
+"a"  # take part of the list (or array)
+
+#⌾ takes 2 operands 
+#below, both operands are 2-trains
+(1⊸+) ⌾ (1⊸⊑) "abced"
+"acced"
+#if we use `take`, we need to replace with an equivalent rank list
+"z"⌾ (1⊸↑) "bqn"
+
+---
+Logical operation
+
+Not ← 1+-  # also Span
+And ← ×
+Or  ← ×⌾¬
+
+for Or, the definition is 
+    A ∨ B = ¬(¬A ∧ ¬B)
+so for above,
+    𝕨 ×⌾¬ 𝕩 =  ¬⁼(¬𝕨 × ¬𝕩)
+# but ¬⁼ ←→ ¬, (an so is -⁼ ←→ -)
+so,
+    𝕨 ×⌾¬ 𝕩 =  ¬(¬𝕨 × ¬𝕩)
+Another definition is
+Or  ← +-×
+
+----
+Namespace
+
+#file.bqn
+⟨something, DoThing⟩⇐     # Declare exports
+abbreviation ⇐ "sth"      # Define and export
+_something ← {𝕗}          # Separate definition
+DoThing ← "TODO"⊸!
+
+#some other file at same folder
+ns ← •Import "file.bqn"
+⟨something, abbr⇐abbreviation⟩ ← ns  # Destructure
+ns.DoThing 6   
+
+
+#exports
+example ← {
+  b‿c⇐   # Non-definition exports can go anywhere
+  a⇐2    # Define and export
+  b←1+a
+  c←b‿"str"
+}
+
+#imports
+⟨alias⇐a, b, c0‿c1⇐c, b2⇐b⟩ ← example
+
+#another example of imports (without using ⇐)
+c‿a ← example
+
+#using dot .
+example.b
+
+{n⇐7}.n
+
+--
+Block
+
+    a←b←"outer"
+"outer"
+    { a←"inner" ⋄ a‿b } # block here, with local scoping & a separator, executed from L to R
+⟨ "inner" "outer" ⟩
+    a
+"outer"
+--
+Lowercase	Uppercase	Meaning
+𝕩	        𝕏	        Right argument
+𝕨	        𝕎	        Left argument, or Nothing (·)
+𝕤	        𝕊	        Function self-reference
+𝕗	        𝔽	        Left operand
+𝕘	        𝔾	        Right operand
+𝕣	        none	    Modifier self-reference
+
+𝕩, 𝕨 => right, left data argument
+𝕏, 𝕎 => right, left function argument
+
+    {'c'=𝕩} "abcd"
+⟨ 0 0 1 0 ⟩
+    { 𝕩+↩2 ⋄ 0≍𝕩 } 3  # change of value for 𝕩
+⟨ 0 5 ⟩
+    4 { ⟨𝕩⋄-𝕨⟩ } 5
+⟨ 5 ¯4 ⟩
+
+--
+    3 { (2×𝕨)-𝕩 } 1
+5
+      { (2×𝕨)-𝕩 } 1  # left argument is · Nothing  
+¯1
+--
+    "abc" { (𝕨≍⌽) 𝕩 } "def"
+┌─     
+╵"abc  
+  fed" 
+      ┘
+          { (𝕨≍⌽) 𝕩 } "def" # 𝕨 behaves just like · Nothing
+┌─     
+╵"fed" 
+      ┘
+
+    { 𝕨 ⋆⊸- 𝕩 } 5 # this behaves as { · ⋆⊸- 𝕩 } 5, which is ⋆⊸- 𝕩
+143.4131591025766
+
+--
+𝕗	        𝔽	        Left operand
+𝕘	        𝔾	        Right operand
+
+--
+# doesnt really make sense to use data type as operands
+# but it will just return itself
+    4 {×˜𝕗}
+16
+    2 {𝕗+𝕘} 3
+5
+
+# if try to pass in a function with lowercase 𝕗, it will error out
+    × {×˜𝕗}
+Error: ×: Unexpected argument types
+# Uppercase 𝔽 is ok
+    × {×˜𝔽}
+×˜×
+    _dot_ ← {𝔽´∘𝔾}   #_dot_ is a 'deferred modifier', it's content is only evaluate when the modifier is called
+    1‿2‿3 +_dot_× 1‿0‿1
+4
+
+    +{𝕩𝔽𝕩} 6
+12
+    2 ⥊{⟨𝔽𝕨,𝔾𝕩⟩}- 5
+⟨ ⟨ 2 ⟩ ¯5 ⟩
+
+--
+Self-reference
+If a block is assigned a name after it is created, this name can be used for recursion:
+
+# (0⊸<)◶1‿Fact 𝕩-1, based on breakdown below is return Fact(𝕩 - 1) if 𝕩 - 1 is > 0;
+# else return 1 (this is the base case)
+# Fact(𝕩 - 1) .. is essentially { (𝕩 - 1) × Fact (𝕩 - 2) .. × 1 }
+    Fact ← { 𝕩 × (0⊸<)◶1‿Fact 𝕩-1 } 
+    Fact 7
+5040
+    (×´1+↕) 7  # There's often a simpler solution than recursion
+5040
+
+# we can use self reference 𝕊 to refer to the function it appears in
+#this allows for anonymous recursive function
+    { 𝕩 × (0⊸<)◶1‿𝕊 𝕩-1 } 7
+5040
+
+--
+Self-reference modifier 𝕣
+Refers to the 'containing modifier', while 𝕊 refers to the 'entire' function it appears in
+Only refers to 1-modifier or 2-modifier, so can only be written as _𝕣 or _𝕣_
+    Fact_mod ← 1 { (0⊸<)◶⟨𝕗, (𝕗×𝕩)_𝕣⟩ 𝕩-1 }
+    Fact_mod 7
+5040
+
+
+
+There must be a space in between the Left operand and _𝕣
+    Fact2 ← 1 { (0⊸<)◶⟨𝕗, 𝕗×𝕩 _𝕣⟩ 𝕩-1 }   # this is valid
+1(1-modifier block)
+    Fact2 7
+5040
+
+
+
+--
+Block headers
+
+Fact ← { F n:   # F is only defined inside {} while Fact can be used inside or outside
+  n × (0⊸<)◶1‿F n-1
+}
+
+# A dyadic function that refers to itself as Func
+{ l Func r:
+  …
+
+# A deferred 1-modifier with a list argument
+{ Fn _apply ⟨a,b⟩:
+  …
+
+# A monadic function with no names given
+{ 𝕊𝕩:
+  …
+
+# An immediate (??) or deferred 2-modifier
+{ F _op_ val:
+  …
+
+# for the example above; a header is the same as a series of assignments for a
+# headless block
+{ # Fn _apply ⟨a,b⟩:
+  Fn ← 𝔽
+  _apply ← _𝕣    # this monadic 1-modifier cannot take a right operand 𝔾 or left argument 𝕨
+  ⟨a,b⟩ ← 𝕩
+  …
+
+# header destructuring
+    Destruct ← { 𝕊 a‿1‿⟨b,2⟩: a≍b }
+    Destruct       5‿1‿⟨7,2⟩
+⟨ 5 7 ⟩
+
+# nameless block is possible by incoorporating all the special names
+# most vague header
+𝕨 𝔽_𝕣_𝔾 𝕩:
+
+--
+Short headers (without inputs specified) - AKA 'label'
+
+{ b:   # Block
+{ 𝕊:   # Function
+{ _𝕣:  # 1-Modifier
+{ _𝕣_: # 2-Modifier
+
+Label doesnt restrict inputs; but already specify the type of block
+
+--
+Multiple bodies; will execute depending on arguments provided
+    Ambiv ← { ⟨1,𝕩⟩ ; ⟨2,𝕨,𝕩⟩ }
+    Ambiv 'a'
+⟨ 1 'a' ⟩
+    'a' Ambiv 'b'
+⟨ 2 'a' 'b' ⟩
+
+    CaseAdd ← { 2𝕊3:0‿5 ; 2𝕊𝕩:⟨1,2+𝕩⟩ ; 𝕊𝕩:2‿𝕩 }
+    2 CaseAdd 3
+⟨ 0 5 ⟩
+    2 CaseAdd 4
+⟨ 1 6 ⟩
+      CaseAdd 4
+⟨ 2 4 ⟩
+
+# Below, the function name 𝕊  is ommited
+Test ← {
+  "abc": "string" ;
+  ⟨2,b⟩: ⌽𝕩       ;
+  5:     "number" ;
+  𝕩:     "default"
+}
+
+Test "abc"
+"string"
+
+Test ⟨2,5⟩
+⟨5 2⟩
+
+---
+Predicate ?(and also ;) (** need to be INSIDE a block)
+
+    CheckPair ← { 𝕊⟨a,b⟩: a<b? "ok" ; "not ok" }
+
+    CheckPair ⟨3,8⟩    # Fails destructuring
+"ok"
+    CheckPair ⟨1,4,5⟩  # Not a pair
+"not ok"
+    CheckPair ⟨3,¯1⟩   # Not ascending
+"not ok"
+
+#it works similarily like a ternary statement
+#doesnt necessary have to start with a header
+
+    { r←⌽𝕩 ⋄ 't'=⊑r ? r ; 𝕩 }¨ "test"‿"this"
+⟨ "tset" "this" ⟩
+
+{ a<b ? a ; b } is just computing a⌊b
+
+?; can support any number of options
+
+#the structure below is "if _ and _ then _; else if _ then _; else _".
+    Thing ← { 𝕩≥3? 𝕩≤8? 2|𝕩 ; 𝕩=0? @ ; ∞ }
+
+    (⊢ ≍ Thing¨) ↕10  # Table of arguments and results
+┌─                     
+╵ 0 1 2 3 4 5 6 7 8 9  
+  @ ∞ ∞ 1 0 1 0 1 0 ∞  
+                      ┘
+#Same as this actually
+#but due to precendece of ?, need to group (𝕩≥3)
+#else, it would be 𝕩 ≥ (3 ∧ 𝕩≤8)
+Thing ← { (𝕩≥3) ∧ 𝕩≤8 ? 2|𝕩 ; 𝕩=0? @ ; ∞ }
+
+# at its simplest
+   {1=1?•Show "yes"}
+"yes"
+
+# but if no `else` condition, it will throw if no matched `header`
+   {1=0?•Show "yes"}
+Error: No header matched arguments
+at {1=0?•Show "yes"}
+
+
+----
+Valences
+⊘ \%
+
+{𝔽𝕩;𝕨𝔾𝕩}	2-Modifier, Apply 𝔽 if there's one argument but 𝔾 if there are two
+# Blocks that define functions and deferred modifiers can include more than one body, separated by semicolons ;
+
+Usage:
+    5×⊘-2
+3
+    ×⊘-2
+1
+
+--
+Choose
+◶ \$
+
+{f←(𝕨𝔽𝕩)⊑𝕘 ⋄ 𝕨F𝕩} 2-modifier, Select one of the functions in list 𝕘 based on 𝔽
+
+Usage:
+
+    Func ← (0⊸<)◶1‿2
+0⊸<◶⟨ 1 2 ⟩
+    Func 1
+2
+    Func 0
+1
+    Func ¯2
+1
+#breakdown (based on the definition)
+    ((0⊸<)1)⊑1‿2 # if 𝕩 is 1 or larger, its more than 0, so 1⊑1‿2 = 2
+2
+    ((0⊸<)¯2)⊑1‿2 # if 𝕩 is lesser than 0, 0⊑1‿2 = 1, LHS can only be 1 or 0 
+1
+    for next statement 𝕨F𝕩, due to 𝕨 is nothing, basically just return const F𝕩
+    so return 1 if 𝕩 is larger than 0; else return 2 
+
+----
+Fill element
+basically 0 for numbers, ' ' for characters, ⟨⟩ for array
+
+    ¯7 ↑ 4⥊3     # Fill with 0
+⟨ 0 0 0 3 3 3 3 ⟩
+
+    ¯7 ↑ "qrst"  # Fill with space
+"   qrst"
+
+    »¨ ⟨4⥊3,"qrst"⟩   # nudge right
+⟨ ⟨ 0 3 3 3 ⟩ " qrs" ⟩
+
+    3↑⟨⟩  # Fill unknown
+⟨ 0 0 0 ⟩
+
+    »⟨⟩   # Fill not needed
+⟨⟩
+
+# reshape fill when 𝕨 contains ↑ and the product of the rest of 𝕨 doesn't evenly divide the number of elements in 𝕩
+    ↑‿8 ⥊ "completepart"
+┌─          
+╵"complete  
+  part    " 
+           ┘
+    » "abc" + 4‿3‿2
+" ee"
+
+#to find out fill element
+# deshape, take one, nudge right, pick first one
+    ⊑»1↑⥊"string" 
+' '
+
+    6 ↑ ↑↕3  # Two fills at the end
+⟨ ⟨⟩ ⟨ 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 1 2 ⟩ ⟨⟩ ⟨⟩ ⟩
+
+    »¨ 3‿4‿1 /⊸⊔ "abc0123A"
+⟨ " ab" " 012" " " ⟩
+
+----
+Leading axis refers to the initial axis
+
+Rank (⎉) or Cells (˘) modifier
+
+
+# about ranks
+= 9 # rank 0
+= "abcd" # rank 1
+= 3‿4⥊"abcd" # rank 2
+= 3‿3‿4⥊↕36 # rank 3
+
+#using the 3‿3‿4⥊↕36 example, 
+
+Rank 3 - Rank 2 - Rank 1 - Rank 0
+  3    ‿   3    ‿   4      ...
+  
+
+    a ← 3‿2⥊ (+⟜'a')↕6
+┌─    
+╵"ab  
+  cd  
+  ef" 
+     ┘
+    ≢≍a  #added one axis in front of Rank 2, hence becomes rank 3
+⟨ 1 3 2 ⟩
+    =≍a  #use this to confirm no of Rank
+3
+
+#added one axis in front Rank 1 (the Rank where it becomes 'Cells')
+#˘ operates on Major Cells, which is Rank - 1
+    ≍˘a  
+┌─    
+╎"ab  
+      
+ ·cd  
+      
+ ·ef" 
+     ┘
+    ≢≍˘a    # coupled an empty 'row' on top of each row
+⟨ 3 1 2 ⟩
+    (3‿2⥊↕6)≍˘a
+┌─         
+╎ 0   1    
+  'a' 'b'  
+           
+  2   3    
+  'c' 'd'  
+           
+  4   5    
+  'e' 'f'  
+          ┘
+    ≢(3‿2⥊↕6)≍˘a
+⟨ 3 2 2 ⟩
+
+# 𝔽˘ is identical to 𝔽⎉1
+    (3‿2⥊↕6)≍⎉1 a
+┌─         
+╎ 0   1    
+  'a' 'b'  
+           
+  2   3    
+  'c' 'd'  
+           
+  4   5    
+  'e' 'f'  
+          ┘
+
+# below two are identical
+    ≢(3‿2⥊↕6)≍⎉2 a
+⟨ 2 3 2 ⟩
+    (3‿2⥊↕6)≍⎉2 a
+┌─         
+╎ 0   1    
+  2   3    
+  4   5    
+           
+  'a' 'b'  
+  'c' 'd'  
+  'e' 'f'  
+          ┘
+    (3‿2⥊↕6)≍ a
+┌─         
+╎ 0   1    
+  2   3    
+  4   5    
+           
+  'a' 'b'  
+  'c' 'd'  
+  'e' 'f'  
+          ┘
+# coupling beyong existing Ranks doesnt do anything fancy
+    (3‿2⥊↕6)≍⎉3 a  
+┌─         
+╎ 0   1    
+  2   3    
+  4   5    
+           
+  'a' 'b'  
+  'c' 'd'  
+  'e' 'f'  
+          ┘
+
+    (3‿2⥊↕6)≍⎉0 a  # create a new Rank 1 axis
+┌─       
+╎ 0 'a'  
+  1 'b'  
+         
+  2 'c'  
+  3 'd'  
+         
+  4 'e'  
+  5 'f'  
+        ┘
+    ≢(3‿2⥊↕6)≍⎉0 a
+⟨ 3 2 2 ⟩
+
+
+#⎉¯1 seems same as ⎉1
+#if the right operand 𝕘 of ⎉ is negative, its interpreted as 0⌈Rank+𝕘 
+#Therefore, a value of ¯1 selects major cells.
+    (3‿2⥊↕6)≍⎉¯1 a
+┌─         
+╎ 0   1    
+  'a' 'b'  
+           
+  2   3    
+  'c' 'd'  
+           
+  4   5    
+  'e' 'f'  
+          ┘
+    ≢≍⎉¯1 a
+⟨ 3 1 2 ⟩
+
+# but going beyond ¯1 is same as ⎉0
+    ≢≍⎉¯2 a
+⟨ 3 2 1 ⟩
+    ≢≍⎉¯3 a
+⟨ 3 2 1 ⟩
+    ≢≍⎉¯100 a
+⟨ 3 2 1 ⟩
+
+#what are major cells?
+https://help.dyalog.com/18.0/Content/Language/Introduction/Variables/Cells%20and%20Subarrays.htm#CellsSubarrays
+
+#all about Rank ⎉ (its the same as APL ⍤) 
+https://help.dyalog.com/18.0/?skinName=Large#Language/Primitive%20Operators/Rank.htm
+⎉ takes a 𝕘 scalar or vector of up to 3 items
+
+    s
+"abracadabra"
+    s ∾⎉0‿1 "suffix"   # same as 1‿0‿1 "suffix"
+┌─         
+╵"asuffix  
+  bsuffix  
+  rsuffix  
+  asuffix  
+  csuffix  
+  asuffix  
+  dsuffix  
+  asuffix  
+  bsuffix  
+  rsuffix  
+  asuffix" 
+          ┘
+breakdown:
+ ≍⎉0 s
+┌─   
+╵"a  
+  b  
+  r  
+  a  
+  c  
+  a  
+  d  
+  a  
+  b  
+  r  
+  a" 
+    ┘    
+
+  ≍⎉1 "suffix"
+┌─        
+╵"suffix" 
+         ┘
+# so take the Rank 0 of s and join with Rank 1 (major cell) of "suffix"
+
+⊒ is occurence counter, returns the index of leading axis (or called first axis or major cells)
+    s ← "abracadabra"
+    ⊒ s
+⟨ 0 0 0 1 0 2 0 3 1 1 4 ⟩
+    ⊒ ≍˘ s
+⟨ 0 0 0 1 0 2 0 3 1 1 4 ⟩
+    ⊒ s ∾⎉0‿1 "suffix"
+⟨ 0 0 0 1 0 2 0 3 1 1 4 ⟩
+
+    b ← 4‿5 ⥊ ↕4
+┌─           
+╵ 0 1 2 3 0  
+  1 2 3 0 1  
+  2 3 0 1 2  
+  3 0 1 2 3  
+            ┘
+    ∨ b  # sort by cols
+┌─           
+╵ 3 0 1 2 3  
+  2 3 0 1 2  
+  1 2 3 0 1  
+  0 1 2 3 0  
+            ┘
+
+    ∨˘b  # sort by rows (major cells)
+┌─           
+╵ 3 2 1 0 0  
+  3 2 1 1 0  
+  3 2 2 1 0  
+  3 3 2 1 0  
+
+    2‿1 ⌽ ↕3‿5 # rotate; shift once to left and twice upward
+┌─                                         
+╵ ⟨ 2 1 ⟩ ⟨ 2 2 ⟩ ⟨ 2 3 ⟩ ⟨ 2 4 ⟩ ⟨ 2 0 ⟩  
+  ⟨ 0 1 ⟩ ⟨ 0 2 ⟩ ⟨ 0 3 ⟩ ⟨ 0 4 ⟩ ⟨ 0 0 ⟩  
+  ⟨ 1 1 ⟩ ⟨ 1 2 ⟩ ⟨ 1 3 ⟩ ⟨ 1 4 ⟩ ⟨ 1 0 ⟩  
+                                          ┘ 
+    # see how values are matched to leading axes
+    # drop below dropped from the larger ranks first
+    ≢ 3‿2 ↓ 7‿7‿7‿7⥊"abc"
+⟨ 4 5 7 7 ⟩
+
+--
+Use leading axis agreement to match arguments together
+Axes of lower-rank argument are matched with leading axes of higher-rank one
+
+    ⊢ x ← 3‿2‿4 ⥊ ↕60     # A rank-3 array
+┌─             
+╎  0  1  2  3  
+   4  5  6  7  
+               
+   8  9 10 11  
+  12 13 14 15  
+               
+  16 17 18 19  
+  20 21 22 23  
+              ┘
+    100‿0‿200 + x         # 0-cells paired with 2-cells
+┌─                 
+╎ 100 101 102 103  
+  104 105 106 107  
+                   
+    8   9  10  11  
+   12  13  14  15  
+                   
+  216 217 218 219  
+  220 221 222 223  
+                  ┘
+    ⊢ c ← 100 × 3 =⌜○↕ 2  # A rank-2 array to add
+#breakdown: (↕3) =⌜ (↕2)
+┌─         
+╵ 100   0  
+    0 100  
+    0   0  
+          ┘
+    c + x                 # 0-cells paired with 1-cells
+┌─                 
+╎ 100 101 102 103  
+    4   5   6   7  
+                   
+    8   9  10  11  
+  112 113 114 115  
+                   
+   16  17  18  19  
+   20  21  22  23  
+                  ┘
+    x + x                 # Pairwise addition
+┌─             
+╎  0  2  4  6  
+   8 10 12 14  
+               
+  16 18 20 22  
+  24 26 28 30  
+               
+  32 34 36 38  
+  40 42 44 46  
+              ┘
+---
+Depth
+Depth of an array is the greatest level of array nesting it attains, or, put another way, the greatest number of times you can pick an element starting from the original array before reaching an atom
+
+    ≡ 2‿3‿4
+1
+    ≡ "a string is a list of characters"
+1
+
+# doesnt care about shape
+    ≡ 3‿4⥊"characters"
+1
+    ≡ (1+↕10)⥊"characters"
+1
+
+# care about elements
+    ≡ ⟨2,3,4,5⟩
+1
+    ≡ ⟨2,<3,4,5⟩
+2
+    ≡ ⟨2,<3,4,<<<5⟩
+4
+# atom has depth 0
+    ≡'c'
+0
+    F←+⋄≡f
+0
+    ≡⟨'c',f,2⟩
+1
+    ≡⟨5,⟨'c',f,2⟩⟩
+2
+# an empty array's depth is 1
+    ≡⟨⟩
+1
+    ≡2‿0‿3⥊0
+1
+
+--
+For Select, the left argument is a list and its elements correspond to the right
+argument axes
+    ↕6‿7
+┌─
+╵ ⟨ 0 0 ⟩ ⟨ 0 1 ⟩ ⟨ 0 2 ⟩ ⟨ 0 3 ⟩ ⟨ 0 4 ⟩ ⟨ 0 5 ⟩ ⟨ 0 6 ⟩
+  ⟨ 1 0 ⟩ ⟨ 1 1 ⟩ ⟨ 1 2 ⟩ ⟨ 1 3 ⟩ ⟨ 1 4 ⟩ ⟨ 1 5 ⟩ ⟨ 1 6 ⟩
+  ⟨ 2 0 ⟩ ⟨ 2 1 ⟩ ⟨ 2 2 ⟩ ⟨ 2 3 ⟩ ⟨ 2 4 ⟩ ⟨ 2 5 ⟩ ⟨ 2 6 ⟩
+  ⟨ 3 0 ⟩ ⟨ 3 1 ⟩ ⟨ 3 2 ⟩ ⟨ 3 3 ⟩ ⟨ 3 4 ⟩ ⟨ 3 5 ⟩ ⟨ 3 6 ⟩
+  ⟨ 4 0 ⟩ ⟨ 4 1 ⟩ ⟨ 4 2 ⟩ ⟨ 4 3 ⟩ ⟨ 4 4 ⟩ ⟨ 4 5 ⟩ ⟨ 4 6 ⟩
+  ⟨ 5 0 ⟩ ⟨ 5 1 ⟩ ⟨ 5 2 ⟩ ⟨ 5 3 ⟩ ⟨ 5 4 ⟩ ⟨ 5 5 ⟩ ⟨ 5 6 ⟩
+                                                            ┘
+
+    ⟨3‿2,1‿4‿1⟩ ⊏ ↕6‿7 # 3‿2 correspond to first axis, which it flips; 1‿4‿1 to 2nd axis, i.e.columns
+┌─                         
+╵ ⟨ 3 1 ⟩ ⟨ 3 4 ⟩ ⟨ 3 1 ⟩  
+  ⟨ 2 1 ⟩ ⟨ 2 4 ⟩ ⟨ 2 1 ⟩  
+                          ┘
+# how do you get depth 1 in left argument?
+# use atom
+
+    ⟨3‿2,1⟩ <⍟(0=≡)¨⊸⊏ ↕6‿7  # get 3‿2 of column-1 
+⟨ ⟨ 3 1 ⟩ ⟨ 2 1 ⟩ ⟩
+# breakdown
+    s←<⍟(0=≡)¨ ⟨3‿2,1⟩
+┌─               
+· ⟨ 3 2 ⟩ ┌·     
+          · 1    
+              ┘  
+                ┘
+    s ⊏ ↕6‿7
+⟨ ⟨ 3 1 ⟩ ⟨ 2 1 ⟩ ⟩
+
+# but Replicate / doesnt have this problem, becoz depth 1 acts on first axis
+# only
+    3‿2‿1‿2‿3 / "abcde"
+"aaabbcddeee"
+
+---
+Replicate /
+# if single number, applies pervasively
+    3 / "copy"
+"cccooopppyyy"
+
+# boolean value 0 or 1 to switch on and off
+    1‿1‿0‿0‿1‿0 / "filter"
+"fie"
+
+    ≤⟜'i' "filter"  # breakdown: "filter" ≤ 'i'
+⟨ 1 1 0 0 1 0 ⟩
+
+    ≤⟜'i'⊸/ "filter" 
+"fie"
+
+# breakdown:
+    (≤⟜'i')⊸/ "filter"
+    ((≤⟜'i') "filter") / "filter"
+    ("filter" ≤ 'i') / "filter"
+
+    {1+'"'=𝕩}⊸/ "for ""escaping"" quotes"  # the "" inside the quotes is actually one quote, so here there are 2 quotes
+"for """"escaping"""" quotes" # here there are 4 quotes
+
+    ⊢ b ← 2‿5 ⥊ ↕10
+┌─           
+╵ 0 1 2 3 4  
+  5 6 7 8 9  
+            ┘
+# 𝕨 has depth of 2, gives the amount to copy along each leading axis of 𝕩
+    ⟨2‿0, 1‿0‿0‿1‿1⟩ / b
+┌─       
+╵ 0 3 4  
+  0 3 4  
+        ┘
+
+    2‿0 / 1‿0‿0‿1‿1⊸/˘ b  # here ⊸ is 'pack', its packing 1‿0‿0‿1‿1 to be used on the major cells
+┌─       
+╵ 0 3 4  
+  0 3 4  
+        ┘
+#breakdown
+        1‿0‿0‿1‿1 /˘ b
+Error: ˘: Argument lengths don't agree
+at  1‿0‿0‿1‿1 /˘ b
+^^
+        1‿0‿0‿1‿1 ⊸/˘ b
+┌─       
+╵ 0 3 4  
+  5 8 9  
+        ┘
+# if want to duplicate (using unit number) along each axis
+    ⟨<2,<3⟩ / b
+┌─                               
+╵ 0 0 0 1 1 1 2 2 2 3 3 3 4 4 4  
+  0 0 0 1 1 1 2 2 2 3 3 3 4 4 4  
+  5 5 5 6 6 6 7 7 7 8 8 8 9 9 9  
+  5 5 5 6 6 6 7 7 7 8 8 8 9 9 9  
+                                ┘
+# careful not to do this, coz this is equivalent to 2‿3 / b (which applies to
+# first axis only) 
+    ⟨2,3⟩ / b
+┌─           
+╵ 0 1 2 3 4  
+  0 1 2 3 4  
+  5 6 7 8 9  
+  5 6 7 8 9  
+  5 6 7 8 9  
+            ┘
+# simple case
+    b ≡ ⟨⟩ / b
+1
+
+---
+Indices - Monadic /
+𝕩 must be integer and have at least rank 1 (atom not allowed)
+
+    / 3‿0‿1‿2
+⟨ 0 0 0 2 3 3 ⟩
+
+# /𝕩 is the list 𝕩/↕≠𝕩
+
+    2‿5‿0‿1 /⊸⊔ "ABCDEFGH"
+⟨ "AB" "CDEFG" ⟨⟩ "H" ⟩
+#breakdown:
+    (/2‿5‿0‿1) ⊔ "ABCDEFGH"
+⟨ 0 0 1 1 1 1 1 3 ⟩ # notice index 2 is missing
+
+the modification (/∾⟜1)⊸⊔ ensures the result always has as many elements as 𝕨.
+
+    /(∾⟜1) 2‿5‿0‿1
+⟨ 0 0 1 1 1 1 1 3 4 ⟩
+#breakdown:
+    /(2‿5‿0‿1 ∾ 1)  # add one more element to the index vector
+
+# can get indices where 1 appears
+    / 0‿1‿0‿1‿0‿0‿0‿0‿1‿0
+⟨ 1 3 8 ⟩
+# can get the distance from each 1
+    -⟜» / 0‿1‿0‿1‿0‿0‿0‿0‿1‿0
+⟨ 1 2 5 ⟩
+# breakdown:
+⟨ 1 3 8 ⟩ -» ⟨ 1 3 8 ⟩
+
+
+---
+Group \u
+
+    0‿1‿2‿0‿1 ≍ "abcde"  # Corresponding indices and values
+┌─                     
+╵ 0   1   2   0   1    
+  'a' 'b' 'c' 'd' 'e'  
+                      ┘
+    0‿1‿2‿0‿1 ⊔ "abcde"  # Values grouped by index (so the indices are 0,1,2, so there are 3 values in the list)
+⟨ "ad" "be" "c" ⟩
+
+# ¯1 to drop value
+    0‿¯1‿2‿2‿¯1 ⊔ "abcde"  # Drop c and e
+⟨ "a" ⟨⟩ "cd" ⟩
+# extra element to indicate result minimum length
+    0‿1‿2‿2‿1‿6 ⊔ "abcde"  # Length-6 result
+⟨ "a" "be" "cd" ⟨⟩ ⟨⟩ ⟨⟩ ⟩
+
+# try to group a list of words by length
+    phrase ← "BQN"‿"uses"‿"notation"‿"as"‿"a"‿"tool"‿"of"‿"thought"
+    ≍˘ ≠¨⊸⊔ phrase  # breakdown: ≍˘ ((≠¨) phrase) ⊔ phrase
+┌─                   
+╵ ⟨⟩                 
+  ⟨ "a" ⟩            
+  ⟨ "as" "of" ⟩      
+  ⟨ "BQN" ⟩          
+  ⟨ "uses" "tool" ⟩  
+  ⟨⟩                 
+  ⟨⟩                 
+  ⟨ "thought" ⟩      
+  ⟨ "notation" ⟩     
+                    ┘
+
+# get diagonals of a table
+
+    ⊢ a ← 'a'+⥊⟜(↕×´)3‿5
+┌─       
+╵"abcde  
+  fghij  
+  klmno" 
+        ┘
+    (+⌜´·↕¨≢)⊸⊔ a
+⟨ "a" "bf" "cgk" "dhl" "eim" "jn" "o" ⟩ 
+
+# breakdown: ((+⌜´·↕¨≢) a) ⊔ a
+# 2-Train
+    (+⌜´·↕¨≢) a
+┌─                                                                                             
+╵ 0 1 2 3 4                                                                                    
+  1 2 3 4 5                                                                                    
+  2 3 4 5 6                                                                                    
+             ┘
+    ↕¨≢ a 
+⟨ ⟨ 0 1 2 ⟩ ⟨ 0 1 2 3 4 ⟩ ⟩
+
+# the usage of fold, just to fold the list once is smart
+    +⌜´⟨⟨0,1,2⟩,⟨0,1,2,3,4⟩⟩
+    ⟨0,1,2⟩ +⌜ ⟨0,1,2,3,4⟩
+
+# the · is Nothing, it does nothing as a Left 𝕨 to ↕, but its needed to separate
+# the Range and the Fold function; else the whole thing gets recognized as a
+# Fork
+
+    (+⌜´↕¨≢) a
+Error: ´: Argument must be a list (3‿5 ≡ ≢𝕩)
+at (+⌜´↕¨≢) a
+   ^^^^^^^^
+3-Train: (+⌜´)↕¨(≢), the error shows that the Fold is applied straight to `a`
+
+# in order words, becoz 3-Train is defined as such
+# (f g h) ⍵ -> (f ⍵) g (h ⍵)
+# its not possible for ·↕¨ to be the middle `g` function anymore since its _does
+# not_ accept a left argument (Nothing)
+
+--
+Using Group for partitioning
+
+# easy splitting
+    ' '(+`∘=⊔⊢)"BQN uses notation as a tool of thought"
+⟨ "BQN" " uses" " notation" " as" " a" " tool" " of" " thought" ⟩
+# breakdown ' '(+`∘=)".." ⊔ (' '⊢"..")
+# use of scan for running numbers to group
+   ' '+`∘="BQN uses notation as a tool of thought"
+⟨ 0 0 0 1 1 1 1 1 2 2 2 2 2 2 2 2 2 3 3 3 4 4 5 5 5 5 5 6 6 6 7 7 7 7 7 7 7 7 ⟩
+# but, the 'front spacing' is included
+
+# we could remove the 'front spacing' by making it ¯1
+    ' '((⊢-˜¬×+`)∘=⊔⊢)"BQN uses notation as a tool of thought"
+⟨ "BQN" "uses" "notation" "as" "a" "tool" "of" "thought" ⟩
+# breakdown of (⊢-˜¬×+`) 
+# take note this is 3 trains of 3 train
+# (f g (f1 g1 h))
+   a ← (' '="BQN uses notation as a tool of thought")
+⟨ 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 1 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 ⟩
+   b ← (¬ a) × (+`) a
+⟨ 0 0 0 0 1 1 1 1 0 2 2 2 2 2 2 2 2 0 3 3 0 4 0 5 5 5 5 0 6 6 0 7 7 7 7 7 7 7 ⟩
+   a -˜ b
+⟨ 0 0 0 ¯1 1 1 1 1 ¯1 2 2 2 2 2 2 2 2 ¯1 3 3 ¯1 4 ¯1 5 5 5 5 ¯1 6 6 ¯1 7 7 7 7 7 7 7 ⟩
+
+--
+To get rid of (one chunk of space) - more than 1 char - of delimiter
+
+# if use this same method, will have ⟨⟩ empty partitions
+' '((⊢-˜¬×+`)∘=⊔⊢)"  string with  spaces   "
+    ⟨ ⟨⟩ ⟨⟩ "string" "with" ⟨⟩ "spaces" ⟩
+
+# we want only the FIRST leading space of each spacings - to create a group
+# the first leading space can be 0, for the 0th group
+# we shift and compare
+    (⊢≍1⊸»<⊢) ' '="  string with  spaces   "  # All, then filtered, spaces
+┌─                                                 
+╵ 1 1 0 0 0 0 0 0 1 0 0 0 0 1 1 0 0 0 0 0 0 1 1 1   
+  0 0 0 0 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0     # this is what we want
+                                                  ┘
+    ≍⟜(⊢-˜¬×·+`1⊸»<⊢)' '="  string with  spaces   "  # More processing
+┌─                                                         
+╵  1  1 0 0 0 0 0 0  1 0 0 0 0  1  1 0 0 0 0 0 0  1  1  1  
+  ¯1 ¯1 0 0 0 0 0 0 ¯1 1 1 1 1 ¯1 ¯1 2 2 2 2 2 2 ¯1 ¯1 ¯1  
+                                                          ┘
+    ' '((⊢-˜¬×·+`1⊸»<⊢)∘=⊔⊢)"  string with  spaces   "  # Final result
+⟨ "string" "with" "spaces" ⟩
+
+    ' '((¬-˜⊢×·+`»⊸>)∘≠⊔⊢)"  string with  spaces   "  # Slightly shorter
+⟨ "string" "with" "spaces" ⟩
+
+# breakdown
+(⊢-˜¬×·+`1⊸»<⊢) a
+(⊢-˜(¬×(+`(1⊸»<⊢)))) a  # the nothing, separates the plus scan + shift function as one chunk
+
+so
+a-˜(¬a)×(+`(1⊸»<⊢))a
+
+# infact
+   ·+`(1»a)<a
+⟨ 0 0 0 0 0 0 0 0 1 1 1 1 1 2 2 2 2 2 2 2 2 3 3 3 ⟩
+
+# we can enhance the function to use `membership of` to search for any "string"
+# like so, we can delimit for any arbitary string
+   " -> "((⊢-˜¬×·+`1⊸»<⊢)∘∊˜⊔⊢) "CH -> B -> CD"
+⟨ "CH" "B" "CD" ⟩
+   " -> "((¬-˜⊢×·+`»⊸>)∘(¬∊˜)⊔⊢) "CH -> B -> CD"
+⟨ "CH" "B" "CD" ⟩
+
+
+--
+A combinator (or nothing or separator) has higher precendence, it binds more tightly
+
+Using back the above e.g
+
+(+⌜´∘↕¨≢) a
+┌─              
+· ┌·    ┌·      
+  · 3   · 10    
+      ┘      ┘  
+               ┘
+#breakdown , ∘ actually 'binds' ↕ as its 𝔾, (+⌜´∘↕)¨≢ a
+
+
+# back to `phrase`, if we want to group based on 0-index and also get rid of
+# word more than 5 letters (i.e, get from length-1 to length-5)
+
+    1 -˜ ≤⟜5⊸× ≠¨ phrase
+⟨ 2 3 ¯1 1 0 3 1 ¯1 ⟩
+    ≍˘ {1-˜≤⟜5⊸×≠¨𝕩}⊸⊔ phrase
+┌─                   
+╵ ⟨ "a" ⟩            
+  ⟨ "as" "of" ⟩      
+  ⟨ "BQN" ⟩          
+  ⟨ "uses" "tool" ⟩  
+                    ┘
+
+#breakdown: 1 -˜ (≤⟜5)⊸× ≠¨ phrase
+    np ← ≠¨ phrase
+⟨ 3 4 8 2 1 4 2 7 ⟩ # want: get rid of 8,7 (turn to ¯1) , and then reduce the rest by 1
+    1 -˜ (≤⟜5)⊸× np
+    1 -˜ ((≤⟜5)np) × np
+    1 -˜⟨ 1,1,0,1,1,1,1,0 ⟩×np
+⟨ 2 3 ¯1 1 0 3 1 ¯1 ⟩
+
+# since we want length 1 to length 5, once way to guarantee there are 5 groups
+# is to add a minimum `5` length as the extra element
+    ≍˘ {5∾˜1-˜≤⟜5⊸×≠¨𝕩}⊸⊔ phrase
+┌─                   
+╵ ⟨ "a" ⟩            
+  ⟨ "as" "of" ⟩      
+  ⟨ "BQN" ⟩          
+  ⟨ "uses" "tool" ⟩  
+  ⟨⟩                 
+                    ┘
+
+# when group is called monadically
+
+    ≍˘ ⊔ 2‿3‿¯1‿2
+┌─         
+╵ ⟨⟩       
+  ⟨⟩       
+  ⟨ 0 3 ⟩  
+  ⟨ 1 ⟩    
+          ┘
+#basically, right argument operates on its own indices as values (similar as replicate)
+    2‿3‿¯1‿2 ⊔ ↕4
+⟨ ⟨⟩ ⟨⟩ ⟨ 0 3 ⟩ ⟨ 1 ⟩ ⟩ 
+
+---
+Multidimensional Grouping
+# ⟨first axis, second axis⟩
+    ⟨0‿0‿1‿1,0‿1‿0‿1‿0‿1‿0⟩ ⊔ (10×↕4)+⌜↕7
+┌─                              
+╵ ┌─              ┌─            
+  ╵  0  2  4  6   ╵  1  3  5    
+    10 12 14 16     11 13 15    
+                ┘            ┘  
+  ┌─              ┌─            
+  ╵ 20 22 24 26   ╵ 21 23 25    
+    30 32 34 36     31 33 35    
+                ┘            ┘  
+                               ┘
+--
+    ≠¨⊔ 2‿3‿1‿2
+⟨ 0 1 2 1 ⟩
+
+/⁼ inverse Indices called on the index argument gives the length of each group:    
+    /⁼∧ 2‿3‿1‿2
+⟨ 0 1 2 1 ⟩
+
+Calling Indices on the result lengths of Group sorts all the indices passed to Group (removing any ¯1s). This is a kind of counting sort.
+    /≠¨⊔ 2‿3‿1‿¯1‿2
+⟨ 1 2 2 3 ⟩
+
+#breakdown
+    ⊔ 2‿3‿1‿¯1‿2  # monadic group, values -to-> group of indices
+⟨ ⟨⟩ ⟨ 2 ⟩ ⟨ 0 4 ⟩ ⟨ 1 ⟩ ⟩ # value 0 has none, value 1 is at index 2, value 2 is at index 0,4..
+    ≠¨ ⊔ 2‿3‿1‿¯1‿2
+⟨ 0 1 2 1 ⟩ # size of these indices
+    /0‿1‿2‿1 # ignoring 0, value 1 has 1, value 2 has 2,2, value 3 has 3 <-- this is a counting sort (its a sort, coz it can only count up)
+⟨ 1 2 2 3 ⟩
+
+# sorting by group - see the left argument as a list with indices to sort
+# remove the extra layer of array with Join
+    ∾ 2‿3‿1‿¯1‿2 ⊔ "abcde"
+"caeb"
+# equivalent to the more difficult (but comprehensive?) sorting..
+    2‿3‿1‿¯1‿2 {F←(0≤𝕨)⊸/ ⋄ 𝕨⍋⊸⊏○F𝕩} "abcde"
+"caeb"
+
+# breakdown
+              F         G
+ 2‿3‿1‿¯1‿2 (⍋⊸⊏)○((0≤2‿3‿1‿¯1‿2)⊸/) "abcde"
+
+Over: (G W) F (G X)
+
+G X => ((0≤2‿3‿1‿¯1‿2)⊸/)"abcde"
+G W => ((0≤2‿3‿1‿¯1‿2)⊸/)2‿3‿1‿¯1‿2
+
+    2‿3‿1‿2 (⍋⊸⊏) "abce"
+"caeb"
+#breakdown2
+# the indices order required to sort "abce"
+    ⍋ 2‿3‿1‿2
+⟨ 2 0 3 1 ⟩
+# use the indices order to sort  "abce"
+    2‿0‿3‿1 ⊏ "abce"
+"caeb"
+
+# in APL, we do for e.g. 4 3 6 7[⍋4 3 6 7], using the [..]
+# but in BQN, we use pick  ⊏
+    ⍋⊸⊏ 4‿3‿6‿7 # first grade, then pick based on the sorted indices
+⟨ 3 4 6 7 ⟩
+---
+    ⊢ l ← "planet"‿"moon"‿"star"‿"asteroid"
+⟨ "planet" "moon" "star" "asteroid" ⟩
+
+    ∧ l
+⟨ "asteroid" "moon" "planet" "star" ⟩
+
+    ⍋ l    # order needed to pick the list to sort it
+⟨ 3 1 0 2 ⟩
+    ⍋⍋l    # applying it twice, `inverse` the index order
+⟨ 2 1 3 0 ⟩
+┌─                                   
+╵ "planet" "moon" "star" "asteroid"  
+  2        1      3      0           
+                                    ┘
+# what the above says is: for each major cell of that argument, what rank it has
+# relative to the others - the "ordinals" idiom
+
+ordinal - relating to the order of something in a series.
+
+    (⍋l) ⊏ l
+⟨ "asteroid" "moon" "planet" "star" ⟩
+
+while ⍋l transforms l to ∧l, the inverse of ⍋l transforms ∧l back into l. 
+That's what we want: for each cell of l, the corresponding number in the inverse of ⍋l is what index that cell has after sorting.
+
+   (⍋⍋l) ⊏ ⟨ "asteroid","moon","planet","star" ⟩
+⟨ "planet" "moon" "star" "asteroid" ⟩
+
+Or
+    𝕩 ≡ q⊏p⊏𝕩
+
+   ⟨ 2,1,3,0 ⟩ ⊏ ⟨ 3,1,0,2 ⟩ ⊏ ⟨ "planet","moon","star","asteroid" ⟩
+⟨ "planet" "moon" "star" "asteroid" ⟩
+
+The fact that Grade Up inverts a permutation is useful in itself. Note that this applies to Grade Up specifically, and not Grade Down.
+This is because the 'identity permutation' is ordered in ascending order. 
+i.e.
+ (⍋⁼) is actually ⍋
+'identify permutation' is ∧⍋l also ↕≠l
+
+Grade Down would actually invert the reverse of a permutation, 
+which is unlikely to be useful. So the ordinals idiom that goes in the opposite direction is actually not ⍒⍒ but ⍋⍒.
+
+---
+BQN specifies that matching cells are "always ordered by their indices".
+
+One effect is that ⍋𝕩 is not always the same as ⌽⍒𝕩, even though ∧𝕩 always matches ⌽∨𝕩.
+
+    ⊢ t ← >⟨ "dog"‿4, "ant"‿6, "pigeon"‿2, "pig"‿4 ⟩
+┌─            
+╵ "dog"    4  
+  "ant"    6  
+  "pigeon" 2  
+  "pig"    4  
+             ┘
+
+    1 ⊏˘ t
+⟨ 4 6 2 4 ⟩
+
+    (1⊏˘t) ⍋⊸⊏ t   # see "dog" and "pig" is based on the array index
+┌─            
+╵ "pigeon" 2  
+  "dog"    4  
+  "pig"    4  
+  "ant"    6  
+             ┘
+
+# But
+    (1⊏˘t) ⍒⊸⊏ t
+┌─            
+╵ "ant"    6  
+  "dog"    4   # same arrangement of dog and pig
+  "pig"    4  
+  "pigeon" 2  
+             ┘
+
+    (1⊏˘t)
+⟨ 4 6 2 4 ⟩
+    ⍋ (1⊏˘t)   
+⟨ 2 0 3 1 ⟩
+    ⍒ (1⊏˘t)  # can see the 0 and 3 indices order are maintained
+⟨ 1 0 3 2 ⟩
+
+-- FFT (Food For Thought)
+    (⌽⍒/3‿4‿5) ⊏ "012abcdABCDE"
+"210dcbaEDCBA"
+
+    a←3‿4‿5
+⟨ 3 4 5 ⟩
+    /a
+⟨ 0 0 0 1 1 1 1 2 2 2 2 2 ⟩
+    ⍒/a   # see the ordering of indices for 'matching cells' are maintained
+⟨ 7 8 9 10 11 3 4 5 6 0 1 2 ⟩
+    ⌽⍒/a
+⟨ 2 1 0 6 5 4 3 11 10 9 8 7 ⟩
+
+--
+Bin
+
+finding "what bin" (in 𝕨)something (from 𝕩) fits into.
+
+    hs ← 1e7×627‿581‿578‿553‿520  # High scores
+
+    hs ⍒ 1e7×565‿322‿788‿627
+⟨ 3 5 0 1 ⟩   # 565 is lesser than 578 but more then 553, can slot in 3rd rank
+# 322 falls outside the bin lists, 788 at Rank 0, 627 tie with 1st rank
+---
+Repeat \# 2-modifier
+
+    »»» "ABCDE"
+"   AB"
+
+    »⍟3 "ABCDE"
+"   AB
+
+# symbol similar to math concept of exponential
+n⋆4  ←→  n×n×n×n
+F⍟4  ←→  F∘F∘F∘F
+
+Since F⍟1 applies F and F⍟0 doesn't, Repeat might be pronounced "if" or "conditional" when 𝔾 is boolean.
+
+    2 ×⍟0 2
+2
+    2 ×⍟1 2
+4
+
+# 𝕨 𝔽⍟n 𝕩 is always equivalent to 𝕨⊸𝔽⍟n 𝕩, provided n is a constant;not a function
+    3 +⍟2 7
+13
+    3 + 3 + 7
+13
+
+#Count can be dynamic with 𝔾 as a function
+in that case, actual count is 𝕨𝔾𝕩
+
+remember the labels: 𝕨 𝔽_𝕣_𝔾 𝕩
+
+5+⍟× 2  # here w is 5, x is 2 , so (5+) (5+) ..10times.. (5+) 2
+52
+5+⍟× 1  # here w is 5, x is 1, so (5+) ..5times.. (5+) 1
+26
+
+Before/after binds stronger and creates trains
+
+# below w is simply nothing ·
+    ∾⟜1⍟⊢ 4
+⟨ 4 1 1 1 1 ⟩
+breakdown: (∾⟜1) (∾⟜1) (∾⟜1) (∾⟜1) 4
+
+    1⊸+⍟≠ ↕4
+⟨ 4 5 6 7 ⟩
+breakdown: (1⊸+) (1⊸+) (1⊸+) (1⊸+) ↕4
+
+# some usecase for dynamic boolean
+# halve the number if greater than 6
+    ÷⟜2⍟{6<𝕩}¨ 3‿7‿2‿1‿8   # notice the Each ¨ 
+⟨ 3 3.5 2 1 4 ⟩
+# which is equivalent to
+    (÷⟜2⍟{6<𝕩})¨ 3‿7‿2‿1‿8
+⟨ 3 3.5 2 1 4 ⟩
+
+    3 ⊣⍟<¨ 2‿4‿6  # Left if less, i.e. minimum
+⟨ 2 3 3 ⟩
+    3⌊2‿4‿6  # easier
+⟨ 2 3 3 ⟩
+---
+Some experiments
+How to rotate 2D array 90 Degs to the right?
+
+    a
+┌─       
+╵ 1 2 3  
+  4 5 6  
+  7 8 9  
+        ┘
+    ⍉a
+┌─       
+╵ 1 4 7  
+  2 5 8  
+  3 6 9  
+        ┘
+    ⌽˘⍉a  # reverse it along the first axis
+┌─       
+╵ 7 4 1  
+  8 5 2  
+  9 6 3  
+        ┘
+# works ok for larger square 2D array
+    a←4‿4⥊1+↕16
+┌─             
+╵  1  2  3  4  
+   5  6  7  8  
+   9 10 11 12  
+  13 14 15 16  
+              ┘
+    ⌽˘⍉a   # rotate 90 deg clockwise
+┌─           
+╵ 13  9 5 1  
+  14 10 6 2  
+  15 11 7 3  
+  16 12 8 4  
+            ┘
+# same with this
+    ⍉∘⌽a
+┌─           
+╵ 13  9 5 1  
+  14 10 6 2  
+  15 11 7 3  
+  16 12 8 4  
+            ┘
+# rotate it 90 deg counter clockwise
+    ⌽∘⍉a
+┌─           
+╵ 4 8 12 16  
+  3 7 11 15  
+  2 6 10 14  
+  1 5  9 13  
+            ┘
+# rotate 180 deg
+    ⌽⌾⥊a
+┌─             
+╵ 16 15 14 13  
+  12 11 10  9  
+   8  7  6  5  
+   4  3  2  1  
+              ┘
+
+---
+Search functions
+
+Name	                 (Search)for	in	Return
+⊐	Index of	                𝕩	    𝕨	Index of first match
+⊒	Progressive Index of	    𝕩	    𝕨	Index of first unused match
+∊	Member of	                𝕨	    𝕩	1 if found, 0 if not
+⍋⍒	Bins	                    𝕩	    𝕨	Predecessor index
+
+--
+∊	Member of
+
+		"green"‿"bricks"‿"cow"‿"blue" ∊ "red"‿"green"‿"blue"
+⟨ 1 0 0 1 ⟩   # result length will match length of 𝕨
+
+# useful in finding intersection and difference
+    "initial set" (∊/⊣) "intersect"     # Keep 𝕩
+"initiset"
+
+    "initial set" (¬∘∊/⊣) "difference"  # Remove 𝕩
+"tal st"
+
+⍷ Find
+
+    "xx" ⍷ "xxbdxxxcx"
+⟨ 1 0 0 0 1 1 0 0 ⟩
+# equivalent to
+    "xx"⊸≡˘ 2 ↕ "xxbdxxxcx"
+⟨ 1 0 0 0 1 1 0 0 ⟩
+
+# interesting to note that, by "flattening" into a list
+   (<"->")≡¨<˘2↕"CH -> B"
+⟨ 0 0 0 1 0 0 ⟩
+⟨ 3 ⟩
+# this unit array '<' comparison is not the same as 'pack' ⊸ (as atom)
+   (<"->")≡˘2↕"CH -> B"
+⟨ 0 0 0 0 0 0 ⟩
+   "->"⊸≡˘2↕"CH -> B"
+⟨ 0 0 0 1 0 0 ⟩   # but notice the dimension is not 𝕩's dimension
+
+# to have like APL style with trailing zeros
+    "string" ⍷ "substring"
+⟨ 0 0 0 1 ⟩
+
+    "string" (≢∘⊢↑⍷) "substring"  # APL style
+⟨ 0 0 0 1 0 0 0 0 0 ⟩
+
+Find is quite useful, even for scanning 2D patterns
+    ⊢ a ← 7 (4|⋆˜)⌜○↕ 9   # Array with patterns
+┌─                   
+╵ 1 1 1 1 1 1 1 1 1  
+  0 1 2 3 0 1 2 3 0  
+  0 1 0 1 0 1 0 1 0  
+  0 1 0 3 0 1 0 3 0  
+  0 1 0 1 0 1 0 1 0  
+  0 1 0 3 0 1 0 3 0  
+  0 1 0 1 0 1 0 1 0  
+                    ┘ # this is 7 x 9
+
+    (0‿3‿0≍0‿1‿0) ⍷ a
+┌─               
+╵ 0 0 0 0 0 0 0  
+  0 0 0 0 0 0 0  
+  0 0 0 0 0 0 0  
+  0 0 1 0 0 0 1  
+  0 0 0 0 0 0 0  
+  0 0 1 0 0 0 1  
+                ┘ # this is 6 x 7 only 
+
+# to get full padding
+   (0‿3‿0≍0‿1‿0) (≢∘⊢↑⍷) a
+┌─
+╵ 0 0 0 0 0 0 0 0 0
+  0 0 0 0 0 0 0 0 0
+  0 0 0 0 0 0 0 0 0
+  0 0 1 0 0 0 1 0 0
+  0 0 0 0 0 0 0 0 0
+  0 0 1 0 0 0 1 0 0
+  0 0 0 0 0 0 0 0 0
+                    ┘
+# special case
+#It's also allowed for 𝕨 to have a smaller rank than 𝕩; in this case leading axes of 𝕩 are mapped over so that axes of 𝕨 correspond to trailing axes of 𝕩.
+    0‿1‿0‿1 ⍷ a
+┌─             
+╵ 0 0 0 0 0 0  
+  0 0 0 0 0 0  
+  1 0 1 0 1 0  
+  0 0 0 0 0 0  
+  1 0 1 0 1 0  
+  0 0 0 0 0 0  
+  1 0 1 0 1 0  
+              ┘
+
+--
+⊐	Index of
+
+    "zero"‿"one"‿"two"‿"three" ⊐ "one"‿"eight"‿"two"
+⟨ 1 4 2 ⟩ # result length match length of 𝕩, "eight" is not found, so return ≠𝕨
+
+How to think about it?
+The `open` side of the symbol points to the `searched-in argument`
+think about the `open` side as 'gulping up' the arguments and 'contain' them within
+while the other side is left outside of the container and being used as a `searched for` match
+
+This is same as 𝕨⊏𝕩, we search `for` 𝕨 `in` 𝕩
+the result (list) length is the same length as the `searched for` argument
+
+# Index of - always return just the first match
+       "one"‿"zero"‿"one"‿"two"‿"three" ⊐ "one"‿"eight"‿"two"‿"one"
+⟨ 0 5 3 0 ⟩
+
+--
+ To find the indices of all matches, start with Match Each, then Indices
+    / "letters" ≡¨< 'e'        # Many to one
+⟨ 1 4 ⟩
+
+    "letters" (<∘/˘≡⌜˜) "let"  # Many to many
+⟨ ⟨ 0 ⟩ ⟨ 1 4 ⟩ ⟨ 2 3 ⟩ ⟩
+# Note, for <∘/˘, if we do < we could combine at major axis ˘, even if the
+# result output for each axis has different length
+
+
+# breakdown
+    # 2-Train
+    "letters" (<∘/˘) (≡⌜˜) "let"
+    # first Train
+    "letters" ≡⌜˜ "let"
+┌─               
+╵ 1 0 0 0 0 0 0  
+  0 1 0 0 1 0 0  
+  0 0 1 1 0 0 0  
+                ┘
+    # 2nd Train, notice, the combinator always bind strongest to Function
+    # so its not <∘(/˘), its (<∘/)˘
+    (<∘/)˘ ("letters" ≡⌜˜ "let")
+⟨ ⟨ 0 ⟩ ⟨ 1 4 ⟩ ⟨ 2 3 ⟩ ⟩
+
+--
+⊒	Progressive Index of
+
+Progressive Index of returns the index of the first unused match, 
+provided there's still one left.
+It returns either ≠𝕨 or an index of a cell from 𝕨 that matches the given cell of 𝕩. 
+
+    "aaa" ⊒ "aaaaa"
+⟨ 0 1 2 3 3 ⟩ # last 2 3's are 𝕨 length, `a` is progressively found in index 0,1,2
+
+    "aaabb" ⊒ "ababababab"
+⟨ 0 3 1 4 2 5 5 5 5 5 ⟩ # last 5 5's
+
+    "abaaccdd" ⊒ "abcbc" 
+⟨ 0 1 4 8 5 ⟩ # second `b` in 𝕩 cannot be found
+
+--
+Progressive Member of
+
+# Not available as a symbol
+
+# so Membership of in terms of Index of is:
+𝕩∊𝕨 is (𝕨⊐𝕩)<≠𝕨
+# e.g.
+    "abcde" ∊ "beb"
+⟨ 0 1 0 0 1 ⟩
+    "beb" ⊐ "abcde"
+⟨ 3 0 3 3 1 ⟩
+    ("beb" ⊐ "abcde") < 3
+⟨ 0 1 0 0 1 ⟩
+
+(𝕨⊐𝕩)<≠𝕨, after refactoring is ⊐˜<≠∘⊢
+
+    "abcde"∊"beb"
+⟨ 0 1 0 0 1 ⟩
+    "abcde" (⊐˜<≠∘⊢) "beb"
+⟨ 0 1 0 0 1 ⟩
+3-Train
+   w (⊐˜<(≠∘⊢)) x
+   (w⊐˜x) < (w(≠∘⊢)x)
+   
+# Member of 
+    "aabbcc" (⊐˜<≠∘⊢) "baa"
+⟨ 1 1 1 1 0 0 ⟩
+
+# Progressive Member of
+    "aabbcc" (⊒˜<≠∘⊢) "baa"
+⟨ 1 1 1 0 0 0 ⟩   # second `b` is not a member
+
+    "aabbcc" ((⊒˜=≠∘⊢)/⊣) "baa"  # Multiset difference, notice the `=` instead of `<`, meaning find those NOT in the progressive set
+"bcc"
+
+    ⍋∘⍋ "adebcedba"
+⟨ 0 5 7 2 4 8 6 3 1 ⟩
+
+    ∧⊸⊒ "adebcedba"
+⟨ 0 5 7 2 4 8 6 3 1 ⟩
+
+    ∧⊸⊐ "adebcedba"  # Ties included, or rather only the _first_ index is used
+⟨ 0 5 7 2 4 7 5 2 0 ⟩
+
+    ⊒˜ "anything at all"   # every cell matched to itself, equal to ↕∘≠
+⟨ 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ⟩
+
+---
+Single Search (how to search for one thing only)
+
+    stuff ← "tacks"‿"paper"‿"string"‿"tape"
+
+    stuff ⊐ "tacks"‿"string"
+⟨ 0 2 ⟩   # good
+
+    stuff ⊐ "string"
+⟨ 4 4 4 4 4 4 ⟩  # bad - it treats the element as the whole list to check
+
+    stuff ⊐< "string"
+┌·      # enclosed
+· 2  
+    ┘
+
+    stuff ⊑∘⊐⟜< "string"  # want the `first` element
+2
+
+    stuff⊸⊐⌾< "string" # or use `Under` to undo (un-enclose) < 
+2
+
+    stuff
+⟨ "tacks" "paper" "string" "tape" ⟩
+    "string"‿"nothing" ∊stuff
+⟨ 1 0 ⟩
+    "string"∊stuff  # member of - also suffers same issue
+⟨ 0 0 0 0 0 0 ⟩
+
+    ∊⟜stuff⌾< "string" # can use similar trick, but for member of
+1
+
+---
+Search for argument can be higher rank arrays
+
+    ("high"≍"rank") ∊ "list arg"
+┌─         
+╵ 0 1 1 0  
+  1 1 0 0  
+          ┘
+
+    4‿4‿4 ⊒ 3‿2⥊4
+┌─     
+╵ 0 1  # searches in index order  (same index as if using Deshape)
+  2 3  
+  3 3  
+      ┘
+ # so above same as: ⥊𝕨⊒𝕩 is 𝕨⊒⥊𝕩.
+
+    ⊢ rows ← >"row"‿"rho"‿"row"‿"rue"
+┌─     
+╵"row  
+  rho  
+  row  
+  rue" 
+      ┘
+
+    rows ⊐ >"row"‿"row"‿"col"≍"rho"‿"cow"‿"col"
+┌─       
+╵ 0 0 4  # the shape always matches the `searched for` argument's
+  1 4 4  
+        ┘
+#breakdown:
+
+    >"row"‿"row"‿"col"≍"rho"‿"cow"‿"col"
+┌─     
+╎"row  
+  row  
+  col   
+       
+ ·rho  
+  cow  
+  col" 
+      ┘
+    ≢>"row"‿"row"‿"col"≍"rho"‿"cow"‿"col"
+⟨ 2 3 3 ⟩
+# that's why there's 2 rows in the result, each 3 major cells searched against
+# the LHS argument `rows` ; in contrast
+# if we `flatten` everything into a column
+    rows ⊐ >"row"‿"row"‿"col"‿"rho"‿"cow"‿"col"
+⟨ 0 0 4 1 4 4 ⟩
+# a 0-cell of 𝕩 gives a 0-cell of the result; i.e. 1-1 cell comparisons and give
+# a rank-0 (atom, just a number) for each cell
+
+# consider this: the searched-in cells are rank-0 atom, so compare atom to ataom
+    (2‿1≍3‿1) ∊ 3‿1‿4‿3
+┌─     
+╵ 0 1  
+  1 1  
+      ┘
+# the searched-in cells are `list`, so compare list to list
+    (2‿1≍3‿1) ∊ 3‿1≍4‿3
+⟨ 0 1 ⟩
+    3‿1≍4‿3
+┌─     
+╵ 3 1  
+  4 3  
+      ┘
+
+---
+↕  <-- Dyadic window
+
+    5↕"abcdefg"  # take a window, there are 1+(≠𝕩)-𝕨, or (≠𝕩)¬𝕨, of these sections
+┌─       
+╵"abcde  
+  bcdef  
+  cdefg" 
+        ┘   # 8 - 5 = 3 sections
+
+# these two are the same
+    2⊏5↕"abcdefg"
+"cdefg"
+    5↑2↓"abcdefg"
+"cdefg"
+
+Windows differs from Prefixes and Suffixes in that it doesn't add a layer of nesting (it doesn't enclose each slice)
+
+# Recall Prefixes and Suffixes
+    ↑ "abcde"
+⟨ ⟨⟩ "a" "ab" "abc" "abcd" "abcde" ⟩
+    ↓ "abcde"
+⟨ "abcde" "bcde" "cde" "de" "e" ⟨⟩ ⟩
+
+# window can do multiple dimension slices
+    <⎉2 2‿2↕"0123"∾"abcd"≍"ABCD"   #2‿2 slice
+┌─                      
+╵ ┌─     ┌─     ┌─      
+  ╵"01   ╵"12   ╵"23    
+    ab"    bc"    cd"   
+       ┘      ┘      ┘  
+  ┌─     ┌─     ┌─      
+  ╵"ab   ╵"bc   ╵"cd    
+    AB"    BC"    CD"   
+       ┘      ┘      ┘  
+                       ┘
+# transposed is the same
+    {(5↕𝕩)≡⍉(3↕𝕩)}"abcdefg"
+1
+
+    {⟨𝕩,⍉𝕩⟩}5↕"abcdefg"
+┌─                   
+· ┌─        ┌─       
+  ╵"abcde   ╵"abc    
+    bcdef     bcd    
+    cdefg"    cde    
+          ┘   def    
+              efg"   
+                  ┘  
+                    ┘
+# take running sums of 3 values
+    +˝˘3↕ ⟨2,6,0,1,4,3⟩
+⟨ 8 7 5 8 ⟩
+
+A common task is to act on windows with an initial or final element so the total length stays the same. 
+When using windows of length 2, the best way to accomplish this is with a shift « or ». 
+If the window length is longer or variable, then a 'trick' with Windows works better: 
+---> add the elements, and then use windows matching the 'original' length. (Hence, do not need to specify the intended window length! For e.g. above, we had to specify window length 3↕..)
+
+# more normal way of doing - clear intention
+    -⟜(0»⊢) +` 3‿2‿1‿1 # shift a zero to the left
+⟨ 3 2 1 1 ⟩
+
+# using the 'trick'
+    (-˜˝≠↕0∾⊢) +` 3‿2‿1‿1  # directly join the zero to the left; and window length is full input length
+⟨ 3 2 1 1 ⟩
+# breakdown
+    c ← +` 3‿2‿1‿1
+⟨ 3 5 6 7 ⟩
+    d ← (≠c)↕(0∾⊢ c)
+┌─         
+╵ 0 3 5 6  
+  3 5 6 7  
+          ┘
+# then do the thing
+    -˜˝ d
+⟨ 3 2 1 1 ⟩
+
+# apply the concept to the 3 running sums (to keep the length constant)
+# but see, the first TWO elements in the result might not be needed
+    (+˝≠↕(2⥊0)⊸∾) ⟨2,6,0,1,4,3⟩
+⟨ 2 8 8 7 5 8 ⟩
+
+# notice that the whole chunk of functions are (f . g . h . i) 
+# evaluations are from right to left, so the fork g . h . i are processed first
+
+----
+How to use functions as block (ignores arguments and purely for side effects)
+
+1.Pass @ to a function that ignores its argument. It's a nice signal that nothing is happening and is easy to type.
+2.A headerless function that doesn't use an argument will be interpreted as an immediate block by default. Start it with the line 𝕤 to avoid this (it's an instruction to navel gaze: the function contemplates its self, but does nothing about it
+
+fn = ()=>{m+=1;n*=2}; fn() # Javascript
+Fn ← {𝕤⋄  m+↩1,n×↩2}, Fn @ # Delayed execution
+
+
+----
+Control Flow
+If ← {𝕏⍟𝕎@}´
+If (a<10)‿{𝕤
+  a +↩ 10
+}
+
+# if its true, it will execute and return a result, else returns @
+   a←1
+1
+   {𝕤⋄a+↩10}⍟(a<10) @
+11
+   {𝕤⋄a+↩10}⍟(a<10) @
+@
+# most cases, can use this
+{ a<10 ? a+↩10 ; @ }
+
+--
+For
+
+Fn¨ v      # for (𝕩 in v)
+Fn¨ ↕n     # for (𝕩=0; 𝕩<n; 𝕩++)
+Fn¨ k↓↕n   # for (𝕩=k; 𝕩<n; 𝕩++)  with 0≤k
+Fn¨ k+↕n-k # for (𝕩=k; 𝕩<n; 𝕩++)  with k≤n
+Fn¨ ⌽↕n    # for (𝕩=n; --𝕩; )
+
+--
+If-Else
+# with only predicate
+{
+  threshold < 6 ?
+  a ↩ Small threshold ;  # If predicate was true
+  b ↩ 1 Large threshold  # If it wasn't
+}
+
+# with Choose ◶
+IfElse ← {cond‿True‿False: cond◶False‿True @}
+
+# 2 ways to write it
+IfElse ⟨𝕩<mid⊑𝕨
+  {𝕤⋄ hi↩mid}
+  {𝕤⋄ lo↩mid}
+⟩
+
+IfElse (𝕩<mid⊑𝕨)‿{𝕤
+  hi↩mid
+}‿{𝕤
+  lo↩mid
+}
+
+#usage for above example
+   hi←0
+0
+   lo←0
+0
+   mid←1
+1
+   8‿9 { IfElse (𝕩<mid⊑𝕨)‿{𝕤⋄hi↩mid}‿{𝕤⋄lo↩mid} } 2
+1
+   hi
+1
+   lo
+0
+
+#with case headers  
+{𝕏𝕨}´ (𝕩<mid⊑𝕨)‿{
+  1: hi↩mid
+;
+  0: lo↩mid
+}
+
+# breakdown (𝕩<mid⊑𝕨) {𝕏𝕨} {1: hi↩mid;0: lo↩mid} 
+# 𝕨 could be 1 or 0, hence deciding which header to execute
+
+--
+Chained if-else
+
+#just predicates
+{
+  a<b ? a+↩1 ;
+  a<c ? c-↩1 ;
+        a-↩2
+}
+
+#this is a right fold, with the right most input as @ 
+#but becoz the middle ones are all deferred functions
+#so none will be executed until the first `test` statement is executed
+Test ← {fn←{Cond‿Act 𝕊 else: Cond◶Else‿Act}´𝕩 ⋄ Fn@}
+
+Test ⟨
+  (  a<b)‿{𝕤⋄a+↩1}
+  {𝕤⋄a<c}‿{𝕤⋄c-↩1}
+  {𝕤⋄a-↩2}
+⟩
+
+--
+Switch case
+Match ← {𝕏𝕨}´
+
+Match value‿{
+  0‿b: n-↩b
+;
+  a‿b: n+↩a-b
+;
+  𝕩: n∾↩𝕩
+}
+
+Select ← {(⊑𝕩)◶(1↓𝕩)@}
+
+Select number‿{
+  name ↩ "zero"
+}‿{
+  name ↩ "one"
+}‿{
+  name ↩ "two"
+}
+
+--
+                 |this 𝕩 is actually useless, its just @
+Forever ← {𝕊a:{𝕊A𝕩}@}
+# main gist, is to run A as a function, forever
+
+Forever 1⊑@‿{𝕤
+  # Stuff to do forever
+}
+
+# slicker way is to pass 𝕩 as an operand (𝔽) into 
+# the inner {𝕊𝔽𝕩} 
+Forever ← {𝕩{𝕊𝔽𝕩}@}
+
+# inner operand 𝔾 is outer 𝕩
+# inner operand 𝔽 is outer 𝕨
+# inner 𝕩 is @ 
+# so execute 𝔾@ as long as 𝔽 is 1
+While ← {𝕨{𝕊∘𝔾⍟𝔽𝕩}𝕩@}´
+
+While {𝕤⋄a<15}‿{𝕤
+  a×↩2
+}
+
+   a←1
+1
+   While {𝕤⋄a<15}‿{𝕤⋄•Show a⋄a×↩2}
+1
+2
+4
+8
+16
+
+DoWhile ← {𝕨{𝕊⍟𝔽𝔾𝕩}𝕩@}´
+# run 𝔾 once 
+# if 𝔽 is 1, will run the loop again
+   a←1
+1
+   DoWhile {𝕤⋄a<15}‿{𝕤⋄•Show a⋄a×↩2}
+1
+2
+4
+8
+16
+   DoWhile {𝕤⋄a<15}‿{𝕤⋄•Show a⋄a×↩2} # will run once
+16
+32
+   While {𝕤⋄a<15}‿{𝕤⋄•Show a⋄a×↩2} # wont run, just return @
+@
+
+--
+Low stack version - save required stack frames logarithmicly (why?)
+While ← {𝕩{𝔽⍟𝔾∘𝔽_𝕣_𝔾∘𝔽⍟𝔾𝕩}𝕨@}´
+
+The simplest approach is to perform one iteration and 
+--> recurse with the same two functions.
+# comment
+#{𝔽_𝕣_𝔾∘𝔽⍟𝔾𝕩} is same as {𝕊∘𝔽⍟𝔾𝕩}
+#it is `deconstructed out` as 𝔽_𝕣_𝔾 becoz we want to bind 𝔽 with 𝔽⍟𝔾∘𝔽
+#(as mentioned below)
+
+The modified approach replaces (the leftmost) 𝔽 with 𝔽⍟𝔾∘𝔽, (what is the significance of this?) 
+that is, it doubles it while making sure the condition is still checked each iteration. 
+
+#so, on the next level of recursion
+#we get TWO times the function 𝔽⍟𝔾
+
+The `doublings compound` so that recursion level n performs 𝔽 up to 2⋆n times (2 power n) while using on the order of n additional stack frames. 
+
+# seems this also work? what's the diff between this and the above?
+While ↩ {𝕩{𝔽⍟𝔾∘𝕊∘𝔽⍟𝔾𝕩}𝕨@}´
+
+# seems there's a system •_while_
+### WARNING: this is NOT a pure BQN function, so it cannot be defined by pure BQN terms
+
+# so this would work
+   {𝕊: •Show i⋄i+↩1}•_while_(<⟜10) i   # navel gazing 𝕊:, same as 𝕤⋄
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+# this works as well: 
+{𝕊: •Show i⋄i+↩1}•_while_{𝕤 ⋄ i < 10} @
+
+# this builtin •while works by taking any initial value from 𝔾
+# and the subsequent loop condition is actually evaluated from the result of 𝔽 
+   i←0
+0
+   {𝕊: •Show i⋄i+i↩1 ⋄ 12}•_while_(<⟜10) i
+0
+12   # stopped, coz the result value of 𝔽 is 12 
+   i
+1
+ 
+
+# if using ⊢, it would not go beyond 0 for 𝔽
+   i←2
+2
+   {𝕊: •Show i⋄i-↩1}•_while_⊢1
+2
+1
+0
+# its weird, becoz somehow the left 𝔽 affects the right condition
+
+left tack ⊣ seems the same
+   i←2
+2
+   {𝕊: •Show i⋄i-↩1}•_while_⊣1
+2
+1
+0
+
+# it takes a w as well
+# in this case it evaluates the condition by w G x
+# and executes by w F x, with the new result being the next x
+   10 {𝕊: •Show 𝕨‿𝕩⋄•Show i⋄i+↩1}•_while_> i
+⟨ 10 5 ⟩
+5
+⟨ 10 6 ⟩
+6
+⟨ 10 7 ⟩
+7
+⟨ 10 8 ⟩
+8
+⟨ 10 9 ⟩
+9
+10
+
+
+
+
+

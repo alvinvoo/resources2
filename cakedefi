@@ -1,0 +1,207 @@
+https://blog.singlefinance.io/what-is-liquidity-mining-and-impermanent-loss-5b3d2c7fcc79
+Liquidity Pool Tokens
+If a provider is to create a new pool, the number of liquidity tokens they will receive will be equal to the square root of (x * y), where x and y reflect the quantity of each token delivered.
+
+For e.g. in Cake, 0.59665 BTC - 7289.9965 DFI pair = 
+scala> math.sqrt(0.59665*7289.9965)
+val res0: Double = 65.95131849876088  (shares?)
+
+Auto-sake on LP
+Auto-compound on Staking
+
+--
+Impermanent Loss
+
+An impermanent loss is a temporary loss of funds that occurs when providing liquidity. It’s very often explained as 
+ - a difference between holding an asset versus providing liquidity for that asset. 
+ - The greater the price difference, the higher the percentage of impermanent loss.
+
+How does Impermanent Loss Happen?
+
+Impermanent loss is usually observed in standard liquidity pools where the liquidity provider (LP) has to provide both assets in the correct ratio and one of the assets is volatile in relation to the other, for example, in an ETH/USDC 51/50 liquidity pool.
+
+--
+APY - considers the effect of compounding
+APR - doesnt 
+
+--
+Mobile wallet LP no fee?
+Becoz of non-custodian own wallet?
+
+aprtoapy.com
+defichain-income.com
+
+seems like only 2 exchanges have DFI coin
+Sign up for Bittrex with my link: https://bittrex.com/discover/join?ref...https://bittrex.com/discover/join?referralCode=4GP-KDW0TL&v=CDxQmtbfID8
+Sign up for KuCoin with my link: https://www.kucoin.com/ucenter/signup...
+https://www.kucoin.com/ucenter/signup?rcode=rBEB6BY&v=CDxQmtbfID8
+That means, only these 2 exchanges can exchange DFI back to BTC?
+
+--
+DefiChain
+DeFiChain is a blockchain dedicated to Native Decentralized Finance for Bitcoin.
+
+Decentralized Finance includes all the financial applications you know from more traditional centralized finance (i.e., banks), with the key benefit being that there is no centralized institution you have to trust.
+
+Native Decentralized Finance or #NativeDeFi means that the DeFi applications on DeFiChain are built directly on the blockchain, ensuring the highest level of security standards and a greater resistance to hacks.
+
+DeFiChain is a fork of Bitcoin, meaning that its core development started off from the same secure, well audited and robust code base as Bitcoin. As a result, DeFiChain has good synergy with Bitcoin to continue to have seamless integration of decentralized finance applications with the Bitcoin blockchain.
+
+Though DeFiChain is a Bitcoin fork, the blockchain’s consensus is ensured through a hybrid of Proof of Stake and Bitcoin’s Proof of Work. This means that everyone can participate in securing the blockchain and earn block rewards!
+
+DeFiChain Staking currently offers 31.91% annual yields, with a stable coin price that correlates closely with Bitcoin due to the high liquidity on the Decentralized Exchange (DEX). This makes DeFiChain perfectly suitable to generate a regular passive income.
+
+--
+Decentralized financial applications include: Lending and borrowing, trading, asset tokenization, distribution of dividends, and more.
+
+A typical financial transaction looks like this: Sender → Bank → Receiver. Decentralized finance cuts out the middle step, making decentralized financial transactions look like this: Sender → Receiver.
+
+Trustless financial applications without an intermediary (i.e. a bank) enables true financial freedom for all, accessible and usable by anyone all around the world. Borderless, without any gatekeeper.
+
+All decentralized finance must be open-source by nature. This level of heightened transparency contributes to long-term security, allowing people to verify the code themselves without the need to trust anyone or anything other than pure mathematics.
+
+DeFiChain already has decentralized trading functionality live and working, with lending and borrowing, as well as asset tokenization coming in Q3 2021. Soon you’ll be able to buy Tesla, Apple and more directly on the blockchain in a decentralized way!
+
+--
+Most DeFi projects are built on the Ethereum blockchain, where applications run on so-called virtual machines. Unlike native blockchains, blockchains like Ethereum offer greater flexibility for developers. This flexibility, however, makes them more risky for decentralized financial applications.
+
+When it comes to financial services, Ethereum uses smart contracts on the application layer, which could be prone to human errors and coding mistakes. In addition, they are simply not built for the function of financial applications, but rather a one-size-fits all solution. There, THE CODE GETS COMPILED AND HAS TO RUN THROUGH A VIRTUAL MACHINE.
+
+On blockchains like DeFiChain, the execution of the code happens DIRECTLY ON THE NATIVE BLOCKCHAIN LAYER — no “on-top” application layer is needed. As a result, DeFiChain is perfectly designed for all kinds of financial applications and services.
+
+Performing DeFi transactions on Ethereum takes more than 3,000 distinct steps — each with its own potential attack surface. On DeFiChain, just a few lines of code are enough, making transactions much more robust against potential attacks, and DeFiChain’s #NativeDeFi approach, more secure.
+
+Different DeFi stakeholders have different preferences when it comes to security. While developers look at it from a purely technical perspective, wanting to be as flexible as possible in writing their code, end users only care that DeFi projects work in their favour by mitigating hacks and malicious attacks. DeFiChain addresses that by providing a secure and safe DeFi platform.
+
+The main benefits of #NativeDeFi include: Consensus happens directly on the native blockchain layer, the transaction costs are low, and the attack surface is low.
+
+--
+DeFiChain – through various decentralized finance applications – enables everyone to participate and earn incredibly high yields.
+
+Two of DeFiChain’s most important applications are Staking and Liquidity Mining, which offer returns of up to 33.07% per year.
+
+Proof of Stake (Staking) is DeFiChain’s consensus algorithm and is comparable to Bitcoin’s Proof of Work (Mining). The difference is that Staking enables anyone to participate even without expensive mining rigs and vast amounts of electricity, to earn new DFI block rewards like bitcoin miners earn new bitcoins.
+
+Liquidity Mining is not part of DeFiChain’s consensus algorithm, but serves the purpose of providing liquidity for the decentralized exchange. In return, liquidity miners get block rewards, making it a very lucrative endeavour and a win-win for everyone involved.
+
+Liquidity Mining on DeFiChain even allows you to earn up to 33.07% yearly returns on major crypto assets like BTC, ETH and more.
+
+Everything is done in a non-custodial manner, meaning that your money is always in your own possession and growing in your own hands.
+
+--
+DeFiChain’s Decentralized Exchange (DEX) is the cornerstone of most decentralized financial applications in the DeFiChain ecosystem.
+
+DeFiChain’s DEX not only allows you to earn incredibly high yields by providing liquidity, but also really demonstrates the power of true decentralized finance.
+
+Being #NativeDeFi for Bitcoin, you can send actual bitcoins (BTC) to and from the Decentralized Exchange, and trade them for ETH, DFI, USDT, DOGE and many more digital tokens. This is a feature unheard of before in the crypto space.
+
+Unlike most other decentralized exchanges, such as those built on Ethereum, DeFiChain’s DEX is not a website – which itself represents a centralized, vulnerable party – but rather an open-source, publicly available app that can be run by anyone. Because it’s decentralized, it also can’t be shut down by a centralized institution.
+
+The coin powering all transactions and trades is DFI, the native digital coin of DeFiChain. Since its launch, the DFI coin has increased by more than 15x, offering more than 27% yearly returns, and proving to be relatively stable even in bearish market conditions.
+
+Decentralized stocks, loans, dividends and more will be introduced to DeFiChain in the upcoming weeks, making the DFI coin a strong investment with a lot of upside potential that can serve as a reliable, high yielding coin in any well-diversified crypto portfolio.
+
+--
+Bitcoin or BTC is a decentralized digital currency that can be sent by one user to another, peer-to-peer on the Bitcoin network without the need for intermediaries such as banks or any other middlemen.
+
+Bitcoin was introduced in 2008 and launched in 2009 by a still unknown person (or group of people) using the pseudonym Satoshi Nakamoto. It is widely considered as the world’s first-ever cryptocurrency.
+
+People use bitcoin for various reasons but, because of its permissionless nature, the original intention was to use it as a form of digital cash or currency. Anyone with an Internet connection can send or receive bitcoin, regardless of where they are in the world.
+
+Furthermore, bitcoin is considered scarce as there can only be a maximum number of 21 million bitcoins (BTC) in existence.
+
+This finite supply is what makes it interesting as a long-term investment, since supply is limited but demand is likely to grow.
+
+Instead of digital cash, the bitcoin narrative has shifted more towards serving as a store of value. In fact, it has been nicknamed by many as digital gold. This is due to it’s censorship-resistant and scarce nature, combining the best attributes of gold in the digital world.
+
+A unit of bitcoin is divisible to eight decimal places (100 millionths of one bitcoin). Hence, it can be purchased in smaller units called a Satoshi - which, as you might have already guessed, was named in homage to Bitcoin’s creator(s) – Satoshi Nakamoto.
+
+--
+
+To understand how the Bitcoin network works, it is important to understand the various concepts or components that ties it all up together. So, let’s start with blockchain technology.
+
+Simply put, a blockchain is a shared public ledger that exists and is digitally distributed across a network. The entire Bitcoin network relies on this technology to record the history of every bitcoin transaction in a transparent, immutable, append-only and decentralized manner.
+
+Bitcoin also uses a peer-to-peer network, public-key cryptography and a proof-of-work consensus mechanism to process and verify transactions.
+
+In Lesson 1, we briefly mentioned that bitcoin is a peer-to-peer digital currency. As such, users who want to exchange bitcoin with others on the Bitcoin network do not require the approval or assistance of intermediaries to execute and verify transactions.
+
+How are bitcoin transactions verified? This is done by network nodes (decentralized computers) via a system called public-key cryptography. What is it? It’s a type of cryptography (a system of encoding and decoding of data) that uses pairs of keys (one public key and one private key).
+
+What happens to these verified transactions? They are recorded as blocks on the blockchain. In the Bitcoin network, participants called miners compete to append these blocks.
+
+Proof-of-Work is the consensus mechanism used to confirm that these miners calculate valid alphanumeric codes — called hashes — to verify bitcoin transactions and add the next block to the blockchain.
+
+We will further dive into these concepts later on. But, in summary, it is by utilizing these concepts and components that the Bitcoin network is able to provide a fast and reliable payment network that anyone can use.
+
+To be more specific, with these various concepts and components coming together, Bitcoin network users are able to benefit from (but not limited to) the following advantages:
+
+• Payment freedom - users can send and receive bitcoin anywhere and anytime. The transactions are relatively fast too!
+• Security and control - bitcoin transactions are secure, transparent and irreversible.
+• Pseudonymity - the network does not require any ID, which makes it suitable for the unbanked and the privacy-conscious.
+• Censorship-resistance - nobody is able to block or freeze a transaction of any amount.
+
+--
+Similar to other cryptocurrencies, bitcoin is created, distributed, traded and stored with the use of a decentralized public ledger system known as a blockchain. And, as mentioned in previous lessons, the Bitcoin network relies on this technology to verify and record all bitcoin transactions in a secure, transparent and immutable manner with no central authority involved.
+
+Blockchains are a type of DISTRIBUTED LEDGER TECHNOLOGY (DLT). As such, it can simply be defined as a digital system that records, shares and synchronises transactions across multiple independent computers in different locations at the same time.
+
+Besides blockchains, the following are also considered as DLTs:
+
+• Hashgraph
+• Directed Acyclic Graph (DAG)
+• Holochain
+• Tempo (Radix) // https://learn.radixdlt.com/article/what-is-radix
+• Cerberus
+
+Bitcoin transactions are recorded as a chain of blocks, with each block containing a collection of valid bitcoin transactions and a hash (valid alphanumeric codes) of the previous block up to the genesis block in the chain.
+
+Blockchain technology helps secure bitcoin transactions, because each network node that runs the blockchain has the same list of blocks and transactions, and can transparently see these new blocks as they’re filled with new transactions. Hence, it is highly unlikely that anyone can cheat the system.
+
+This approach also prevents double-spending, which occurs when a user attempts to use the same unit of bitcoin more than once. How is it prevented? Transactions verified by miners are irreversible, final and cannot be modified. Hence, the potential of a double-spend occurring in the Bitcoin network is highly unlikely.
+
+--
+To further understand what bitcoin mining is, it is important to be familiar with timestamping. Simply put, timestamping is a way of proving that something occurred at a particular time.
+
+To form a distributed timestamp server – a linked list of blocks of data to be time-stamped and broadcasted publicly – as a peer-to-peer network, the Bitcoin network uses a Proof-of-Work (PoW) system.
+
+This “work” is often referred to as bitcoin mining.
+
+To further understand the connection between bitcoin mining and PoW, we must always remember that - in the Bitcoin network - a new block minting must contain a PoW to be accepted by the rest of the network.
+
+PoW requires miners to find a number called a nonce (an arbitrary number that can only be used once), such that when the block content is hashed along with the nonce, the result is numerically smaller than the network’s difficulty target.
+
+If the mining process comes across as difficult to understand, well that’s because it really is a complex process - particularly the math involved in it. That’s why some miners invest in expensive mining rigs to have higher chances of solving the equations that the blockchain generates.
+
+Some miners also cooperate by combining their computational resources to gain an added advantage over other miners. This is called a mining pool.
+
+As compensation for “putting in work” and for assembling a block of transactions that is accepted and verified by other miners, the successful miner or pool of miners receive block rewards and transaction fees - both in the form of bitcoins.
+
+Although it may seem that miners are only motivated by the rewards that they may potentially receive, they actually play an important role in the Bitcoin network as they keep the blockchain consistent, complete and unalterable.
+
+All in all, PoW - alongside the chaining of blocks - makes modifications of the blockchain extremely hard. Hence, making the Bitcoin network secure and less prone to malicious attacks.
+
+--
+After having a good understanding of what bitcoin is and how the Bitcoin network works, we’ll now discuss how most people make money with bitcoin.
+
+As mentioned in Lesson 1, bitcoin is considered by some as a digital currency (which can be traded) and as a store of value (which can transfer purchasing power into the future).
+
+Generally, short-term investors prefer trading. As the word implies, it is the act of buying and selling bitcoins with the aim of making a profit on daily market price changes.
+
+Trading is mostly conducted on a cryptocurrency exchange, which is an online marketplace where users buy, sell and trade cryptocurrencies.
+
+However, if you’re a long-term investor, you must definitely consider lending and liquidity mining.
+
+What is lending? It is, simply, the act of lending your bitcoins to institutional partners for a guaranteed return of your assets (i.e., the bitcoins that you lent) plus interest.
+
+As a technical intermediary, Cake DeFi is able to offer a lending rate of up to 6.5% per annum (one of the highest in the industry) and provide transparency and insurance through our partnership with Singapore-based options trading platform Sparrow. So, check it out!
+
+What is liquidity mining? Basically, it is the process of providing liquidity to a liquidity pool in order to facilitate trading on a Decentralized Exchange (DEX).
+
+If you own bitcoin, you may provide liquidity to the BTC-DFI liquidity pool that Cake DeFi provides access to. The annual percentage rate (APR) for this particular pool is currently at 27.46%. So, check it out!
+
+At Cake DeFi, you may also choose to swap your bitcoin for DFI - the native cryptocurrency of the DeFiChain blockchain. DFI can be staked and as such validate the transactions on the DeFiChain blockchain. For this service participants receive rewards of around 27% annual percentage yield (APY).
+
+You can also double your rewards if you opt for Cake DeFi’s Freezer product and lock in your DFI for 120 months. So, check it out!
+
+All in all, rather than just HODLing, Cake DeFi offers bitcoin owners a more secure and transparent means of earning a passive income. So, what are you waiting for? Check out our lending, liquidity mining and staking products, and start “baking” those bitcoins into cash flow-generating assets. Happy baking!

@@ -1,0 +1,358 @@
+* (defun hello-world () (format t "hello, world"))
+; t is shorthand for the stream *standard-output*.
+HELLO-WORLD
+* (hello-world)
+hello, world
+NIL
+* (HELLO-WORLD)  ;seems case insensitive
+hello, world
+NIL
+* (hellO-WORLD)
+hello, world
+NIL
+
+; how to compile a FASL file
+CL-USER> (load "/home/alvinvoo/my_projects/CL/hello-world.lisp")
+T ; T means true, successful
+CL-USER> (load (compile-file "/home/alvinvoo/my_projects/CL/hello-world.lisp"))
+; compiling file "/home/alvinvoo/my_projects/CL/hello-world.lisp" (written 16 JAN 2022 04:11:58 PM):
+
+; wrote /home/alvinvoo/my_projects/CL/hello-world.fasl
+; compilation finished in 0:00:00.003
+T
+
+--
+Common Lisp Object System (CLOS).
+
+--
+DEFVAR macro. 
+The asterisks (*) in the name are a Lisp naming convention for global variables.
+(defvar *db* nil)
+
+
+
+--
+EMACS + SLIME
+
+how to load source code into REPL
+a few ways:
+1. C-c C-c (compile) then switch to REPL and use
+    (load "<filename>")
+    or
+    (load (compile-file "<filename>")) # this first make FASL file
+2. From REPL, C-c C-l to load file
+
+--
+format directives start with ~
+format ~{ ~} loops through each item in a list
+~a is human readable form
+~% is newline
+~10t tells FORMAT to emit enough spaces to move to the tenth column before processing the next ~a
+
+(defvar b (list :title "Manager" :name "Frank"))
+
+(format t "~{~a:~10t~a~%~}~%" b)
+
+TITLE:    Manager
+NAME:     Frank
+
+NIL
+
+
+--
+The variable *query-io* is a global variable (which you can tell because of the * naming convention
+for global variables) that contains the input stream connected to the terminal.
+
+
+--
+#' is shorthand for “Get me the function with the following name.” Without the #', Lisp would treat evenp as the name of a variable and look up the value of the variable, not the function.
+CL-USER> (remove-if-not #'evenp '(1 2 3 4 5 6 7 8 9 10))
+(2 4 6 8 10)
+
+# below using an anonymous function
+CL-USER> (remove-if-not #'(lambda (x) (= 0 (mod x 2))) '(1 2 3 4 5 6 7 8 9 10))
+(2 4 6 8 10)
+
+# hmm why a double negative? remove-if-not?
+# there's a find-if, but only returning the first match element
+
+--
+set and get works on SYMBOL
+while
+getf works on PLIST (property list) 
+http://www.lispworks.com/documentation/HyperSpec/Body/26_glo_p.htm#property_list
+assuming cd is a PLIST like
+'((:TITLE "Rockin" :ARTIST "Bool" :RATING 0 :RIPPED T)
+ (:TITLE "Home" :ARTIST "Dixie Chicks" :RATING 9 :RIPPED T)
+ (:TITLE "Fly" :ARTIST "Dixie Chicks" :RATING 8 :RIPPED T)
+ (:TITLE "Roses" :ARTIST "Kathy Mattea" :RATING 7 :RIPPED T))
+
+# navigation of list
+CL-USER> (car *db*)
+(:TITLE "Rockin" :ARTIST "Bool" :RATING 0 :RIPPED T)
+CL-USER> (caar *db*)
+:TITLE  # within first element plist
+CL-USER> (cddr *db*)
+((:TITLE "Home" :ARTIST "Dixie Chicks" :RATING 9 :RIPPED T)
+ (:TITLE "Fly" :ARTIST "Dixie Chicks" :RATING 8 :RIPPED T)
+ (:TITLE "Roses" :ARTIST "Kathy Mattea" :RATING 7 :RIPPED T))
+# first and last can be used
+CL-USER> (last *db*)
+((:TITLE "Roses" :ARTIST "Kathy Mattea" :RATING 7 :RIPPED T))
+CL-USER> (first *db*)
+(:TITLE "Rockin" :ARTIST "Bool" :RATING 0 :RIPPED T)
+
+(getf (car *db)) -> "Bool"
+
+--
+getf is an accessor; while setf is a MACRO (ah confusing)
+
+setf changes the value of (in)place to be newvalue.
+# it directly changes the value
+
+# can supply more than 1 pair
+ (setf place-1 newvalue-1
+       place-2 newvalue-2
+       ...
+       place-N newvalue-N)
+
+# will return the last value set
+---
+#normal parameters
+(defun foo (a b c) (list a b c))
+
+#Keyword parameters
+(defun foo (&key a b c) (list a b c))
+
+(foo :a 1 :b 2 :c 3) → (1 2 3)
+(foo :c 3 :b 2 :a 1) → (1 2 3)
+(foo :a 1 :c 3) → (1 NIL 3)
+(foo) → (NIL NIL NIL)
+
+#a keyword parameter can consist of name of the parameter, a default value, and another parameter
+name, called a supplied-p parameter *(set to T or Nil depending on whether an argument was actually passed)
+(defun foo (&key a (b 20) (c 30 c-p)) (list a b c c-p))
+(foo :a 1 :b 2 :c 3) → (1 2 3 T)
+(foo :c 3 :b 2 :a 1) → (1 2 3 T)
+(foo :a 1 :c 3) → (1 20 3 T)
+(foo) → (NIL 20 30 NIL)
+
+--
+boolean
+nil  (symbolize False and Empty list)
+t    (is True)
+
+
+--
+defparameter vs defvar
+
+Defparameter makes an unconditional assignment to name, while defvar makes a conditional one. 
+This means that defparameter is useful in situations where loading or reloading the definition would want to pick up a new value of the variable, while defvar is used in situations where the old value would want to be retained if the file were loaded or reloaded.
+
+(defparameter *p* 1) =>  *P*
+*p* =>  1
+(constantp '*p*) =>  false
+(setq *p* 2) =>  2
+(defparameter *p* 3) =>  *P*
+*p* =>  3
+
+(defvar *v* 1) =>  *V*
+*v* =>  1
+(constantp '*v*) =>  false
+(setq *v* 2) =>  2
+(defvar *v* 3) =>  *V*
+*v* =>  2
+
+--
+A list is recursively defined to be either the empty list or a cons whose cdr component is a list. A list is therefore a chain of conses linked by their cdr components and terminated by nil, the empty list.
+
+The empty list nil therefore can be written as (), because it is a list with no elements.
+
+(a b c)               ;A list of three symbols 
+(2.0s0 (a 1) #\*)     ;A list of three things: a short floating-point number, another list, and a character object
+
+A dotted list is one whose last cons does not have nil for its cdr, rather some other data object (which is also not a cons, or the first-mentioned cons would not be the last cons of the list).
+
+(a . 4)         ;A cons whose car is a symbol 
+                ; and whose cdr is an integer 
+(a b c . d)     ;A dotted list with three elements whose last cons 
+                ; has the symbol d in its cdr
+
+There's a diff
+CL-USER> (cddr '(a b . 7))
+7
+CL-USER> (cddr '(a b 7))
+(7)
+
+Need to understand how cons work
+http://www.lispworks.com/documentation/HyperSpec/Body/f_cons.htm
+(cons 1 2) =>  (1 . 2)
+(cons 1 nil) =>  (1)
+(cons nil 2) =>  (NIL . 2)
+(cons nil nil) =>  (NIL)
+; difference is in 
+CL-USER> (cdr (cons 1 (cons 2 nil)))
+(2)
+CL-USER> (cdr (cons 1 2))
+2
+
+
+--
+backquote / backtick
+-- template of a data structure to be built
+
+CL-USER> (defvar x 3)
+X
+CL-USER> x
+3
+CL-USER> `(1 ,x "foo")  ;only x is evaluated and subtituted for value
+(1 3 "foo")
+
+--
+sort
+it will destructively modify the original argument
+(meaning, the argument variable could not be used anymore)
+
+CL-USER> (defparameter b '(5 4 6 3 2 1))
+B
+CL-USER> (sort b #'<)
+(1 2 3 4 5 6)    ;answer is correct, but `b` has been destroyed (as below)
+CL-USER> b  
+(4 5 6)
+
+(setq tester (copy-seq "lkjashd")) =>  "lkjashd"
+(sort tester #'char-lessp) =>  "adhjkls"
+(setq tester (list '(1 2 3) '(4 5 6) '(7 8 9))) =>  ((1 2 3) (4 5 6) (7 8 9))
+(sort tester #'> :key #'car)  =>  ((7 8 9) (4 5 6) (1 2 3)) 
+(setq tester (list 1 2 3 4 5 6 7 8 9 0)) =>  (1 2 3 4 5 6 7 8 9 0)
+; odd 'smaller' than even
+(stable-sort tester #'(lambda (x y) (and (oddp x) (evenp y)))) =>  (1 3 5 7 9 2 4 6 8 0)
+
+all chars comparisons functions
+http://www.lispworks.com/documentation/HyperSpec/Body/f_chareq.htm
+
+char-equal, char-not-equal, char-lessp, char-greaterp, char-not-greaterp, and char-not-lessp 
+similar to
+char=, char/=, char<, char>, char<=, char>= (seems easier to remember)
+
+--
+Association list (list of key-value pairs)
+http://www.lispworks.com/documentation/HyperSpec/Body/26_glo_a.htm#association_list
+
+(setq values '((x . 100) (y . 200) (z . 50))) =>  ((X . 100) (Y . 200) (Z . 50))
+(assoc 'y values) =>  (Y . 200)
+(rplacd (assoc 'y values) 201) =>  (Y . 201) ; replace in place
+(assoc 'y values) =>  (Y . 201)
+
+--
+Extended loop has many name-clause forms
+http://www.lispworks.com/documentation/HyperSpec/Body/m_loop.htm
+
+
+---
+Macro
+-- macro works on expressions instead of data
+CL-USER> (defmacro backwards (expr) (reverse expr))
+BACKWARDS
+CL-USER> (backwards ("hello voo" t format))
+hello voo
+NIL
+
+' and ` - both stop Lisp from evaluating a form
+but ` stops the whole form and let us pick out which subexpr to be evaluated with ,
+
+CL-USER> `(1 2 3)
+(1 2 3)
+CL-USER> '(1 2 3)
+(1 2 3)
+
+`(1 2 (+ 1 2)) → (1 2 (+ 1 2))
+`(1 2 ,(+ 1 2)) → (1 2 3)
+
+, and ,@ (splices the following expr - which must evaluate into a list - and spills into the enclosing list)
+`(and ,(list 1 2 3)) → (AND (1 2 3))
+`(and ,@(list 1 2 3)) → (AND 1 2 3)
+`(and ,@(list 1 2 3) 4) → (AND 1 2 3 4)
+
+
+(defun select (selector-fn)
+  (remove-if-not selector-fn *db*))
+
+(defun make-comparison-expr (field value)
+  `(equal (getf cd ,field) ,value))
+
+(defun make-comparisons-list (fields)    ; here we see a sub expr of a macro is defined as fun
+  (loop while fields
+	collecting (make-comparison-expr (pop fields) (pop fields))))
+
+(defmacro where (&rest clauses)
+  `#'(lambda (cd) (and ,@(make-comparisons-list clauses))))
+
+; we can use `macroexpand-1` to see whats the result without evaluating
+; notice the escaped '(where...)
+CL-USER> (macroexpand-1 '(where :title "Break" :ass "good" :ripped nil))
+#'(LAMBDA (CD)
+    (AND (EQUAL (GETF CD :TITLE) "Break") (EQUAL (GETF CD :ASS) "good")
+         (EQUAL (GETF CD :RIPPED) NIL)))
+T
+
+;;;;
+The evaluation of a macro form proceeds in two phases: 
+First, the elements of the macro form are passed, unevaluated, to the macro function. 
+Second, the form returned by the macro function—called its expansion—is evaluated according to the
+normal evaluation rules.
+
+
+--
+Special Operators
+
+(if test-form then-form [ else-form ])
+(quote (+ 1 2)) ; same as '(+ 1 2)
+(let ((x 10)) x)
+
+--
+Functions
+(defun verbose-sum (x y)
+  "Sum any two numbers after printing a message."  ; documentation
+  (format t "Summing ~d and ~d.~%" x y)
+  (+ x y))
+
+&optional
+;; when we want to fix the amount of paramters but some are optional
+(defun foo (a b &optional c d) (list a b c d))
+(foo 1 2) → (1 2 NIL NIL)
+(foo 1 2 3) → (1 2 3 NIL)
+(foo 1 2 3 4) → (1 2 3 4)
+
+;; with a default value
+(defun foo (a &optional (b 10)) (list a b))
+
+(foo 1 2) → (1 2)
+(foo 1) → (1 10)
+
+;; with a supplied boolean
+(defun foo (a b &optional (c 3 c-supplied-p))
+  (list a b c c-supplied-p))
+
+(foo 1 2) → (1 2 3 NIL)
+(foo 1 2 3) → (1 2 3 T)
+(foo 1 2 4) →  (1 2 4 T)
+
+&rest - zero to any amount of arguments
+e.g.
+(defun format (stream string &rest values) ...)
+(defun + (&rest numbers) ...)
+
+---
+Printing in Lisp
+write is the general entry point to the Lisp printer.
+prin1 produces output suitable for input to read.
+princ is just like prin1 except that the output has no escape characters. princ is intended to look good to people, while output from prin1 is intended to be acceptable for the function read.
+print is just like prin1 except that the printed representation of object is preceded by a newline and followed by a space.
+pprint produces pretty output.
+
+
+--
+Lisp-1 vs Lisp-2
+Lisp1 has a single environment that maps symbols to values, and those values can be either "regular" or functions. Lisp2 has (at least) two namespaces (symbols have a slot for their a function value and one for a regular value). 
+So, in Lisp2, you can have a function named foo and a value named foo, whereas in Lisp1, the name foo can refer only to a single value (function or otherwise).

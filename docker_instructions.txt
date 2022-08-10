@@ -1,0 +1,128 @@
+52.221.185.152 core20-api-staging-1 i-0cac12f8831ac977e t2.nano
+13.229.198.160 core20-api-staging-2 i-01a9d0b0382550fc1 t2.nano 
+54.255.187.90 core20-api-staging-3 i-0693ac8a86934addb t2.nano
+
+1. how to use docker-compose with docker swarm?
+docker stack deploy
+ - problem
+   - network_mode doesnt work with stack (need to expose 443 in dockerfile?)
+   - all nodes need to already first possess the registry image
+2. how to do 'postInstall' with docker swarm?
+   - need to apply same trick as pulling image
+3. How to apply rolling update?
+
+
+<manager command>
+docker swarm init
+docker swarm join-token manager
+docker service create --replicas 1 --name helloworld alpine ping docker.com  -- "helloword" here is the service name/id
+docker service inspect --pretty
+docker service ps helloworld --> to check which node is running this service
+
+<checking nodes from manager>
+docker node ls
+docker node update --availability drain worker1 -- setting 'worker1' to DRAIN mode, preventing it from running/receiving new task
+docker node inspect --pretty staging_1_worker -- check status/availability
+docker node update --availability active staging_2_worker
+
+<worker command>
+docker swarm join --token <token> <ip:port>
+docker ps <-- can run this on worker to check
+
+-- Containers running in a service are called “tasks.”
+docker service scale helloworld=5 -- scale number of containers to 5 (can scale for mutiple services)
+-- alternatively
+docker service update --replicas 5 helloworld (update only one service)
+
+liv3ly@staging_1_manager:~$ docker service scale helloworld=5
+helloworld scaled to 5
+overall progress: 5 out of 5 tasks 
+1/5: running   [==================================================>] 
+2/5: running   [==================================================>] 
+3/5: running   [==================================================>] 
+4/5: running   [==================================================>] 
+5/5: running   [==================================================>] 
+verify: Service converged 
+liv3ly@staging_1_manager:~$ docker service ls
+ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+nhsnbg5jvib3        helloworld          replicated          5/5                 alpine:latest
+
+-- after scale, will be reflected in the REPLICAS
+
+
+-- to remove service
+docker service rm helloworld
+
+
+-- create a service with 10s update delays (across tasks during updates)
+docker service create \
+>   --replicas 3 \
+>   --name redis \
+>   --update-delay 10s \ <-- this can later be configured via docker service update --update-delay <duration> <servicename>
+> redis:5.0.6
+
+
+--due to Docker’s built-in routing mesh, you can access any node in the swarm and get routed to the app
+
+
+--
+-- create a local registry in manager node
+docker service create --name registry --publish published=5000,target=5000 registry:2
+
+docker stack deploy --compose-file docker-compose.yml <stack prefix name>
+
+docker stack rm <stack prefix name>
+
+-- update one container at a time, waiting 10 seconds in-between each update
+docker service update --image registry.gitlab.com/liv3ly-team/liv3ly-core:staging --update-delay=10s --update-parallelism=1 liv3ly_liv3ly-core
+
+getting docker daemon log
+
+sudo journalctl -fu docker.service
+
+docker exec -ti stack_myservice.1.$(docker service ps -f 'name=stack_myservice.1' stack_myservice -q --no-trunc | head -n1) /bin/bash
+
+docker service ps -f 'desired-state=running' --no-trunc
+
+ssh -tt $docker_node sudo docker exec -ti $docker_fullname /bin/bash
+
+docker service ps -f 'desired-state=running' --no-trunc liv3ly_liv3ly-core
+
+docker service ps -f 'desired-state=running' --no-trunc --format "{{.Node}} {{.Name}}.{{.ID}}" liv3ly_liv3ly-core
+
+ssh -tt liv3ly@staging_2_worker docker exec -it liv3ly_liv3ly-core.2.pwh26vme4595j7btihetf8iqq bash
+
+ssh liv3ly@staging_1_manager docker exec liv3ly_liv3ly-core.1.a12z8sbp953ztnnmurr4yhlqq php artisan migrate
+
+export IP=`ifconfig eth0 | grep "inet" | grep -v "inet6" | sed -e 's/^[[:space:]]*//' | cut -d ' ' -f 2`
+
+-----
+
+refresh docker container without entirely stopping it first
+
+docker-compose up -d liv3ly-core   -- just reup the service, add --build if there's local Dockerfile to rebuild
+
+-----
+to restart only one service: for e.g. redis
+
+docker stack services <stack_name>
+
+docker service update --force <service id>
+
+----
+docker logs <container name> to check apache2 logs
+
+(all error and std logs will pipe to here)
+
+-----
+
+redis-cli
+keys *  -- to list all keys, we would see past data and most importantly the recent jobs for horizon:recent_job (if any job still here, means stucked)
+the job itself is stored in hashmap, we could get detail like so:
+
+zrange horizon:recent_jobs 0 -1
+
+hgetall horizon:3   -- for e.g.
+if status is 'pending' means stucked
+
+-----

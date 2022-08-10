@@ -1,0 +1,245 @@
+1. pretty printing
+
+from:
+(2+(3*4))
+
+to: 
+expression: - expr()
+{add, {num, 2},{mul, {num, 3},{num, 4}}}
+
+
+type for expression, expr()
+
+-type expr() :: {'num', integer()}
+             |  {'var', atom()}
+             |  {'add', expr(), expr()}
+             |  {'mul', expr(), expr()}
+
+1.a
+we can think of it as a tree from bottom up..
+
+    +
+  2   *
+    3  4
+
+    +       step 2.->"(2+(3*4))"
+  2   *     step 1.->"(3*4)"
+    3  4    
+
+1.b - or top down
+
+    +       step 1.->"(..+...)"
+  2   *     step 2.->"2"  "(3*4)"
+    3  4    
+
+**in erlang, string is a list
+
+working the recursive function out (based on type spec)
+
+print({num,N}) ->
+    integer_to_list(N);
+print({var,A}) ->
+    atom_to_list(A);
+print({add,E1,E2}) ->
+    "(" ++ print(E1) ++ "+" ++ print(E2) ++ ")";
+print({mul,E1,E2}) ->
+    "(" ++ print(E1) ++ "*" ++ print(E2) ++ ")".
+
+print({add,{num,2},{mul,{num,3},{num,4}}})
+-> "(" ++ print({num,2}) ++ "+" ++ print({mul,{num,3},{num,4}}) ++ ")"
+-> "(" ++ "2" ++ "+" ++ "(" ++ print({num,3}) ++ "*" ++  print({num,4}}) ++ ")" ++ ")"
+-> "(" ++ "2" ++ "+" ++ "(" ++ "3" ++ "*" ++ "4" ++ ")" ++ ")"
+-> "(2+(3*4))"
+
+--
+2. Evaluate expressions
+
+2.a - direct evaluation
+
+turn an expression into a number, by working out its value
+-spec eval(expr()) -> integer()
+
+based on the type we had,
+
+eval({num,N}) -> N;
+eval({add,E1,E2}) -> eval(E1) + eval(E2)
+eval({mul,E1,E2}) -> eval(E1) * eval(E2)
+
+2.a.i - evaluation with variables
+
+we need somewhere to lookup their values, e.g. [{a,23},{v,17}]
+
+-type env() :: [{atom(),integer()}].
+
+-spec eval(env(),expr()) -> integer().
+
+eval(_Env,{num,N}) -> N;
+eval(Env,{var,A}) -> lookup(A,Env);
+eval(Env,{add,E1,E2}) -> eval(Env,E1) + eval(Env,E2);
+eval(Env,{mul,E1,E2}) -> eval(Env,E1) * eval(Env,E2).
+
+-- how about lookup function? --
+
+-type env() :: [{atom(),integer()}].
+
+-spec lookup(atom(),env()) -> integer().
+
+lookup(A,[{A,V}|_]) -> V;
+lookup(A,[_|Rest[) -> lookup(A,Rest).
+
+Fails when atom not present (its not handled)
+
+--
+2.b compile + execute (in a stack virutal machine)
+
+    +
+  2   *    -->  compile  -> PUSH 2, PUSH 3, FETCH 4, MUL₂, ADD₂ -> execute -> 14
+    3  4
+
+PUSH  -> push onto a stack
+FETCH a -> fetch variable `a` from lookup and push onto a stack
+ADD₂ -> pops first 2 elements from the stack, adds them and push the result back to the stack
+MUL₂ -> pops first 2 elements from the stack, muls them and push the result back to the stack
+
+for e.g.
+
+(2+(3*a))   , a = 4
+
+PUSH 2, PUSH 3, FETCH a, MUL₂, ADD₂
+
+stack
+^
+|
+|         4
+|      3  3  12 
+|   2  2  2  2  14
+----------------------->
+running instructions
+
+---
+How to implement in Erlang?
+
+Instructions, programs and stacks
+
+-type instr() :: {'push', integer()}
+                |{'fetch', atom()}
+                |{'add2'}
+                |{'mul2'}.
+
+-type program() :: [instr()].
+
+-type stack() :: [integer()].
+
+
+Compiling expressions; running programs
+
+-spec compile(expr()) -> program().       #compile an expressions into a list of (program) instructions
+
+-spec run(program(),env()) -> integer().   #run the program with the given env and return a result
+
+-spec run(program(),env(),stack()) -> integer().  # run with the stack
+
+---
+Running the stack machine: 
+`run` function defined using pattern matching and tail recursion
+
+# we cover the correct behaviour only (it's gonna fail for missing cases)
+run([{push, N} | Continue], Env, Stack) ->
+    run(Continue, Env, [N | Stack]);    # `Continue` is the tail part of this list (recursion)
+run([{fetch, A} | Continue], Env, Stack) ->
+    run(Continue, Env, [lookup(A,env) | Stack]);
+run([{add2} | Continue], Env, [N1,N2|Stack]) ->
+    run(Continue, Env, [(N1+N2) | Stack]);
+run([{mul2} | Continue], Env, [N1,N2|Stack]) ->
+    run(Continue, Env, [(N1*N2) | Stack]);
+run([], Env, [N]) ->
+    N.
+
+Compilation:
+
+compile({num,N}) ->
+    [{push,N}];
+compile({var,A}) ->
+    [{fetch,A}];
+compile({add,E1,E2}) ->
+    compile(E1) ++ compile(E2) ++ [{add2}];
+compile({mul,E1,E2}) ->
+    compile(E1) ++ compile(E2) ++ [{mul2}];
+
+Lesson learned:
+- flexibility of data representations
+- type definitions and specifications
+- pattern matching
+- tail recursion
+- missing cases - let it fail
+
+---------
+Parsing
+
+Going from "(2+(3*4))" to {add, {num, 2}, {mul, {num, 3}, {num,4}}} is called `parsing`
+Going from {add, {num, 2}, {mul, {num, 3}, {num,4}}} to "(2+(3*4))"  is called `(pretty) printing`
+
+
+Getting the type right
+
+-spec parse(string()) -> {expr(), string()}.      #Return a pair {expression, what's left of the input}.
+
+Examples
+parse("(2+(3*4))") = {{add, {num, 2}, {mul, {num, 3}, {num, 4}}}, ""} 
+parse("2")         = {{num,2}, ""}
+parse("2+(3*4))")  = {{num,2}, "+(3*4))"}   #what's left cannot be parsed
+
+
+--
+Predictive, top-down, parsing
+
+--
+Parsing expression (outline)
+Recognize in the order of a "(", an expression, an operator, an expression and finally ")".
+
+-spec parse(string()) -> {expr(), string()}.
+
+% composite expression
+% didnt cover for integers and variable
+parse([$(|Rest]) ->                      % starts with a '('
+     {E1,Rest1}     = parse(Rest),       % then an expression
+     [Op|Rest2]     = Rest1,             % then an operator, '+' or '*'
+     {E2,Rest3}     = parse(Rest2),      % then another expression
+     [$)|RestFinal} = Rest3,             % starts with a ')'
+     {case Op of
+        $+ -> {add, E1, E2};
+        $* -> {mul, E1, E2}
+      end,
+      RestFinal};  % to be continued later
+
+Recognizing numbers and literals:
+
+% first, get the longest initial segment of a list with a `given property`:
+
+-spec get_while(fun((T) -> boolean()), [T]) -> {[T],[T]}.          % T is polymorphic, P below is the property function (T) -> boolean()
+
+get_while(P,[Ch|Rest]) ->   % P is some property, Ch is character
+    case P(Ch) of
+        true ->
+            {Succeeds, Remainder} = get_while(P,Rest),
+            {[Ch|Succeeds],Remainder};     % as long as the Property is met, append it to the list
+        false ->
+            {[], [Ch|Rest]}
+    end;
+
+get_while(_P,[]) ->
+    {[],[]}.
+
+
+For e.g. recognizing literals
+
+Literals (or variables)
+% this is the _continuation_ of the first `parse` code...
+parse([Ch|Rest]) when $a =< Ch andalso Ch =< $z ->
+    {Succeeds,Remainder} = get_while(fun is_alpha/1,Rest),     % is_alpha/1 is self defined function
+    {{var, list_to_atom([Ch|Succeeds])}, Remainder}.
+
+Testing for a small alphabetic character .. (literal)
+is_alpha(Ch) -> $a =< Ch andalso Ch =< $z.
+
+

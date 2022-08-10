@@ -1,0 +1,314 @@
+jest is a test runner (like mocha)
+enzyme is a library to test react
+there's also a react-test-renderer library (enzyme actually make use of this library!)
+
+when using enzyme, need to configure adapter for specific version of react
+
+Enzyme Adapter Package	React semver compatibility
+enzyme-adapter-react-16	^16.4.0-0
+enzyme-adapter-react-16.3	~16.3.0-0
+enzyme-adapter-react-16.2	~16.2
+enzyme-adapter-react-16.1	~16.0.0-0 \|\| ~16.1
+enzyme-adapter-react-15	^15.5.0
+enzyme-adapter-react-15.4	15.0.0-0 - 15.4.x
+enzyme-adapter-react-14	^0.14.0
+enzyme-adapter-react-13	^0.13.0
+
+--
+
+import Enzyme from 'enzyme';
+import Adapter from 'enzyme-adapter-react-16';
+ 
+Enzyme.configure({ adapter: new Adapter() });
+
+with enzyme, we can simulate user browsing behavior (BDD?)
+
+-----
+Jest
+
+can configure Jest to run some configurations beforehand, for e.g. to run a setup file with the above Enzyme configuration code using the setup code:
+
+https://jestjs.io/docs/en/configuration.html#setupfiles-array
+
+module.exports = {
+  setupFiles: ['<rootDir>/tests/setup.js']
+}
+
+can read more about Jest configuration, for example, it finds test files by default using:
+[ "**/__tests__/**/*.js?(x)", "**/?(*.)+(spec|test).js?(x)" ]
+
+i.e. any file under __tests__ (i.e. tests/), any file *.test.js, *.test.jsx, *.spec.js, *.spec.jsx
+
+run jest with --watchAll to repeat watch, with --verbose if wants to see individual test description print outs
+
+-----
+
+Enzyme's 3 rendering mode
+1. Shallow Rendering
+- Constrain to testing a component as a unit, the tests aren't indirectly asserting on behavior of child components.
+- shallow(...) API calls React lifecycle componentDidMount and componentDidUpdate
+- gets converted into a JSON representation of what would have been rendered (not fully rendered,only one level deep) 
+- good for testing THIS level of component, without touching the children's content
+- it is recommended to start each it('..') test with a new copy of shallow(..) rendering, such that each component starts with a 'clean' slate
+
+---
+use .find(selector) to find EVERY node in the render tree for the current wrapper that matches the selector
+.find returns a ShallowWrapper so can chain to other methods
+
+can use .simulate to handle user interaction/events
+wrapper.find('a').simulate('click')
+*simulate here will actually get the onClick prop and call it..
+*so if want to test form's onSubmit, use simulate('submit'), test onChange, use simulate('change')
+*since simulate is only getting the onEvent prop and calling it, hence simulate(event,someArgs..) is also equal to prop('onEvent')(someArgs)
+
+use console(wrapper.debug) to see the actual tree output
+
+---
+for shallow rendering, .prop(key) will return values for props on the root node that the component renders, not the component itself.
+To access the props for React component, use wrapper.instance().props. 
+NOTE: wrapper.instance() DOESNT have prop() attribute! To access a component (class) prop, use wrapper.instance().props.*someprop*
+NOTE: wrapper.instance() only works for CLASS component, not stateless function (will return null)
+
+2. Full DOM Rendering
+- Useful for testing components that may interact with DOM APIs or need to test components wrapped in HOC.
+- Requires a full DOM API available at global scope.
+- mount(...) depend on jsdom library (headless browser in JS)
+- actually mounts the component in DOM, tests can affect each other if they are all using same DOM. use unmount(...) to cleanup
+
+---
+if use .debug, we can see that mounting renders the entire tree of the DOM, including children components
+mounting also renders the tree into a DOM (jsdom), Enzyme takes care of creating the DOM between each test. (Need to use unmount?)
+
+3. Static Rendering
+- More to check on static HTML structure
+- uses a 3rd party HTML parsing and traversal library Cheerio
+- render(...) returns a CheerioWrapper around the rendered HTML of the current node's subtree
+---
+
+-----
+Jest Snapshot Testing
+
+Snapshot test make sure your UI doesnt change unexpectedly
+snapshot test first run will create  a 'screenshot', second and subsequent runs compare it to a reference image stored alongside the test.
+
+import renderer from 'react-test-renderer'; //<--y not using Enzyme stuffs?
+//yup! can use enzyme + enzyme-to-json serializer.. very simple!
+
+it('renders correctly', () => {//can also use test('...'), both are same, it is an alias for test
+  const tree = renderer//here create the whole component DOM tree
+    .create(<Link page="http://www.facebook.com">Facebook</Link>)
+    .toJSON();
+  expect(tree).toMatchSnapshot();
+});
+
+first time run, jest creates a snapshot file (*.snap), in the __snapshots__ dir like this:
+
+exports[`renders correctly 1`] = `
+<a
+  className="normal"
+  href="http://www.facebook.com"
+  onMouseEnter={[Function]}
+  onMouseLeave={[Function]}
+>
+  Facebook
+</a>
+`;
+
+the snapshot artifacts should be commited alongside code changes.
+failed snapshot artifacts can be easily updated by pressing 'u'.
+
+react-test-renderer/shallow
+// usage of shallow renderer: https://reactjs.org/docs/shallow-renderer.html
+a simple shallow renderer that is similar to ReactDOM.render() but it doesn’t require DOM and only renders a single level deep. This means you can test components isolated from how their children are implemented.
+
+for e.g. for simple Header component that might embed other components as children
+
+import ReactShallowRenderer from 'react-test-renderer/shallow';
+
+test('should render Header correctly',()=>{
+    const renderer = new ReactShallowRenderer();
+    renderer.render(<Header />);
+    expect(renderer.getRenderOutput()).toMatchSnapshot();
+})
+
+Enzyme's shallow rendering will have even more features
+
+---
+if we use enzyme + enzyme-to-json's serializer
+1. first we add "snapshotSerializers": ["enzyme-to-json/serializer"] to the Jest configuration file
+2. then, we just expect(wrapper).toMatchSnapshot() like follow
+
+it('converts basic button using shallow', () => {
+  const shallowed = shallow(
+    <Button className="class">
+      <strong>Hello!</strong>
+    </Button>,
+  );
+
+  expect(shallowed).toMatchSnapshot();
+});
+
+///there's also a helper toJson function if we want to set some additional arguments etc
+import toJson from 'enzyme-to-json';
+ 
+it('renders correctly', () => {
+  const wrapper = shallow(
+    <MyComponent className="my-component">
+      <strong>Hello World!</strong>
+    </MyComponent>
+  );
+ 
+  expect(toJson(wrapper)).toMatchSnapshot();
+});
+
+snapshot can be taken anywhere in a test, before or after a test etc
+
+-----
+Jest Expect
+
+expect.any(constructor) - matches anything that was created with the given constructor.
+
+for e.g.
+
+expect(someVar).toEqual(expect.any(Number))
+
+-----
+Jest Mock Libraries
+
+Sometimes you want to mock out certain behavior of certain libraries, or remote resources
+
+first create the mock files (with same name) under __mocks__, for e.g. lodash.js
+
+2 ways to generate the mock
+
+1. automatic mock - 
+const lodash = jest.genMockFromModule('lodash');
+
+lodash.head = arr => 5; //override something
+
+export default lodash; //export to be used in jest tests
+
+*automatic mock prepends all functions in the library with 'mock' (i.e. all become undefined mock jest.fn()), hence unless you are ONLY testing this one particular thing and not using this library's other functions in anywhere else in the unit tests
+
+----
+if you just wan to check certain function of a module (imported in the component) is called with certain arguments, can use jest.mock(module):
+
+for e.g. to mock the next-router
+
+import routes from '../../routes';
+
+jest.mock('../../routes');//now all functions in this module will be mocked, these mocked functions can be manipulated with the mock functions api
+https://jestjs.io/docs/en/mock-function-api
+for e.g. the implementation can be overwritten
+if just want to check whether they have been called etc, just use expect's toHaveBeenCalled... as per jest.fn() explanation below.
+
+2. manual mock with real module - 
+require the real module with require.requireActual(moduleName)
+
+const lodash = require.requireActual('lodash');
+
+lodash.head = arr => 5; //override something
+
+export default lodash; //export to be used in jest tests
+
+-----
+Jest Mock Functions (or spies)
+
+-Let you spy and test on the behavior of a mock function (when called indirectly by some code). Can test behavior, output etc
+-Used in conjunction with expect's toHaveBeen..CalledWith..
+
+test('somefunction is called with valid arguments',()=>{
+  const someFunctionSpy = jest.fn();
+  const wrapper = shallow(<Component onSubmit={someFunctionSpy}/>
+  wrapper.find(..).simulate('submit')
+  expect(someFunctionSpy).toHaveBeenCalledWith({
+    someArgs0: ...
+    someArgs1: ...
+  });
+
+})
+
+---
+Be aware when you are playing with mocked async functions. Remember to use async await to call the said trigger function if there's chaining of then() or catch() at the target mock function that you want to test the return value. Else, whatever inside then() or catch() might/might not be triggered.
+
+-----
+Jest Time Mocks. Let you manipulate time!
+
+jest.useFakeTimers();
+
+test('wait 1 second before calling callback',()=>{
+  const timer = require('../timer');
+  const callback = jest.fn();
+
+  timer(callback);
+
+  expect(callback).not.tobeCalled();
+
+  jest.runOnlyPendingTimers(); //run the timer cycle once!
+  
+  expect(setInterval).toHaveBeenCalledTimes(1);//assuming timer method uses setInterval like such setInterval(callback(),1000);
+  expect(callback).toHaveBeenCalledTimes(1);
+})
+
+plenty more jest functions to manipulate time here: https://jestjs.io/docs/en/timer-mocks.html
+-----
+TDD testing
+Write the test which will fail first, and the write the code and make the test pass
+BDD is used in conjuction with TDD
+
+can paradigm shift here, instead of going back and forth between code and browser to make sure components are working correctly, use TDD in conjuction with development to make sure the results expected is correct without having to resort to viewing browser each time there's code changes
+
+-----
+BDD testing
+
+Rather than reading state inside a component directly, we should test the OUTPUT of the component directly to see what is the state reflected
+
+//rather than this
+  it('starts with a count of 0', ()=>{
+    const wrapper = shallow(<Counter />);
+    const countState = wrapper.state().count;
+    expect(countState).toEqual(0);
+  })
+//try this
+  it('starts with a count of 0', ()=>{
+    //this is a better way of BDD testing
+    //test using the output of the component rather then the 'inside' state
+    const wrapper = shallow(<Counter />);
+    const text = wrapper.find('p').text();
+    expect(text).toEqual('Current count: 1');
+  })
+
+
+------
+What to test??
+
+For actions:
+test input (default, potential) and output
+
+For reducers (treat reducers as functions): 
+test initial @@INIT default value
+
+For unconnected components/stateless functions (export the unconnected components/stateless functions):
+Single component's snapshot - first test
+- look of website when load initially should be the same 
+- change of look when data changes, when user interaction happens etc
+Start test from Parent (first level) component
+Childen component lists length
+Single field (of a component's) content/input assertion (before and after user's interaction), i.e onClick, onChange, onSubmit etc - can take snapshot if want
+
+For connected components:
+2 ways of testing, 
+1. redux-mock-store
+- npm package
+- need to mount (full rendering) if want to use dispatch 
+- can just mount the component with the initialized mock store 
+- can get the prop attribute
+- can dispatch 
+
+2. using the actual store (this is more of integration testing)
+- same as 1. but uses 'real' store by simply createStore(withReducers)
+- if coupled with full render (i.e. mount with provider)), can test a full round from component to store and back
+- can also test change in state - i.e. test the returned state that is mapped in 'mapStateToProps', can find the prop and test the value is correct
+
+
+In the test world, all dummy data/baseline can be treated as 'fixtures'

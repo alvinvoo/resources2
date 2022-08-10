@@ -1,0 +1,5 @@
+How to start?
+
+Two STM32 blue pill development board cost $6, 24Mhz 8CH logic analyzer for $10, About two good multimeter cost around $100 and a decent powersupply would set you $70. You can add Oscilloscope and signal generator later on down the line when you start going into very advance stuff.  Get comfortable with C programming, especially with pointer. Knowing Python will be very helpful to develop test script and quick prototype. Start learning PCB design with KiCad (free opensource) and circuit design.
+
+https://www.amazon.com/Making-Embedded-Systems-Patterns-Software/dp/1449302149?asin=1449302149&revisionId=&format=4&depth=1

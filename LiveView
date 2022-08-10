@@ -1,0 +1,125 @@
+Write the application UI code in Elixir (instead of JS)
+based on Channels and Sockets
+
+https://hex.pm/packages/phoenix_live_view
+LiveView separates server rendering from real-time updates. 
+
+initialization (first load is static html page - very fast - help in SEO as well):
+LiveView Controller -> [mounts LiveView] -> Static HTML page (rendered by LiveView Client - in js)
+
+live updates:
+LiveE EEx (.leex) Template-LiveView Channel -> LiveView Socket <- Events/Data -> Static HTML page
+
+--
+The ~L in the render/1 function defines a Live EEx template string.
+
+We’re even able to pass state from the controller all the way through to the final rendered LiveView. LiveView provides a signed session mechanism that allows for user authentication and state passing out-of-the-box.
+
+--> recent release has deprecated ~L and in favor of ~H (more safe)
+
+---
+LiveView's Programming Model
+2 front-end patterns:
+1. Declarative user interfaces
+   	<div>
+ 	  <%= if will_rain?(state) do %>
+ 	    <span>It's going to rain</span>
+ 	  <% else %>
+ 	    <span>It's a clear day!</span>
+ 	  <% end %>
+ 	</div>
+ instead of 
+ 	function setWeather(weather) {
+ 	  if (weather.willRain) {
+ 	    weatherElement.setText("It's going to rain")
+ 	  } else {
+ 	    weatherElement.setText("It's a clear day!")
+ 	  }
+ 	}
+
+2. Unidirectional data flow 
+LiveView keep state in Channel, away from front end
+
+        User Interface
+       ^              |
+       |              V 
+     State    <-     Event
+
+----
+How LiveView Changes Content
+
+1. template engine (~H for updated versions)
+
+Since HEEx must parse and validate the HTML structure, code interpolation using <%= ... %> and <% ... %> are restricted to the BODY (inner content) of the HTML/component nodes and it cannot be applied within TAGS.
+
+do this inside tags
+<div class={@class}>
+  ...
+</div>
+
+for multiple dynamic attributes, where inside {...} must be either a keyword list or
+a map containing key-value pairs
+<div {@dynamic_attrs}>
+  ...
+</div>
+
+templates/layouts hierachy observed:
+(all these are actually explicitly defined
+
+root.html.leex
+ -> live.html.leex
+    -> page_live.html.leex (seems like if using > live "/", PageLive, :index at router.ex
+    then, must be same template file name as page_live.ex and same directory)
+
+2. LiveView frontend (the js plugin - phoenix_live_view) uses morphdom to change the DOM with just diffs of template 
+
+
+--
+if want to set the root_layout (useful when debugging missing @conn)
+ pipeline :browser do
+    ...
+    plug :put_root_layout, {Sneakers23Web.LayoutView, :app}
+    ...
+ end
+
+----
+LiveView tests
+
+Floki is a simple HTML parser that enables search for nodes using CSS selectors.
+{:floki, ">= 0.30.0", only: :test}
+
+https://hexdocs.pm/floki/readme.html
+
+{:ok, document} = Floki.parse_document(html)
+
+Floki.find(document, "p.headline")
+# => [{"p", [{"class", "headline"}], ["Floki"]}]
+--
+document
+|> Floki.find("p.headline")
+|> Floki.raw_html
+# => <p class="headline">Floki</p>
+
+---
+# must use ConnCase
+  use Sneakers23Web.ConnCase, async: false
+  import Phoenix.LiveViewTest
+
+  test "the live view connects", %{conn: conn} do
+    # spawns a connected LiveView process
+    {:ok, _view, html} = live(conn, "/drops")
+    assert html =~ ~s(<main class="product-list">)
+    assert html =~ ~s(coming soon...)
+  end
+
+  test "product releases are picked up", %{conn: conn, inventory: inventory} do
+    {:ok, view, html} = live(conn, "/drops")
+    assert html =~ ~s(coming soon...)
+
+    release_all(inventory)
+    # render the updated view
+    html = render(view)
+    ...
+  end
+
+-----

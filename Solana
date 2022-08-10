@@ -1,0 +1,218 @@
+Blocktime: 400ms
+
+Proof of history 
+    -> Clock before concensus?
+    -> Each node when adding blocks add their own timestamp into the block
+    -> Validator organize the blocks post tranx
+
+
+nLocktime-based
+    -> Post dates tranx using blk height instead of timestamp
+SHA 256 hash chain
+    -> function?
+Optimistic Concurrency Control (year 1981?)
+    -> Enable DB to replicate itself and maintain HA (wo compromising tranx rate)
+(Towards 710k tps - standard gigabit network)
+
+Solana Cluster
+independently owned computers working together
+to verify the output of untrusted user submitted programs
+    -> Preserve/interpret record of events
+    -> Track computer performance
+    -> Track real-world assets
+==> Then the cluster produces Solana Ledger
+    -> Record of events
+    -> Preserved for life
+    -> Reproducible output
+
+A billionth of a SOL is called the lamport
+-> inspired by Leslie Lamport
+https://www.microsoft.com/en-us/research/people/lamport/
+
+SeaLevel(?)
+Validators can actually run smart contract code in a parallel way
+
+Tokenomics
+Deflationary
+50% Fees are burned
+
+Inflationary
+8% staking reward, cut until hit 1.5% in 10 years
+
+Total Supply
+Initially 500million tokens
+
+Early Distribution
+4 funding rounds + Initial ICO = 36% supply
+Founds = 13%
+Solana Foundation = 10%
+Community Iniatives (also Solana Foundation) = 39%
+
+----
+Basic concepts
+                                  |  Blockchain
+            e.g.                  |            Rust
+        getAccountInfo            |     (Compiles down to eBPF - format in blockchain)
+ CLIENT   <-------->   *JSON RPC  -->   Solana Program
+          tranx (tx)       ^      |          |
+                           |      |          V
+                           -------|-------Account
+                              data|
+
+*https://docs.solana.com/developing/clients/jsonrpc-api#getaccountinfo
+
+
+Everything is an Account
+Account indexed by a PublicKey (32 bytes String - encoded in base58)
+            ---> Address to an Account (something like databuffers)
+
+Solana on-chain programs are compiled via the LLVM compiler infrastructure to an Executable and Linkable Format (ELF) containing a variation of the Berkeley Packet Filter (BPF) bytecode.
+
+
+(some concepts)
+Keypair 64-bytes
+
+0 --- 32 --- 64
+- first half is SecretKey, Private key or SK
+- second half is PublicKey, PK
+
+SK -> PK is unique 
+hash = sign(msg, SK)
+verify(hash, PK) -> T only if SK signs
+So, this represents OWNERSHIPs (SK owns many PKs?)
+
+
+Account (data buffer)
+owner: PK program that has write-access
+data: byte array
+lamports: u64 (1B L = 1 Sol)
+executable: bool (is this a program? - which is like a special account)
+
+"Rent": lamports (in the Account) are to pay for space with SOL
+
+--
+
+"passed in by user"
+programID: identifies the program
+accounts: list of data buffers (any size)
+instruction_data: bytes that specify which ix to execute
+
+
+SOL usages:
+
+ Rent cost: allocating data
+ Paying for tranx: 5k L per signature
+
+
+
+--
+Lecture 1
+state.rs -> keep track of program state
+instruction.rs -> all instruction that the program can do
+processor.rs -> to implement the instruction functions
+
+
+See how much "rent" cost
+solana rent 8    (bytes)
+Rent per byte-year: 0.00000348 SOL
+Rent per epoch: 0.000002591 SOL
+Rent-exempt minimum: 0.00094656 SOL
+
+--
+To build:
+
+cargo build-bpf  (uses solana sdk)
+
+*a *.so eBPF format file will be generated in /target/deploy/ directory
+
+*usually will have instructions to deploy
+To deploy this program:
+  $ solana program deploy /home/alvinvoo/my_projects/solana/solana-bootcamp-lectures/lecture_1/counter/target/deploy/counter.so
+  The program address will default to this keypair (override with --program-id):
+    /home/alvinvoo/my_projects/solana/solana-bootcamp-lectures/lecture_1/counter/target/deploy/counter-keypair.json
+
+first keypair id.json
+Wrote new keypair to /home/alvinvoo/.config/solana/id.json
+=========================================================================================
+pubkey: 3Kv38LreAjpE5a4Hgu5sSk59KQ7VS4AqPFJLjVoSEcor
+=========================================================================================
+Save this seed phrase and your BIP39 passphrase to recover your new keypair:
+gallery shallow enact improve hover disease volcano unfold exercise decade elevator wheat
+=========================================================================================
+
+
+After first deploy
+Program Id: 5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx
+(this is the pubkey)
+
+
+(Is this true?)
+Careful when deploying the code!!
+If code uploaded unsuccessfully due to insufficient funds
+After topup, second upload may cause the first failed upload to
+deduct again! (Hence, charging twice for one upload)
+
+--
+Main focus - look at 
+    (back - processor.rs) - process_instruction function
+    pub fn process_instruction(
+        _program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        instruction_data: &[u8],
+    ) 
+
+    (front - index.js) - TransactionInstruction section
+  const idx = Buffer.from(new Uint8Array([0])); // correspond to Enum 0 instruction (CounterInstruction::Increment)
+
+  let incrIx = new TransactionInstruction({   // instructions to pass to backend
+    keys: [    // this is the AccountInfo
+      {
+        pubkey: counterKey,
+        isSigner: false,
+        isWritable: true,
+      }
+    ],
+    programId: programId,   // correspond to _program_id
+    data: idx, // correspond to instruction_data; in this case Enum 0
+  });
+
+--
+running of counter program
+[alvinvoo@alvinvoo js]$ node index.js 5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx
+5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx
+Requesting Airdrop of 1 SOL...
+Airdrop received
+Generating new counter address
+https://explorer.solana.com/tx/5crVsvrN4qmPNSP2Tq1jBpGyXDNsVY1NJgbvqtKgMpeckxAex99k9o4eXEZx6KxPPDoFB4erAcjbyAKowEo5QxeL?cluster=devnet
+Counter Key: M2LD4GRP558YZcEu8LeM71PuBhN3yXuCxT63VV3EtPu
+Count:  1
+Success
+
+[alvinvoo@alvinvoo js]$ node index.js 5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx M2LD4GRP558YZcEu8LeM71PuBhN3yXuCxT63VV3EtPu  // <-- call against the same account "counter" id
+5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx
+Requesting Airdrop of 1 SOL...
+Airdrop received
+Found counter address
+https://explorer.solana.com/tx/fNrTvHQDgEBjCBXYThtJnGr79mZcs4QToijsPR9X2pFVWetoxhHxpW1ucrnDstKjhQgUPe7gkGx8we6aEzwZdrc?cluster=devnet
+Counter Key: M2LD4GRP558YZcEu8LeM71PuBhN3yXuCxT63VV3EtPu
+Count:  2
+Success
+
+
+if we check the explorer, we can see the output log
+first pass--
+#1 System program instruction   //<-- creation of account
+> Program returned success
+#2 Unknown Program (5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx) Instruction
+> Program logged: "process_instruction: 5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx: 1 accounts, data=[0]"
+> Program logged: "Instruction: Increment"
+> Program logged: "Updating count 1"
+> Program consumed: 13583 of 1400000 compute units
+> Program returned success
+
+second pass--
+#1Unknown Program (5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx) Instruction
+> Program logged: "process_instruction: 5sZc8eqbGLWT2CKqxd5SG9bwnHSw8z44mgmTGDDMo7zx: 1 accounts, data=[0]"
+> Program logged: "Instruction: Increment"
+> Program logged: "Updating count 2"
+> Program consumed: 13584 of 1400000 compute units

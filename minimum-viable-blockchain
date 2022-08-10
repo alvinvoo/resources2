@@ -1,0 +1,157 @@
+Securing transactions with PKI (Public key Infrastructure) - Public key cryptography
+
+Public-key cryptography, also known as asymmetric cryptography, refers to a cryptographic algorithm which requires two separate keys, one of which is secret (or private) and one of which is public. Although different, the two parts of this key pair are mathematically linked. The public key is used to encrypt plaintext or to verify a digital signature; 
+whereas the private key is used to decrypt ciphertext or to create a digital signature. 
+
+Example Work-flow of a transaction:
+Scenario: Alice signing a 'receipt' (think of as IOU) to Bob
+
+1.Both Alice and Bob generate a set public-private keypairs.
+2.Both Alice and Bob publish their public keys to the world.
+3.Alice writes a transaction receipt in plaintext.
+4.Alice encrypts the plaintext of the transaction using her private key.
+5.Alice prepends a plaintext "signed by" note to the ciphertext.
+6.Both Alice and Bob store the resulting output.
+
+let's examine the properties of our new receipt:
+
+1.Bob doesn't know Alice's private key, but that doesn't matter because he can look up her public key (which is shared with the world) and use it to decrypt the ciphertext of the transaction.
+2.Alice is not really "encrypting" the contents of the transaction. Instead, by using her private key to encode the transaction she is "signing it": anyone can decrypt the ciphertext by using her public key, and because she is the only one in possession of the private key this mechanism guarantees that only she could have generated the ciphertext of the transaction.
+
+As a result, the use of public key infrastructure (PKI) fulfills all of our earlier requirements:
+
+1.Bob can use Alice's public key to authenticate signed transaction by decrypting the ciphertext.
+2.Only Alice knows her private key, hence Alice can't deny that the transaction took place - she signed it.
+3.Neither Bob nor anyone else can fake or modify a transaction without access to Alice's private key.
+
+**Both Alice and Bob simply store a copy of the signed transaction and the need for an intermediary is eliminated. The "magic" of public key cryptography is a perfect match for their two-party barter system.
+
+--
+The double-spend is possible due to the "weak consistency" of the distributed ledger
+
+So blockchain employ "eventual consistency" with N-confirmation transaction
+(but still maintain high availability incase of network partition)
+
+*In CS speak, a two-party ledger provides "strong consistency", and growing the ledger beyond two parties requires some form of distributed consensus to mitigate double-spend. 
+
+
+--
+https://en.wikipedia.org/wiki/CAP_theorem
+Blockchain technology sacrifices immediate consistency for availability and partition tolerance, by requiring a specific number of "confirmations", Blockchain consensus algorithms are basically reduced to eventual consistency.
+
+--
+Proof-of-work as a participation requirement
+Core idea behind requiring a proof-of-work:
+
+1.The proof-of-work step should be "expensive" for the sender.
+2.The proof-of-work step should be "cheap" to verify by everyone else.
+
+--
+We can incentivize participants in the network to confirm transactions by allowing them to pool and confirm multiple transactions at once - i.e. confirm a "block" of transactions. Doing so would also allow them to aggregate transaction fees, thereby lowering the validation costs for each individual transaction.
+
+A block is simply a collection (one or more) of valid transactions - think of it as the equivalent of a page in a physical ledger. In turn, each block contains a reference to a previous block (previous page) of transactions, and the full ledger is a linked sequence of blocks. Hence, blockchain. 
+
+1. Alice and Bob generate new transactions and announces them to the network.
+2. Chris is listening for new transaction notifications, each of which contains a transaction fee that the sender is willing to pay to get it validated and confirmed by the network:
+    a.Chris aggregates unconfirmed transactions until he has a direct financial incentive (sum of transaction fees > his cost) to perform the necessary work to validate the pending transactions.
+    b.Once over the threshold, Chris first validates each pending transaction by checking that none of the inputs are double-spent.
+    c.Once all transactions are validated Chris adds an extra transaction to the pending list (indicated in green in the diagram above) that transfers the sum of advertised transaction fees to himself.
+    d.Chris generates a block that contains the list of pending transactions, a reference to the previous block (such that we can traverse the blocks and see the full ledger), and performs the proof-of-work challenge to generate a block hash value that conforms to accepted rules of the network - e.g. partial hash collision of N leading zeros.
+    e.Finally, once Chris finds a valid block, he distributes it to all other participants.
+3. Both Alice and Bob are listening for new block announcements and look for their transaction in the list:
+    a.Alice and Bob verify integrity of the block - i.e. verify proof-of-work and contained transactions.
+    b.If the block is valid and their transaction is in the list, then the transaction has been confirmed!
+    c. Take note this is only ONE confirmation!
+    d. Once there are N-1 blocks that built on this block, there will be N confirmations
+
+No blocks are ever "final". The only claim we can make is that the "deeper" any particular block is in the chain, the less likely it is that it will undone
+0-confirmation transaction: exchange is performed without waiting for any block to include the transaction.
+1-confirmation transaction: latest valid block includes the transaction.
+N-confirmation transaction: there is a valid block that includes the transactions, and there are N-1 blocks that have since been built on top of that block.
+
+The longer you wait, the more blocks will be built on top of the block that contains your transaction, the lower the probability of an alternative chain that may undo your transaction.
+
+
+---
+Wallets
+Miner
+
+
+---
+What is a crypto digest?
+
+digest means (output)
+
+A cryptographic hash function must be deterministic, meaning that the same message always results in the same hash. Ideally it should also have the following properties:
+
+    1. it is quick to compute the hash value for any given message
+    2. it is infeasible to generate a message that yields a given hash value (i.e. to reverse the process that generated the given hash value)
+    3. it is infeasible to find two different messages with the same hash value
+    4. a small change to a message should change the hash value so extensively that a new hash value appears uncorrelated with the old hash value (avalanche effect)[2]
+
+
+--
+
+For ENCRYPTION
+AES (Advanced Encryption Standard)
+symmetric-key algorithm, meaning the same key is used for both encrypting and decrypting the data. 
+
+For ENCRYPTION
+RSA  (Rivest–Shamir–Adleman) - oldest
+public-key cryptosystem
+asymmetric-key algorithm, Senders encrypt with public keys (non-secret) whereas receivers decrypt with private keys (secret)
+More often, RSA is used to transmit shared keys for symmetric-key cryptography, which are then used for bulk encryption–decryption. 
+The methodology above can also be called as `Hybrid ciphers`.
+An asymmetric cipher is used to protect a short-lived symmetric key, and a symmetric cipher (under that key) encrypts the actual message.
+
+
+One way hash function. 
+SHA (Secure Hash Algorithm)
+
+
+--
+For pycrptodome Cipher
+
+Plaintexts and ciphertexts (input/output) can only be bytes, bytearray or memoryview
+Often, the sender has to deliver to the receiver other data in addition to ciphertext alone (e.g. initialization vectors or nonces, MAC tags, etc).
+
+Primitives have been defined to integrate symmetric encryption and authentication (MAC - Message Authentication Code)
+MAC also known as a `tag`
+
+The MAC value protects a message's data integrity, as well as its authenticity, by allowing verifiers (who also possess the secret key) to detect any changes to the message content. 
+
+
+--
+scrypt - password-based key derivation function (KDF)
+KDFs can be used to 'stretch keys' into longer keys or to 'obtain keys of a required format', such as 'converting' a group element that is the result of a Diffie–Hellman key exchange into a symmetric key for use with AES.
+Pseudorandom functions used for key derivation.
+Key derivation functions take a password, a salt, and a cost factor as inputs then generate a password hash. Their purpose is to make each password guessing trial by an attacker who has obtained a password hash file expensive and therefore the cost of a guessing attack high or prohibitive.
+
+
+--
+Public-Key Cryptography Standards (PKCS)
+
+PKCS#1 - simple structure RSAPrivateKey
+https://www.ietf.org/rfc/rfc3447.txt
+PKCS#8 - more complicated structure PrivateKeyInfo
+https://www.ietf.org/rfc/rfc5208.txt
+
+Algorithm 	Sender uses.. 	Receiver uses…
+----        ----            ----
+Encryption 	Public key 		Private key
+Signature 	Private key 	Public key
+** there's only ever ONE private key
+
+https://www.pycryptodome.org/en/latest/src/cipher/oaep.html
+PKCS#1 OAEP uses RSA public key to encrypt data
+and uses RSA private key to decrypt data
+
+
+RSA
+DSA
+
+ECC - Elliptic Curve Cryptography
+
+paper describing various signature algos
+section 6, on ECDSA
+https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf

@@ -1,0 +1,96 @@
+
+
+-- Quote and Backquote (or 'quasiquote')
+
+  1 ]=> (define (abc a b c) `(,a ,b ,c))   ;; evaluate a b and c 
+
+  ;Value: abc
+
+  1 ]=> (abc 1 2 3)
+
+  ;Value: (1 2 3)
+
+  1 ]=> (define (abc a b c) '(a b c))   ;; quote datum.. where datum is an Obj
+
+  ;Value: abc
+
+  1 ]=> (abc 1 2 3)
+
+  ;Value: (a b c)
+
+  1 ]=>
+
+-- Comma and @ sign (@ is for splicing)
+  1 ]=> `(,@'(1 2 3)) ;; here it splices the list '(1 2 3) and spill it onto the outer list
+
+  ;Value: (1 2 3)
+
+
+---
+Both recursive procedures (syntax)
+but one is recursive process, the other is iterative process (process pattern)
+
+Linear Recursive Process
+
+(define (factorial n)
+  (if (= n 1) 
+      1 
+      (* n (factorial (- n 1)))))
+
+- There's some additional "hidden" information, maintained by the interpreter and not contained in the program variables, which indicates “where the process is” in negotiating the chain of deferred operations
+- The longer the chain, the more information must be maintained.
+
+---
+
+Linear Iterative Process
+
+(define (factorial n) 
+  (fact-iter 1 1 n))
+
+(define (fact-iter product counter max-count) ;; its state is captured by these three state variables
+  (if (> counter max-count)
+      product
+      (fact-iter (* counter product)
+                 (+ counter 1)
+                 max-count)))
+
+- Program Variables provide a complete description of the state of process at any point
+- If we stopped the computation between steps, all we would need to do to resume the computation is to supply the interpreter with the values of the variables
+
+---
+Golden ratio can find fibonacci number
+
+φ = (1 + √5)/2 ~= 1.6180, which satisfies the eq
+
+φ² = φ + 1
+
+Fib(n) ~= φⁿ/√5
+
+φ⁷/√5 = 12.9827 ~= 13
+φ⁸/√5 = 21.0059 ~= 21
+..
+
+recursive process
+(define (fib n)
+  (cond ((= n 0) 0)
+        ((= n 1) 1)
+        (else (+ (fib (- n 1))
+                 (fib (- n 2))))))
+
+with a recursive tree
+it can be shown that the number of times the procedure will compute (until the number of leave nodes) (fib 1) or (fib 2) is precisely Fib(n + 1)
+
+For e.g. Fib(5) = 5, will require 5 (fib 1) nodes and 3 (fib 0) nodes = 8 i.e. Fib(6) 
+
+we could transform it into an iterative process
+a <- a + b,    (where a is next val, b is previous val)
+b <- a         (a becomes next previous val)
+
+(define (fib n) 
+  (fib-iter 1 0 n))
+
+(define (fib-iter a b count) ;; with 3 state variables
+  (if (= count 0)
+      b
+      (fib-iter (+ a b) a (- count 1))))
+

@@ -1,0 +1,509 @@
+GraphQL is a query language
+
+Client + GraphQL  <---->  Server + GraphQL
+
+Allows for more flexible and efficient approach than REST
+
+Compare to REST APIs which operates through multiple URL endpoints, a GraphQL server operates on a single URL/endpoint, usually /graphql, and all GraphQL requests for a given service should be directed at this endpoint.
+
+The data structure instead of being a nested tree (think JSON), it is a graph (like a spider web), where every piece of data is linked with it's relative data, such that when any specific data is queried, all it's relative data can be easily accessible.
+
+can selectively ask for specific keys in a request
+			
+{
+  book(id: 123){
+    title
+    genre
+    reviews
+    author{
+      name
+      bio
+      books
+      {
+        name
+      }
+    }
+  }
+}
+
+can be even more specific
+
+{
+  book(id: 123){
+    title
+    author{
+      name
+      books
+      {
+        name
+      }
+    }
+  }
+}
+
+-------------
+
+Project stack:
+
+Client (browser)      Server (Node.js)           Database
+React App              Express App               MongoDB
++ 	   ----------> +                 ------->
+Apollo		       GraphQL Server
+
+Apollo Client 
+
+A 'library'for React to use GraphQL
+
+Graphiql
+
+A graphical interactive in-browser GraphQL IDE.
+- easy to test GraphQL query
+- there's a website https://graphql.github.io/swapi-graphql/
+- but also can be served locally
+
+-------------
+To define a GraphQL end point, we must provide the GraphQLSchema
+
+1. First define GraphQLObjectType
+2. Define relationships between GraphQLObjectType
+3. Define root queries (how user can query first-level from the graph)
+	Root query is a GraphQLObjectType that represents all of the possible entry points into the GraphQL API
+
+
+---
+
+There seems to be (at least) two ways of building a schema (For graphql-js).
+
+1. The easy way out is to use the graphql-js utilities - buildSchema
+
+var { buildSchema } = require('graphql');
+
+// Construct a schema, using GraphQL schema language
+var schema = buildSchema(`
+  type Query {//<--root query type
+    quoteOfTheDay: String
+    random: Float!
+    rollThreeDice: [Int]
+  }
+`);
+
+http://graphql.github.io/learn/schema/#scalar-types  //<---String, Int, Float, Boolean, and ID
+
+*The exclaimation mark behind Float! just means to say the variable cannot be null.
+buildSchema lets me use default GraphQL schema language to define and create the schema. (It will later translate to the proper JS object I suppose). The schema will use default resolvers. So the limitation is that we would need to define all resolver functions in the root. 
+
+// The root provides a resolver function for each API endpoint
+var root = {
+  quoteOfTheDay: () => {
+    return Math.random() < 0.5 ? 'Take it easy' : 'Salvation lies within';
+  },
+  random: () => {
+    return Math.random();
+  },
+  rollThreeDice: () => {
+    return [1, 2, 3].map(_ => 1 + Math.floor(Math.random() * 6));
+  },
+};
+
+var app = express();
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  rootValue: root,
+  graphiql: true,//<-- enable graphiql interface at /graphql (mainly for development & debugging purpose)
+}));//if we didnt enable graphiql, graphql will expect a query by default
+
+
+*This way is quick and dirty, might not be easiest to learn and might have limitation.
+
+2. Define everything with GraphQLSchema.
+
+const graphql = require('graphql');
+const {GraphQLObjectType, GraphQLString, GraphQLSchema} = graphql;
+
+let books = [
+  {name:'Name of the Wind',genre:'Fantasy',id:'1'},//<--id here can be defined as string
+  {name:'The Final Empire',genre:'Fantasy',id:'2'},
+  {name:'The Long Earth',genre:'Sci-Fi',id:'3'}
+]
+
+const BookType = new GraphQLObjectType({
+  name: 'Book',
+  fields: () => ({
+    id: {type: GraphQLID},//<---http://graphql.github.io/graphql-js/basic-types/
+    name: {type: GraphQLString},
+    genre: {type: GraphQLString}
+  })
+})
+
+const RootQuery = new GraphQLObjectType({
+  name:'RootQueryType',
+  fields:{
+    book:{
+      type: BookType,
+      args:{id:{type:GraphQLID}},//<---argument for user to pass, i.e. book(id: 1){ ...} or book(id: "1"){..}
+      resolve(parent,args){
+        //code to get data from db/other source, i.e. how to resolve this?
+      }
+    }
+  }
+})
+
+module.exports = new GraphQLSchema({
+  query: RootQuery
+})
+
+----------------
+GraphQLID type
+As input type, either string or integer works (i.e. more flexible)
+The ID type will still appear as a string in the JSON response.
+
+----------------
+GraphQLList type
+To wrap a GraphQLObjectType in a list (when you are expecting the result to contain more than one of the same type)
+
+books:{
+      type:new GraphQLList(BookType),//<---multiple books can return
+      resolve(parent, args){
+        return books.filter(book=>book.authorid===parent.id)
+      }
+    }
+
+---------------
+A thunk is used to define a field due to interdependencies between different types.
+A thunk will delay the execution of the function, if not wrapped, the object when first defined will execute immediate resulting in undefined error
+
+const BookType = new GraphQLObjectType({
+  name: 'Book',
+  fields: () => ({//its like a thunk, delay execution of the function due to two/multiple ways dependencies between different types,
+    //here depends on AuthorType which is defined later. If not wrapped, it will be executed immediately upon initialization of BookType, and return undefined
+    id: ...,
+    author: {
+	type: AuthorType,//here depending on another type which is defined later
+	resolve(..){
+		...
+	}
+    }
+  })
+})
+
+const AuthorType = new GraphQLObjectType({
+
+    fields:()=>({
+	books:{
+	  type: new GraphQLList(BookType)//here interdepending on booktype as well
+        }
+    })
+})
+-----------------
+GraphQL Mutations
+Mutation is a 'query' to change the data of GraphQL
+const Author = require('../models/author');
+
+const Mutation = new GraphQLObjectType({
+  name:'Mutation',
+  fields:{
+    addAuthor:{//similar to the rootquery, this is a function addAuthor(name:.., age:..)
+      type:AuthorType,
+      args:{
+        name:{type: GraphQLString},
+        age:{type: GraphQLInt}
+      },
+      resolve(parent,args){//args is required input from user
+        let author = new Author({//Author here is a model for mongoose
+          name: args.name,
+          age: args.age
+        });
+        return author.save();//save in mongodb; the object {name, age} will be returned
+      }
+    }
+  }
+})
+
+module.exports = new GraphQLSchema({
+  query: RootQuery,
+  mutation: Mutation//define this objectype as mutation
+})
+
+-------------------
+The resolve function for GraphQL:
+
+https://graphql.org/learn/execution/
+-During execution, GraphQL will wait for Promises, Futures, and Tasks to complete before continuing and will do so with optimal concurrency.
+
+AND https://mongoosejs.com/docs/promises.html
+ Mongoose queries objects (what's returned by Model.find(..) etc) are NOT exactly promise but does offer .then() function to chain on.
+.exec() will give a full-fleged promise.
+
+Based on that, the below works:
+    books:{
+      type:new GraphQLList(BookType),
+      resolve(parent,args){
+        //return books
+        return Book.find({});//GraphQL will wait for the async db Promise(or Query) here to resolve before returning the result
+      }
+    },
+
+--------------------
+GraphQLNonNull
+
+    addAuthor:{
+      type:AuthorType,
+      args:{
+        name:{type: new GraphQLNonNull(GraphQLString)},//---> here basically translates into type String!
+        age:{type: new GraphQLNonNull(GraphQLInt)}
+      },
+
+--------------------
+Apollo client
+Packages:
+
+apollo-boost: Package containing everything (including apollo-client, apollo-cahce-inmemory, apollo-link-http, graphql-tag) you need to set up Apollo Client
+react-apollo: View layer integration for React
+graphql: to parse GraphQL queries
+
+-----
+
+apollo-client: A client to connect to the GraphQL server
+graphql-tag: Contains a 'gql' function which can parse GraphQL query string into a query document which can then be passed into apollo-client instance.
+ApolloProvider from 'react-apollo':
+Provides a client instance to a React component tree, and a higher-order component (HOC) for retrieving that client instance.
+---
+const client = new ApolloClient({
+  uri: "http://localhost:4000/graphql"
+})
+
+...
+      <ApolloProvider client={client}>
+        <div id="main">
+          <h1>Alvin&apos;s Reading List</h1>
+          <BookList/>
+        </div>
+      </ApolloProvider>
+Makes the GraphQL client available to any of your components enhanced by the graphql() function. 
+The <ApolloProvider/> component works the same as the react-redux <Provider/> component. 
+---->It provides an ApolloClient instance to all of your GraphQL components (via props?) that either use the graphql() function, 
+or the withApollo function.
+
+-------------------
+How to send query?
+Use the gql from 'graphql-tag' or directly from 'apollo-boost'
+Use the graphql function from 'react-apollo' to 'enhance' any component with GraphQL capabilites.
+
+import React, { Component } from 'react';
+import {gql} from 'apollo-boost';//import gql from 'graphql-tag';
+import {graphql} from 'react-apollo';
+
+const getBooksQuery = gql`
+{
+    books{
+      name
+      id
+    }
+}
+`
+
+class BookList extends Component {
+  render() {
+    console.log(this.props);
+    return (
+      <div>
+        <ul id="book-list">
+          <li>Book name</li>
+        </ul>
+      </div>
+    );
+  }
+}
+
+export default graphql(getBooksQuery)(BookList);
+
+This follows the React HOC pattern, which is similar to react-redux's connect function.
+
+this.props will then contain the 'data' object returned from the query.
+
+--------------------
+When we have different queries or mutations (or called 'enhancers' in a HOC context) that we need to enchance a component with, we use compose (a utility).
+
+export default compose(
+  withApollo,//<---lightweight graphql
+  graphql(`query { ... }`,{name:"...somename"}), //<---provide a name such that the return object is with this 'name' key
+  graphql(`mutation { ... }`,{name:"...someother name"),
+  connect(...),
+)(MyComponent);
+
+the config.name: by default, the return value of any query (in this.props) is a 'data' object while any mutation is a 'mutate' function. The name config gives it a different name.
+
+---
+By default, when I pass a query into graphql(), the result is this.props.data object
+when I pass a mutation into graphql() the result is this.props.mutate() function
+--------------------
+How to configure express-graphql for CORS
+
+CORS or Cross-Origin Resource Sharing, is a mechanism that uses additional HTTP headers to tell 
+a browser to let a web application running at one origin (domain) have permission to access selected 
+resources from a server at a different origin. A web application makes a cross-origin HTTP request 
+when it requests a resource that has a different origin (domain, protocol, and port) than its own origin.
+
+One thing to note is that CORS is only applicable to BROWSER. For security reasons, browsers restrict 
+cross-origin HTTP requests initiated from within scripts. Web application can only request HTTP resources from same origin,
+unless the response from the other origin includes the right CORS headers.
+
+In CORS, a preflight request with the OPTIONS method is sent, so that the server can respond whether it is 
+acceptable to send the request with these parameters.
+
+BUT express-graphql only implements the graphql endpoint (which only accepts GET and POST request). Hence, the OPTIONS method need to somehow
+be handled and be responsed with a 200 return status (to the browser).
+
+SO, we could use the cors module which will handle everything for us
+
+var express = require('express')
+var cors = require('cors')
+var app = express()
+ 
+app.get('/graphql', 
+	cors(),
+	graphqlHTTP({
+	schema,
+	graphiql: true
+	}) 
+	)
+...
+OR, just add a piece of 'middleware' callback
+
+app.use('/graphql',
+  function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+    if (req.method === 'OPTIONS') {//handles the preflight http header of CORS
+      res.sendStatus(200);
+    } else {
+      next();
+    }
+  },
+  graphqlHTTP({
+  schema,
+  graphiql: true
+}));
+--------------------
+What is GraphQL AST? AST in particular?
+
+When a GraphQL server receives a query to process it generally comes in as a String (Think JSON). 
+This string must be tokenized and parsed into a representation that the machine understands. This representation is called an abstract syntax tree (AST).
+
+When GraphQL Processes the query, it walks the tree executing each part against the schema.
+
+Converting raw strings to an AST is the first step of every compiler from C++ to Chrome's JavaScript's VM to Babel.
+
+AST explorer (for all types of data format ;)):
+
+https://astexplorer.net/#/drYr8X1rnP/1
+
+---------------------
+Passing arguments into GraphQL:
+
+config.options-
+An object or function that returns an object of options that are used to configure how the query is fetched and updated.
+
+If config.options is a function then it will take the component’s props as its first argument.
+export default graphql(gql`{ ... }`, {
+  options: {
+    // Options go here.
+  },
+})(MyComponent);
+
+export default graphql(gql`{ ... }`, {
+  options: (props) => ({
+    // Options are computed from `props` here.
+    // `props` can contain arguments passed into this component from a parent component
+  }),
+})(MyComponent);
+---
+//props can then be passed as variables/arguments into the actual query
+export default graphql(gql`
+  query ($width: Int!, $height: Int!) {
+    ...
+  }
+`, {
+  options: (props) => ({
+    variables: {
+      width: props.size,
+      height: props.size,
+    },
+  }),
+})(MyComponent);
+
+
+----
+
+Use the query variables, beginning with $
+
+const addBookMutation = gql`
+mutation($name:String!,$genre:String!,$authorid:ID!){
+  addBook(name:$name,genre:$genre,authorid:$authorid){
+    name
+    id
+  }
+}
+`
+
+...
+actual passing in the Apollo enhanced component:
+
+    this.props.addBookMutation({
+      variables:{
+        name,
+        genre,
+        authorid
+      }
+    })
+https://www.apollographql.com/docs/react/api/react-apollo.html#graphql-mutation-options-variables
+
+//---> this will result in a body of this?
+JSON.stringify({
+	mutation....,
+	varriables:{...}
+})
+...
+I suspect behind the scene this is supplying a JSON body as indicated in https://graphql.org/graphql-js/passing-arguments/
+
+...
+fetch('/graphql', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  body: JSON.stringify({
+    query,//OR mutation..
+    variables: { somevariables... },
+  })
+})
+  .then(r => r.json())
+  .then(data => console.log('data returned:', data));
+----
+Mutation option - refetchQueries
+
+https://www.apollographql.com/docs/react/api/react-apollo.html#graphql-mutation-options-refetchQueries
+--to refetch a query BEFORE or AFTER the mutation, more to update the UI
+
+There's something of a data cache(need to read up on this) in react-apollo graphql() itself (as a HOC) such that the it KNOWS
+all the queries and their retrieved dataset. That's why by just doing
+
+AddBook.js:
+    this.props.addBookMutation({
+      variables:{
+        name,
+        genre,
+        authorid
+      },
+      refetchQueries:[{query: getBooksQuery}]
+    })
+
+The below at
+BookList.js:
+  displayBooks(){
+    const {data} = this.props;
+    if(data.loading){
+	...
+
+is updated

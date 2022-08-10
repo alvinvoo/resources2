@@ -1,0 +1,459 @@
+--
+use `see` and `help` word to explore code
+
+Ctrl + h over any word to see Browser documentation help
+
+Sometimes objects in Data Stack can be pressed and Inspector will popup
+
+--
+The default set of roots includes the following directories in the Factor source directory: 
+• core - essential system vocabularies such as parser and sequences. The vocabularies in this root constitute the boot image; see Bootstrapping new images.
+• basis - useful libraries and tools, such as compiler, ui, calendar, and so on.
+• extra - additional contributed libraries.
+• work - a root for vocabularies which are not intended to be contributed back to Factor.
+You can store your own vocabularies in the work directory. 
+
+--
+How to start new project (or new vocabulary)
+IN: scratchpad USE: tools.scaffold
+Loading resource:basis/tools/scaffold/scaffold.factor
+Loading resource:basis/tools/scaffold/scaffold-docs.factor
+IN: scratchpad "palindrome" scaffold-work    ! for e.g. if we named the vocabulary 'palindrome'
+Creating scaffolding for P" resource:work/palindrome/palindrome.factor"
+Loading resource:work/palindrome/palindrome.factor
+IN: scratchpad "work" resource-path .
+"/home/alvinvoo/FACTOR/factor/work"
+
+
+--
+! For listener to call the words defined in palindrome vocabulary
+USE: palindrome
+! to reload - either press F2 (to reload any changed source files) - or manually (single vocab)
+"palindrome" reload 
+
+-
+Unit testing
+
+"palindrome" scaffold-tests
+! this will generate palindrom-tests.factor
+
+! in this file - we can write some unit tests
+{ f } [ "hello" palindrome? ] unit-test
+{ t } [ "racecar" palindrome? ] unit-test
+
+! in Listener
+"palindrom" test
+
+
+--Basic syntax
+
+token or separator for parser is `space`
+
+10 sq 5 - .    ! . is popping from data stack + pprint nl ! nl is newline
+> 95
+
+Action									Stack contents
+10 is pushed on the stack.				10
+The sq word is executed. 
+It pops one input from the stack 
+(the integer 10) and squares it, 
+pushing the result.						100
+5 is pushed on the stack.				100 5  ! we can see here that the `5` is pushed to the right, we can execute the expression line by line to see how the data stack changes
+The - word is executed. 
+It pops two inputs from the stack 
+(the integers 100 and 5) and 
+subtracts 5 from 100, 
+pushing the result.						95
+The . word is executed. 
+It pops one input from the stack (the integer 95) 
+and prints it in the listener's output area.
+
+--Line by Line
+IN: scratchpad 10
+
+--- Data stack:
+10
+IN: scratchpad sq
+
+--- Data stack:
+100
+IN: scratchpad 5
+
+--- Data stack:
+100
+5                 <-- when we `push` 5, its appended to the right/bottom
+				  <-- differently than what i imagine a number is pushed to the top
+IN: scratchpad -
+
+--- Data stack:
+95
+IN: scratchpad .
+95
+
+-- 
+this seems to take the burden out of programmer's head
+# Joy is the same
+100 5 - .
+95
+
+--
+10.5
+"character strings"
+{ 1 2 3 }
+! by the way, this is a comment
+
+( x -- y ) ! stack effect
+https://docs.factorcode.org/content/article-effects.html
+
+`dup` makes a copy of the top value of stack
+5 dup * .
+25
+
+--Colon definition
+`sq` word definition is actually as:
+: sq ( x -- y ) dup * ;
+
+! colon definition : -> start of word definition
+! must immediately followed by a new word and a stack effect
+! definition continues on until ; token is hit
+
+! another example
+: neg ( x -- -x ) 0 swap - ;
+
+5 0 -       ! Computes 5-0
+5 0 swap -  ! Computes 0-5
+
+--Quotation
+--Quotations are objects
+! following 2 lines are equal
+2 [ 2 + 3 * ] call
+2 2 + 3 *
+
+2 2 + .     ! Prints 4
+[ 2 2 + . ] ! Pushes a quotation
+
+#truthy
+In Factor, any object not equal to the special value f is considered true, while f is false.
+
+any `print` will pop the stack value and prints it on the output area
+
+! if examples
+10 3 < [ "Math is broken" print ] [ "Math is good" print ] if
+Math is good
+
+! more complex if example
+: sign-test ( n -- )
+    dup 0 < [
+        drop "negative"
+    ] [
+        zero? [ "zero" ] [ "positive" ] if
+    ] if print ;
+! usage
+IN: scratchpad 1 sign-test
+positive
+IN: scratchpad 1 neg sign-test
+negative
+IN: scratchpad 0 sign-test
+zero
+
+! comment
+the `dup` is to store one more `n` in stack
+for first `negative` scenario, it will be first `drop`
+else, it can be used for `zero?`
+again, `print` pops the stack and prints it
+so at the end, the stack is empty
+
+careful: `print` is only for string; for the rest can use . (pprint nl)
+
+--
+Array
+{1 2 3}
+
+IN: scratchpad 1 "Hey" write .
+Hey1
+
+each, map, filter
+{ 1 2 3 } [ "The number is " write . ] each
+The number is 1
+The number is 2
+The number is 3
+
+{ 5 12 0 -12 -5 } [ sq ] map .
+{ 25 144 0 144 25 }
+
+: negative? ( n -- ? ) 0 < ;
+{ -12 10 16 0 -1 -3 -9 } [ negative? ] filter .
+{ -12 -1 -3 -9 }
+
+--
+Symbol
+
+A symbol is a word which pushes itself on the stack when executed.
+SYMBOL: name
+! must use set and get to read and write variable values
+"Slava" name set
+name get print
+Slava
+! with-scope
+: print-name ( -- ) name get print ;
+"Slava" name set
+[
+    "Diana" name set
+    "There, the name is " write  print-name
+] with-scope
+"Here, the name is " write  print-name
+There, the name is Diana
+Here, the name is Slava   ! with-scope value lost after leaving scope
+
+--
+Vocabularies
+    -- words
+
+USE: io    ! print is from `io` vocabulary
+"Hello world" print
+
+USING: arrays kernel math ;  ! to use words in multple vocabularies
+
+IN: my-file      ! where to use it, by default its `scratchpad`
+: my-function ( when what -- ) ... ;
+
+! functions (dependencies) ordering matter in file
+
+--
+Application
+
+! MAIN: as entry point
+IN: game-of-life
+...
+: play-life ( -- ) ... ;
+
+MAIN: play-life
+
+`run` word loads a vocabulary and calls main entry point
+"tetris" run
+
+! Factor can deploy stand-alone exec
+"tetris" deploy-tool
+
+--
+Scripting
+./factor <somefilename>.factor
+
+--
+Images
+
+Factor has the ability to save the entire state of the system into an image file. 
+The image contains a complete dump of all data and code in the current Factor instance.
+
+when starting ./factor, use -i=<image> to specify image file, else default `factor.image` is used
+
+
+
+--
+Combinators - a word taking a quotation or another word as input
+
+what are `Cleave` combinators?
+The bi combinator takes one value and two quotations; 
+the tri combinator takes one value and three quotations. 
+The cleave combinator takes one value and any number of quotations, 
+and is essentially equivalent to a chain of keep forms:
+
+--
+First off, what is `keep` word?
+Call a quotation with a value on the stack, restoring the value when the quotation returns.
+
+IN: scratchpad 10 [ 2 - ] keep
+--- Data stack:
+8
+10   ! value 10 is restored (repushed) in the stack
+
+IN: scratchpad 2 "greetings" [ <array> ] keep 2array .   ! [ <array> ] is quoted (hold off evaluation)  and keep will do the calling and keep (repush) "greetings" in the stack
+{ { "greetings" "greetings" } "greetings" }
+
+-->>>
+IN: scratchpad 10 [ 5 - ] [ 5 * ] bi
+--- Data stack:
+5
+50
+
+IN: scratchpad clear
+IN: scratchpad 10 [ 5 - ] [ 5 * ] [ 8 - ] tri
+--- Data stack:
+5
+50
+2
+
+! same as
+IN: scratchpad 10 { [ 5 - ] [ 5 * ] [ 8 - ] } cleave
+--- Data stack:
+5
+50
+2
+
+! Equivalent
+{ [ p ] [ q ] [ r ] [ s ] } cleave
+[ p ] keep [ q ] keep [ r ] keep s
+
+-----
+curry vs compose
+
+! curry ( obj quot -- curry )
+USING: kernel prettyprint ;
+5 [ . ] curry .
+[ 5 . ]
+
+USING: kernel math prettyprint sequences ;
+{ 1 2 3 } 2 [ - ] curry map .
+{ -1 0 1 }
+
+! if obj is a word, it is pushed as a literal
+IN: scratchpad [ - ] [ - ] curry .
+[ [ - ] - ]    ! first [ - ] is pushed as a literal
+
+if want to apply (call) it, 
+IN: scratchpad [ - ] [ call - ] curry .
+[ [ - ] call - ]  ! call will 'dequote' the first [ - ]
+
+
+! compose ( quot1 quot2 -- compose )
+IN: scratchpad [ sq ]
+
+--- Data stack:
+[ sq ]
+IN: scratchpad [ . ]
+
+--- Data stack:
+[ sq ]
+[ . ]
+IN: scratchpad compose  ! compose 2 quots together
+
+--- Data stack:
+[ sq . ]
+
+
+===
+so these 2 are equivalent
+{ 10 20 30 } [ sq ] [ call . ] curry each
+{ 10 20 30 } [ sq ] [ . ] compose each   ! so means, compose will first 'dequote' [ sq ], its like doing _ call
+
+! another e.g for difference
+IN: scratchpad [ 3 ] [ 5 / ] compose .
+[ 3 5 / ]
+
+IN: scratchpad [ 3 ] [ 5 / ] curry .
+[ [ 3 ] 5 / ]
+
+-----
+Fried quotations
+Fried quotations generalize quotation-building 
+words such as curry and compose. 
+
+started by parsing word '[
+fry specifiers:
+use _ to hld a value
+use @ to splice the quotation (syntax sugar for _ call)
+
+:below are equivalent
+{ 10 20 30 } 5 '[ _ + ] map
+{ 10 20 30 } 5 [ + ] curry map
+{ 10 20 30 } [ 5 + ] map
+
+
+:below are equivalent
+{ 10 20 30 } 5 '[ 3 _ / ] map
+{ 10 20 30 } 5 [ 3 ] swap [ / ] curry compose map
+    -> breakdown: { 10 20 30 } [ 3 ] 5 [ / ] curry compose map
+    -> { 10 20 30 } [ 3 ] [ 5 / ] compose map
+    -> { 10 20 30 } [ 3 5 / ] map
+{ 10 20 30 } [ 3 5 / ] map
+
+
+:below are equivalent
+{ 10 20 30 } [ sq ] '[ @ . ] each
+{ 10 20 30 } [ sq ] [ call . ] curry each
+{ 10 20 30 } [ sq ] [ . ] compose each
+{ 10 20 30 } [ sq . ] each
+
+
+:below are equivalent
+{ 8 13 14 27 } [ even? ] 5 '[ @ dup _ ? ] map
+-> breakdown: if we execute them chunk by chunk on stack, we can see what's happening
+
+IN: scratchpad { 8 13 14 27 }
+--- Data stack:
+{ 8 13 14 27 }
+
+IN: scratchpad [ even? ] 5
+--- Data stack:
+{ 8 13 14 27 }
+[ even? ]
+5
+
+IN: scratchpad '[ @ dup _ ? ]  
+--- Data stack:
+{ 8 13 14 27 }
+[ even? dup 5 ? ]   ! fried quotation is applied immediately
+
+IN: scratchpad map
+--- Data stack:
+{ t 5 t 5 }
+
+-----
+Characters are really just integers
+IN: scratchpad CHAR: a
+--- Data stack:
+97
+
+Strings start and end with "
+IN: scratchpad "hola"
+--- Data stack:
+97
+"hola"
+
+----
+ranges - Virtual sequence consisting of a range of numbers
+
+! First, what is a T{ tuple syntax
+T{ class } T{ class f slot-values... } T{ class { slot-name slot-value } ... }
+! main point - Virtual
+An empty tuple; since vectors have their own literal syntax, the above is equivalent to V{ }
+T{ vector }
+
+A BOA-form tuple:
+USE: colors
+T{ rgba f 1.0 0.0 0.5 }   ! first element of slot is `f`, means remaining elems are corresponding to slots in order
+
+An assoc-form tuple equal to the above:
+USE: colors
+T{ rgba { red 1.0 } { green 0.0 } { blue 0.5 } }
+
+--
+using ranges vocab,  `range` Tuple class
+IN: scratchpad T{ range f 1 10 1 } [ 2 + . ] each
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+! There are useful Ordinary words, above can also be written as 
+IN: scratchpad 10 [1..b] [ 2 + . ] each
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+
+
+

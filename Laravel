@@ -1,0 +1,1524 @@
+Composer - Dependency Manager for PHP (much like npm/bundler)
+
+// package repo
+https://packagist.org
+
+// install laravel globally
+composer global require laravel/installer
+
+composer require <package> // Adds required packages to your composer.json and installs them.
+composer install // install dependencies from composer.lock or composer.json
+composer info // list packages
+
+The local vendor/ folder is like node_modules/
+
+laravel new <project name> -  to start new project
+php artisan serve -  to start local development server
+php artisan is just like ng or rake
+
+---
+LOGS
+under /storage/logs/
+
+----
+VIEWS - under resources/views
+
+Blade - Laravel templating engine - used to create dynamic templates
+- think of it as a layer on top of php (with nice syntatic sugar) that will compile down to php (for actual rendering)
+
+basics:-
+in layout.blade.php, use:  @yield(<target name>, <default placeholder>)
+in respective child *.blade.php files, we could @extend('layout') or @extend('<relativefolder...>/<file>')
+  - and then, use:  @section(<target name>,<value>) for simple one value replacement
+  - or for larger content
+  @section(<target name>)
+    .. some custom content
+  @endsection
+   
+--
+
+any error will be available via the $errors variable at the view
+
+The $errors variable is bound to the view by the  Illuminate\View\Middleware\ShareErrorsFromSession middleware, which is provided by the web middleware group. When this middleware is applied an  $errors variable will always be available in your views, allowing you to conveniently assume the $errors variable is always defined and can be safely used.
+
+can access a given error via the Blade @error Directive as well, can echo $message to display the error message
+within this directive
+
+@error('title')
+    <div class="alert alert-danger">{{ $message }}</div>
+@enderror
+
+--
+Bunch of helper functions to use through out the application, especiall useful in blade template
+https://laravel.com/docs/5.8/helpers
+
+----
+ROUTES - under routes
+// here shows a basic closure function - without using controller
+Route::get('/', function () {
+    return view('welcome');
+});
+
+There are api and web routes (different route middleware group for api and web routes)
+
+To checkout what ARE the middlewares, we can look at /app/Http/Kernel.php, there are more middleware to go through for web route
+One of it is the VerifyCsrfToken middleware, which extends from Illuminates's VerifyCsrfToken
+Checkout the handle() function to see what it does to incoming request
+
+Resourceful routes - much like rails
+Route::resource('projects','ProjectController');
+
+//* resource for routes
+/*
+  GET /projects (index)
+  GET /projects/create (create)
+  GET /projects/{project} (show)
+  POST /projects (store)
+  GET /projects/{project}/edit (edit)
+  PATCH /projects/{project} (update)
+  DELETE /projects/{project} (destroy)
+*/
+
+php artisan route:list - to show all routes
+
+Laravel has something called 'route model binding'
+if the route wild card is as above: {project}, even if the argument is passed in as id, in the controller,
+if we specified it as such
+
+public function show(Project $project) {
+  // Laravel will automatically retrieve the project object for us
+  // without us having to do Project::find($id)..
+
+}
+
+the route model binding can expect a 'slug' as well, it's configurable
+
+--
+what 'api' middleware does
+
+ 'api' => [
+            'throttle:60,1', <-- ThrottleRequest
+            'bindings', <-- For route model binding
+        ],
+
+for throttle, it is 60 max attempts per minute, the default 60,1 should be arguments passed straight to the handle() of ThrottleRequest.php
+
+---
+Can pass data into view via routes
+1. basic passing
+Route::get('/', function () {
+    $tasks = [
+        'Go to the store',
+        'Go to the market',
+        'Go to work'
+    ];
+
+    return view('welcome',[
+        'tasks' => $tasks,
+        'foo' => request('title')    //request param
+    ]);
+});
+
+then display in blade
+<ul>
+<?php foreach ($tasks as $task): ?>
+  <li><?= $tasks; ?></li>
+<?php endforeach; ?>
+</ul>
+
+OR using blade syntax
+
+<h1>My title is {{ $foo }}</h1>
+<!--- to turn off HTML escaping -->
+<h1>My title is {!! $foo !!}</h1>
+<!-- so if 'foo' => '<script>alert(1)</script>' will trigger alert, cross site scripting -->
+
+<ul>
+  @foreach($tasks as $task)
+    <li>{{ $task }}</li>
+  @endforeach
+</ul>
+
+2. Different ways of passing
+
+return view('welcome')->withTasks($tasks)->withFoo($foo)
+or
+return view('welcome')->with($tasks)->with($foo)
+or inline declaration
+return view('welcome')->with([
+    'Go to the store',
+    'Go to the market',
+    'Go to work'
+])
+
+3. Use the compact method - https://www.php.net/manual/en/function.compact.php, there's silent error when string not set, use with care
+
+view('welcome',compact('tasks')); // provided variable $tasks and tasks same name
+
+----
+CONTROLLERS
+
+php artisan make:controller <ControllerName>
+
+available under app/Http/Controllers/
+
+Routes point to controller instead of closure function
+
+Route::get('/', 'PagesController@home');
+Route::get('/about', 'PagesController@about');
+Route::get('/contact', 'PagesController@contact');
+
+//define the function properly in the controller file
+class PageController extends Controller
+{
+    //
+    public function home(){
+        $tasks = [
+            'Go to the store',
+            'Go to the market',
+            'Go to work'
+        ];
+    
+        return view('welcome',[
+            'tasks' => $tasks,
+            'foo' => request('title')
+        ]);
+    }
+   //...
+}
+
+resourceful controller
+php artisan make:controller PostController -r
+// to generate the model as well
+php artisan make:controller PostController -r -m Post
+
+will generate all the relevant functions
+
+--
+if using Project::create in controller, need to specify protected fillable fields in the model, i.e. fields that can be created/updated, else there will be MassAssignmentException
+this is to prevent malicious user from making unwanted assignment to data fields in DB.
+
+
+public function store(){
+        
+        // variant 1
+        // $project = new Project;
+        // $project->title = request('title');
+        // $project->description = request('description');
+        // $project->save();
+        
+        // variant 2
+        // Project::create([
+        //     'title' => request('title'),
+        //     'description' => request('description')
+        // ]);
+        
+        // the cleanest way
+        Project::create(request(['title', 'description'])); // here
+
+        return redirect('/projects');
+        // return back(); // to return to previous page
+    }
+
+.. in model file, specify $fillable property
+protected $fillable = ['title','description'];
+// can also specify the OPPOSITE of fillable, which is guard (what fields are guarded)
+// the lazy way is to specify an empty guard array
+// this means ALL fields are non-guarded, or fillable
+protected $guarded = [];
+
+OR (same)
+
+static protected $unguarded = true; // means all mass assignable enabled (fillable)
+
+For more properties, look at the Eloquent/Model Properties
+https://laravel.com/api/5.8/Illuminate/Database/Eloquent/Model.html
+
+--
+another important property is 
+protected $casts = [..];
+
+in order to access attributes as a defined type (whether from DB or JSON respone), be sure to cast it! Else the type accessed will be inconsistent, it maybe 1 from DB for boolean true, or string value returned from JSON response versus an integer etc
+
+The supported cast types are: integer, real, float, double, decimal:<digits>, string, boolean,  object, array, collection, date, datetime, and timestamp. When casting to decimal, you must define the number of digits (decimal:2).
+
+--
+another one is
+$appends - where you can append an 'accessor' to the current model's array form
+
+you can create a simple accessor for full name for e.g.
+
+ public function getFirstNameAttribute($value) <-- $value is original value of the column (here is 'first_name'
+    {
+        return ucfirst($value); <-- manipulation on this value
+    }
+
+// of if you want to return a newly computed value
+public function getFullNameAttribute()
+{
+    return "{$this->first_name} {$this->last_name}";
+}
+
+for both, we can access the accessor using $user->first_name
+
+// if you want to mutate an attribute value - mutator
+ public function setFirstNameAttribute($value)
+    {
+        $this->attributes['first_name'] = strtolower($value);
+    }
+$user->first_name = "Janice" --> will store it as 'janice' in the model 
+
+// if we want to 'append' a new computed value on the existing model, we could use the $appends property
+
+    protected $appends = [
+        'reward_type'
+    ];
+
+    public function reward(){
+        return $this->belongsTo(Reward::class);
+    }
+
+    public function getRewardTypeAttribute(){
+        return $this->reward->type->id; <-- the computation can be a relation getter like here or some processing logic
+    }
+
+then the value can be accessed via the model object,i.e $rewardItem->reward_type
+
+beware that if we access just the model, we would NOT see the appended attribute, to get the whole model WITH the attribute, we would need to get the JSON object of the model
+
+i.e. $rewardItem->toJSON(); // then we would see the reward_type attribute, BUT in case of a relationship model like this, the parent 'reward' object would be returned as well
+We could filter out the unwanted object by serializing the json object and using Arr::only or Arr::except
+
+Arr::except(
+  $rewardItem->jsonSerialize(),
+  ['reward']
+)
+
+
+--
+// be careful if you have something like this in the controller
+Project::create(request()->all()); // this means EVERYTHING from the client submission will be use to create
+--
+Validation in controller via request object
+
+request()->validate([
+            'title' => 'required | min:3',
+            'description' => ['required','min:3','max:100']
+        ]); // this returns an array of the VALIDATED FIELDS of the request object, hence we can pass it directly into the create function
+
+Project::create(request()->validate([
+            'title' => 'required | min:3',
+            'description' => ['required','min:3','max:100']
+        ]));
+
+//all validation rules
+https://laravel.com/docs/5.8/validation#available-validation-rules
+
+careful that validate only returns what is indicated in the parameters list
+if there's an additional field that doesnt require validation at all but needed, we need to add it separately
+
+$attributes = request()->validate([..]);
+$attributes['someField'] = request('someField');
+
+little tip: request('someField') ==> returns 'someFieldValue'
+request(['someField']) ===> returns ['someField' => 'someFieldValue']
+
+to validate field ONLY when they are available, we can use the 'sometimes' rule
+
+'title' => 'sometimes | required | min:3'
+
+--
+
+to divide the showing of error messages for different section/forms within same page, we could used named error bag which are accessible via $errors
+
+one way is via the FormRequest's $errorBag (i.e. different bag for different request)
+
+protected $errorBag = 'bagName'; // by default its 'default'
+
+after that we could access as $errors->bagName->any()
+
+or @foreach($errors->bagName->all() as error)
+
+
+
+--
+careful of checkbox status via request() object
+when its checked, the value is 'on', but when not checked, it doesnt have an entry
+so check the has property when updating the boolean value
+
+$task->update([
+      'completed' => request()->has('completed')
+    ]);
+-----
+MIGRATION
+all settings under .env file
+php artisan migrate to perform default migration
+migration files under database/migrations/
+
+php artisan migrate:fresh
+php artisan migrate:rollback
+
+php artisan make:migrate create_projects_table //this will prompt laravel to use Schema::create
+
+php artisan help make:migration <-- can type 'help' before each command to get more info
+
+for methods available to create column (definition), checkout:
+https://laravel.com/api/5.8/Illuminate/Database/Schema/Blueprint.html
+
+-- some methods on the Schema builder need the package 'doctrine/dbal' to be installed first
+composer require doctrine/dbal
+
+-- building foreign keys helper functions
+
+Schema::create('projects', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('owner_id');
+            $table->string('title');
+            $table->text('description');
+            $table->timestamps();
+
+            $table->foreign('owner_id')->references('id')->on('users')->onDelete('cascade');
+        });
+
+we can use onDelete, onUpdate cascade. At here, deleting a user will cascade down and deletes the project with this 'owner_id' as well
+
+we can put default values on a column
+$table->addColumn('boolean','completed')->default(false);
+
+but there's no default(null), have to use the nullable definition 
+$table->addColumn('text','notes')->nullable();
+
+-- database factories
+can write factory code here to seed application database real quick
+1. first define the class - like the UserFactory
+2. then via tinker - we can make some fake users (non persistent)
+>>> factory(App\User::class)->make();
+=> App\User {#3206
+     name: "Prof. Bella Jakubowski I",
+     email: "alanis.gutkowski@example.org",
+     email_verified_at: "2019-06-05 14:49:38",
+   }
+
+or persist it into our db, by using create()
+>>> factory(App\User::class)->create();
+=> App\User {#3209
+     name: "Zelda Carter",
+     email: "dedrick09@example.org",
+     email_verified_at: "2019-06-05 14:50:14",
+     updated_at: "2019-06-05 14:50:14",
+     created_at: "2019-06-05 14:50:14",
+     id: 1,
+   }
+
+or getting the RAW array (instead of the object itself)
+as seen, we can overwrtie the attribute's value as well
+>>> factory('App\Project')->raw(['title'=>'']);
+=> [
+     "title" => "",
+     "description" => "Esse vero dolores ullam rerum quia. Sit et dolores et quidem quia unde dignissimos. Ducimus voluptates explicabo ut et rerum.",
+   ]
+
+using the factory() helper method, we can make multiple dummy objects as well
+factory('App\User',5)->make(); //creates 5 users;
+
+// use WithFaker trait to generate random mockup data
+use WithFaker;
+
+$this->faker-sentence;
+$this->faker-paragraph;
+
+when dealing with foreign key in factory, we could build the key with a closure 
+
+owner_id'=> function () {
+            return factory(App\User::class)->create()->id;
+        }
+
+OR directly like so
+
+'project_id' => factory('App\Project') // this works too
+
+-----
+MODELS
+Eloquent model - similar as rails, it's using active record pattern
+
+php artisan make:model Project - creates /app/Project.php i.e. namespace App\Project
+
+naming convention: table name in plural 'projects', model name in singular 'Project'
+
+can open a tinker session to debug the application (much like rails console)
+php artisan tinker
+
+App\Project is an Eloquent Model
+https://laravel.com/api/5.8/Illuminate/Database/Eloquent/Model.html
+
+// can create and manipulate object model just like in rails
+>>> $proj1 = new App\Project;
+=> App\Project {#3191}
+>>> $proj1->title = 'My 1st Proj'
+=> "My 1st Proj"
+>>> $proj1->description = 'vroomm vroom'
+=> "vroomm vroom"
+>>> $proj1->save()
+=> true
+>>> App\Project::all()
+=> Illuminate\Database\Eloquent\Collection {#3194
+     all: [
+       App\Project {#3195
+         id: 1,
+         title: "My 1st Proj",
+         description: "vroomm vroom",
+         created_at: "2019-06-05 10:44:06",
+         updated_at: "2019-06-05 10:44:06",
+       },
+     ],
+   }
+
+// Builder api to manipulate model
+https://laravel.com/api/5.8/Illuminate/Database/Eloquent/Builder.html
+
+if want to use a Model in Controller file, can do
+
+use App\Project; // on top before class
+OR use it directly within controller class
+
+\App\Project::all(); // take care of the first backslash \, this indicates that this refers to the ROOT of this project, not within this namespace
+Project::find(1);
+Project::find(1)->delete();
+Project::create([..]);
+
+..
+Query builder magic:
+
+Take note also ::all() is a static method which returns an Eloquent Collection
+but App\Project::where('owner_id',1) returns an Eloquent Builder for us to chain other Builder methods in querying DB
+So the magic is in the trait ForwardsCall, so App\Project Eloquent Model forwardCallTo(..) Eloquent Builder with the project instance and the 'where' method
+
+A builder statement needs to end with a ->get() // to execute the query
+basic 1: Project::where('title','=',"My project 1")->get();
+basic 2: Project::where('title','some title');
+also can do Project::whereTitle('some title')->get() this would work on any column name
+
+
+
+--
+eloquent model's relationships
+class Project extends Model
+{
+    //
+    protected $fillable = ['title','description'];
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+}
+
+..
+class Task extends Model
+{
+    // we can update the 'relationship' object as well via the touches property
+    protected $touches = ['project']; // like so, when the task is updated, the project's modified timestamp will be updated as well
+
+    public function project(){
+        return $this->belongsTo(Project::class);
+    }
+}
+
+// access as such
+Project::find(1)->tasks // return Eloquent/Collection here
+Task::find(1)->project
+
+TAKE NOTE of the syntax HERE: This is something taken care by laravel, because 'project' is a property added automatically to Task Model (when it sees a Relations object being returned by project()), so
+
+Task::find(1)->project .. works even though $project is NOT explicitly defined in Task Model class.
+
+Task::find(1)->project() .. returns a BelongsTo class, so similarly
+Project::find(1)->tasks()->create($newTask) works.. because we can 'create' new child from parent in a HasOneOrMany relationship
+
+
+// it is better to define a function when creating child object, instead of accesing the db/model variables straight from the controller - logic encapsulation
+// with the relationship, Laravel can automatically map parent object's id
+public function addTask($task){
+        // return $this->tasks()->create([
+        // actually there's no need for this, as it can be mapped to this's id automatically
+        //     'project_id'=> $this->id, 
+        //     'description' => $description
+        // ]);
+
+        return $this->tasks()->create($task);
+    }
+
+A controller 'should not' have any knowledge about the database or field, instead of
+public function update(Task $task){
+    $task->update([
+      'completed' => request()->has('completed')
+    ]);
+
+    return back();
+  }
+
+-- better to
+public function update(Task $task){
+  $task->complete(request()->has('completed'));
+  return back();
+}
+// and abstract away the logic in model class
+public function complete($complete = true){
+        $this->update(compact('complete'));
+    }
+--
+Special: Polymorphic (column) relationship
+
+$table->nullableMorphs('subject'); // can be null
+$table->morphs('subject'); // this will also create an index on both below columns in DB
+// this is equal to
+$table->unsignedBigInteger('subject_id');
+$tabl->string('subject_type');
+
+the benefit of having a polymorphic column is that we can be flexible about the type
+lets say we have type 'Project' and 'Task' that we want to store information about in this table,
+it could be either 'Project' or 'Task', we just need a column to distinguish them and retrieve their id
+
+so we can have morphOne , morphMany relationship
+consept is similar to hasOne or hasMany
+and morphTo , counterpart is belongsTo
+so the target is 'morphTo' the subjects (which morphMany the targets)
+need to define the morphTo in the target model
+for e.g.
+
+subject1 -> morphMany ->
+                          target
+subject2 -> morphMany ->
+
+target -> morphTo -> (null) (i.e. can be subject1 or 2 or null - if nullable)
+
+class Activity extends Model {
+  public function subject(){
+    return $this->morphTo();
+  }
+}
+
+--
+class Project extends Model {
+  public function activity(){
+    return $this->morphMany('App\Activity', 'subject);
+  }
+}
+
+claas Task extends Model {
+  public function activity(){
+    return $this->morphMany('App\Activity', 'subject);
+  }
+}
+..
+Many to Many relationship (also known as having a pivot table)
+-> belongsToMany
+pivot table === use a combination of name from the two tables for e.g. project_user
+use the 2 table names, make them singular and combine them in alphabetical order (BY DEFAULT, can be overwritten)
+
+
+--
+Direct access to DB
+
+Seems like the DB is a facade for Illuminate/Database
+$ids = \DB::table('project_members')->where('user_id', $this->id)->pluck('project_id');
+
+
+--
+Model events
+
+During a model's lifecycle, several events are fired. We can hook into the events and do things.
+
+https://laravel.com/docs/5.8/eloquent#events
+
+we could hook into the event at the model's boot function
+
+class Project extends Model
+{
+    //
+    protected $fillable = ['title','description','owner_id'];
+    // if we just want to hook it in without using an EVENT CLASS
+    protected static function boot(){
+        parent::boot();
+
+        static::created(function ($project){ // manually registering created hook
+            Mail::to($project->owner->email)->queue(
+                new ProjectCreated($project)
+            );
+        });
+    }
+    ...
+
+}
+
+OR a cleaner solution is to make use of Laravel's observer (to observe the life cycle events)
+
+but remember to register the observer at the AppServiceProvider boot() function
+
+public function boot()
+{
+    User::observe(UserObserver::class);
+}
+
+--
+Laravel black magic again, following up on the hooking event at model's boot function, if we found that
+we keep hooking the same logic at more than one models' CRUD event, we could consider using a 'trait'
+
+When using traits with Eloquent models, Laravel has a neat trick that _boots_ the trait allowing us to hook into the Eloquent events.
+You can boot your traits by adding a boot[TraitName] method to it. for e.g.
+
+trait RecordsActivity
+{
+  protected static function bootRecordsActivity(){ //naming convention - boot[TraitName]
+    static::saving(function ($model){
+      $model->recordActivity(..);
+    });
+  }
+}
+
+..
+
+class Task extends Model
+{
+  use TriggersActivity; // so boot[RecordsActivity] function will be registered
+   
+}
+
+can add an abstract function which forces the user class to define it
+this allows different user class to configure different settings inside the trait
+
+---
+To reload a model instance again from database
+
+$model->fresh()->something..
+
+$model = $model->fresh();
+
+OR simply 'refresh' the model instance itself
+
+$model->refresh();
+
+------
+EVENT + EVENT LISTENER
+
+when there are a series of actions needed to be taken in controller, can consider event
+
+php artisan make:event <eventname>
+php artisan make:listener <listenername> -e <eventname>
+
+fire off custom event in controller methods, passing in the necessary object
+event(new ProjectCreated($project));
+
+in event class, save the object
+public function __construct($project)
+{
+    //
+    $this->project = $project;
+}
+
+in the listener class
+public function handle(ProjectCreated $event)
+{
+    //
+    dump('project created ', $event->project);
+}
+
+register in EventServiceProvider, the listener will trigger when the event is fired
+protected $listen = [
+        Registered::class => [
+            SendEmailVerificationNotification::class,
+        ],
+
+        ProjectCreated::class => [
+            SendEmailWhenProjectCreatedNotification::class
+        ],
+
+        ProjectUpdated::class => [
+            ProjectUpdatedListener::class
+        ]
+    ];
+
+OR, we can tied the triggering to the Eloqeuent model event hooks via the $displatchesEvents
+
+class Project extends Model
+{
+    //
+    protected $fillable = ['title','description','owner_id'];
+
+    protected $dispatchesEvents = [
+        'updated' => ProjectUpdated::class // here point to event class
+    ];
+    ...
+}
+
+
+------
+FORM SUBMISSION
+Laravel by default requires a CSRF token from the client side to match the server session's token
+This is to prevent cross site request forgery (data sent from unknown site)
+Need to add {{ csrf_field() }} or @csrf (blade shortform) within form
+Else will mostly encounter 419 error
+
+    <form method="POST" action="/projects">
+      <!-- {{ csrf_field() }} -->
+      @csrf
+      ...
+This will translate into a hidden input field with token
+<input type="hidden" name="_token" value="c9dX8Q0rEeVZLGSfhwec45OQS4EEPCeRpGPTtauP">
+
+--
+normal forms only support POST n GET request, to call for PATCH method
+
+<form method="POST" action="/projects/{{ project->id }}">
+      <!-- {{ csrf_field() }} -->
+      @csrf
+      <!-- {{ method_field('PATCH') }} -->
+      @method('PATCH')
+
+------
+AUTHORIZATION
+
+A bunch of ways to gatekeep a resource in the controller
+
+// abort_if($project->owner_id !== auth()->id(), 403);
+// abort_unless(auth()->user()->owns($project), 403); need to define owns for user model here
+
+// making use of policy
+- first create a policy based on the model
+php artisan make:policy ProjectPolicy -m Project
+- define the policy function in AuthServiceProvider.php!!
+public function update(User $user, Project $project)
+{
+  // or return $user->is($project->owner);
+  return $user->id == $project->owner_id;
+}
+
+// usually we use this - controller helper method authorize
+// this will return 403 response if not authorized
+$this->authorize('update', $project);
+
+// Make use of Gate::allows or Gate::denies
+abort_unless(\Gate::allows('update', $project), 403);
+
+// Make use of the can or cannot method of auth()->user()
+// the can here is a helper method tied to User model (by default)
+abort_unless(auth()->user()->can('update', $project), 403);
+
+// Can also apply policy to the whole web route using middleware
+// can here is a route middleware pointing to Authorize class --> 'can' => \Illuminate\Auth\Middleware\Authorize::class,
+Route::resource('projects','ProjectController')->middleware('can:update,project');
+
+// Can apply policy to portion of the view, like enable certain section using the can directive
+<h1 class="title">{{$project->title}}</h1>
+
+@can('update', $project)
+<h1>{{auth()->user()->name}} can update!</h1>
+@endcan
+
+// if we wanted to allow admin access to everything (i.e. bypass all policies), we could do so in the AuthServiceProvider.php
+
+public function boot()
+{
+  $this->registerPolicies();
+
+  //
+  Gate::before(function ($user){
+      if ($user->isAdmin()) return true;
+      // do not return false, this will let the policy do the subsequent check
+  });
+}
+
+https://laravel.com/docs/5.8/authorization#writing-policies
+------
+FORM REQUEST
+basically a wrapper for the Request class 
+A dedicated class for a SINGLE form request (for a specific action - like 'update' project)
+we can wrap the valiadtion and authorization stuffs within the request class
+another level of abstraction, probably unnecessary in most cases
+
+
+
+------
+Tap helper method and HigherOrderTap (Laravel black magic)
+
+->this code
+$project = $this->project();
+
+$project->update(..); // due to we cannot chain here, coz this returns a non-project instance value, like a boolean
+
+return $project;
+
+->can be simplified using tap
+tap($this->project())->update(..);
+
+->HigherOrderTap would first cache the parameterized instance, before executing the update(..) function and return the cached instance instead of the boolean (for e.g.)
+
+------
+Laravel Architecture
+
+There's a facade design pattern in Laravel /Iluminate/Support/Facades
+Basically it 'fronts' all the complex implementation for the widely used classes
+
+For e.g. the Schema class that we use to create or update table
+
+We could use Schema::create from https://laravel.com/api/5.8/Illuminate/Database/Schema/Builder.html#method_create
+Or Schema::table from https://laravel.com/api/5.8/Illuminate/Database/Schema/Builder.html#method_table
+
+PSR-4 autoloading specification
+- specific namespace naming
+
+Contracts:
+Is an interface like Facade with some differences
+the contracts package contains no implementation and no dependencies (like a facade)
+facades do not need us to 'pseudo-inject' (or called type-hinting) them in our class constructors, but contracts do:
+use Illuminate\Contracts\Redis\Factory;
+
+public function __construct(Factory $redis) <-- Factory here is a contract 
+    {
+        $this->redis = $redis;
+    }
+
+Laravel's facades and helper functions provide a simple way of utilizing Laravel's services without needing to type-hint and resolve contracts out of the service container. In most cases, each facade has an equivalent contract.
+
+Interfaces help us to decouple our code (by not tying down the class with too much external knowledge)
+
+for e.g. the EventPusher contract below is the interface and the implementation details is in the RedisEventPusher service class
+$this->app->bind(
+    'App\Contracts\EventPusher',
+    'App\Services\RedisEventPusher'
+);
+
+..
+when EventPusher is type-hinted, the RedisEventPusher class would be the one actually getting injected
+public function __construct(EventPusher $pusher)
+{
+    $this->pusher = $pusher;
+}
+
+----
+
+Laravel's own dump and die function
+dd(...)
+
+3 more ways to debug
+
+var_dump(..);
+die();
+
+print_r(..);
+die();
+
+dump(..);
+
+--
+Magical Goodies-
+1. Route auto binding
+2. Service Container
+3. Auto Resolution
+
+Laravel is able to do auto resolution via it's Reflection API
+Reflection is the ability of a process (or program) to examine, introspect, and modify its own structure and behavior.
+
+The keyword is app(<the thing to be resolve>) (or it's alias resolve(..))
+So, route auto binding is part of this auto resolution, we can for e.g. try to resolve a FileSystem, or anything else defined in the 'Service Container'
+
+We could do in controller
+use Illuminate\Filesystem\Filesystem;
+
+public function show(FileSystem $fs){
+  $fs->get();//auto resolution can automatically resolve this
+}
+
+** in long form, most probably it is still injecting via the constructor, but laravel has hidden all these
+i.e.
+//inside Controller class
+public function __construct(FileSystem $fs){
+  $this->fs = $fs;
+}
+
+public function show(){
+  $this->fs->get()
+}
+
+..
+power of app(..)
+
+We could resolve anyting within the framework with app(..)
+dd(app(Filesystem::class));
+
+OR we could define a custom binding INTO the service container
+
+app()->bind($abstract, $concrete..)
+
+app()->bind('example', function(){
+  return new \App\Example; // this will be a custom class
+});
+
+dd(app('example'));// and later retrive a new instance of it
+
+OR bind as singleton (so only ONE instance)
+app()->singleton('example', function(){
+  return new \App\Example; // this will be a custom class
+});
+
+OR even lazier, as long as the custom class is defined
+
+dd(app('App\Example')); // laravel will resolve this into a new instance
+
+Being able to use a 'service' in a function (or class) is like the concept of Dependency Injection
+
+use App\Example;
+
+public function show(Example ex){
+  ex..
+}
+
+4. Service Providers
+
+every component in Laravel has a service provider
+in charge of registering and bootstrapping some kind of service provider to the framework
+sticking with eloquent should be sufficient, this is for more custom services
+the settings can be found under config/app.php  .. providers section
+2 core methods in a provider:-
+1. register - called first round of registering service
+2. boot - called second round to bootstrap the service (if any step defined)
+
+for the binding, the concrete portion (be it a closure or an implementation) needs to be there for Laravel to instantiate. Usually this part is in the register() function. Else Laravel might throw BindingResolutionException.
+
+public function register(){
+  this->app->bind($abstract, $concrete..)
+}
+
+5. Facades (Laravel's black magic)
+Laravel facades serve as "static proxies" to underlying classes in the service container
+Facades use dynamic methods to proxy method calls to objects resolved from the service container
+Hence, the functions for these classes can be accessed as 'static methods' through the facade
+
+There are a bunch of Laravel classes which are 'facaded':
+https://laravel.com/api/5.8/Illuminate/Support/Facades.html
+
+The WHY?
+a. Facade provide terse, shorter syntax -> all important features can be accessed via Facade (as static method)
+b. DI injects class instance, hence cannot be mocked/tested easily. But via proxy methods of facade, in which the implementation of classes is still exactly the same, we can use facade's own static tester methods (https://laravel.com/api/5.8/Illuminate/Support/Facades/Facade.html) to test the underlying classes of whatever we are facading. These tester methods extends PHP mock framework, Mockery (https://github.com/mockery/mockery) and provide a way to 'mock' the tested object.
+
+use Illuminate\Support\Facades\Cache;
+
+Route::get('/cache', function () {
+    return Cache::get('key');
+});
+
+---
+
+use Illuminate\Support\Facades\Cache;
+
+/**
+ * A basic functional test example.
+ *
+ * @return void
+ */
+public function testBasicExample()
+{
+    Cache::shouldReceive('get')  //<-- shouldReceive is a facade static method
+         ->with('key')
+         ->andReturn('value');
+
+    $this->visit('/cache')
+         ->see('value');
+}
+
+c. Real-time Facade - we can facade any class in our application and get the benefit of 1 and 2
+Just by prefixing the namespace with Facades when we are 'using' (or aliasing) the Namespace
+
+use App\Contracts\Publisher;
+
+-to-
+
+use Facades\App\Contracts\Publisher;
+
+->then we can access the class method without DI
+
+$publisher->publish($this);
+
+-to-
+
+Publisher::publish($this);
+
+->and able to mock the target class without actually DI it in test
+
+class Podcast extends Model
+{
+  public function publish()
+  {
+      $this->update(['publishing' => now()]);
+
+      Publisher::publish($this);
+  }
+}
+
+--
+
+public function test_podcast_can_be_published()
+{
+    $podcast = factory(Podcast::class)->create();
+    // take note here is the expected result first
+    Publisher::shouldReceive('publish')->once()->with($podcast);
+    // here is the trigger
+    $podcast->publish();
+}
+
+
+5. Configuration
+Put all configurable environment variables in .env file
+Create an entry in config/<any config file>.php
+
+for e.g.
+
+return [
+    ...
+    'twitter' => [
+        'key' => env('TWITTER_KEY'),
+        'secret' => env('TWITTER_SECRET')
+    ]
+]
+
+key can be accessed as config('<configname>.twitter.key');
+
+6. Middleware
+The onion layer to go through 
+
+main processing function
+- handle
+pass it to next layer with $next Closure
+
+All middleware configuration can be found in Kernel.php
+There's the global middleware stack (compulsary run everytime for each request) - $middleware
+The route middle (optionally used) - $routeMiddleware
+
+middleware can be used in a Controller class (like in constructor)
+
+public function __construct()
+{
+  $this->middleware('auth');
+}
+
+or it can be used directly in the web routes file
+Route::get('/home', 'HomeController@index')->name('home')->middleware('guest'); // guest -> RedirectIfAuthenticated middleware
+
+There are helper function for auth()
+        // auth helper functions
+        // auth()->id()
+        // auth()->user()
+        // auth()->check()
+        // auth()->guest()
+
+7. Laravel Collection
+Powerful way to access and process data
+/Illuminate/Support/Collection
+$users->first()
+$users->last()
+$users->find(4)
+$users->where('email','something')
+$users->pluck('email') --> pick the 'email' properties for all elements and return in a Collection
+$users->pluck('email')[0]
+$users->map(function ($user) { return $user->name; })
+$users->filter(function ($user) { return $user->id <= 3; })
+
+// imagine a user has a email_verified_at date field which default is NULL
+// long form: $users->filter(function ($user) { return $user->email_verified_at; })
+$users->filter->email_verified_at; // gives verified user in array
+$users->reject->email_verified_at; // gives unverified user in array
+
+// if we were to define a isVerified() function in User class which returns $this->email_verified_at
+// this improves readability
+$users->filter->isVerified(); // works as well
+// so this is achieve through Collection's ability to retrieve higher ordered proxy
+
+// similarly
+$users->map->name; // return list of names
+
+// to convert an array to a Collection
+collect(['foo','bar'])
+
+// conver to uppercase using php's strtoupper
+collect($arr)->map(function ($item) { return strtoupper($item); });
+
+// there's a sum function
+// first create a php object
+$song1 = (object) ['name'=>'something', 'length'=>300];
+$song2 = ..
+$song3 = ..
+
+collect([$song1, $song2, $song3])->sum('length'); //works!
+
+// Eloquent Collection class can be extended and we could add our own collection methods
+https://laracasts.com/discuss/channels/eloquent/eloquent-custom-collections
+
+------
+MAIL
+
+make a mailable class together with a view
+php artisan make:mail ProjectCreated -m mail.project-created
+
+if using MAIL_DRIVER=log, can check in log file once sent
+storage/logs/laravel...log
+
+can use MAIL_DRIVER=smtp and smtp.mailtrap.io as well, for real live testing
+
+-----
+NOTIFICATION
+
+we can notify users in multiple channels, most popular is via mail or database (entry)
+
+php artisan make:notification <class name>
+if we want to notify via database
+php artisan notification:table
+php artisan migrate
+
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable
+{
+    use Notifiable; // using a trait. User can do $user->notify(<notification class name>)
+..
+}
+
+User class by default use Notificable trait. Any class using the Notifiable trait, can do, amongst others:
+for e.g
+$user->notify(...)
+$user->notifications(..) // MorphMany relationship
+$user->notifications
+$user->unreadNotifications
+$user->notifications->first()->markAsRead()
+$user->notifications->first()->markAsUnread()
+..
+
+for database entry, we can populate the data field via the toArray (or toDatabase) function at the notification class
+
+------
+SESSION
+
+a cache to store data relevant to this user session
+
+for entire user session
+session(['name','somebody']); // set
+session('name', 'a default name'); // get
+$request->session()->get('name'); // get from request->session, incase this only exist for this request
+
+for the NEXT ONE request only
+this is suitable for flashing message, which we want to discard after use in next session
+// for e.g. in a controller, after some action or in Eloquent model hook
+session()->flash('message', 'Your task has been updated.');
+
+// can be used in blade template, or some partial template
+
+@if(session('message'))
+  <p>{{ session('message') }}</p>
+@endif
+
+------
+HELPERS (function)
+
+we can autoload some classmapping, files etc with composer
+
+"autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "classmap": [
+            "database/seeds",
+            "database/factories"
+        ],
+        "files": [  // for e.g. if I want a helper function to be available in my project
+            "app/myhelpers.php"
+        ]
+    },
+
+run -> composer dumpautoload
+check that the path is added in <project>/vendor/composer/autoload_*.php
+restart server and the helper function can then be used everywhere
+
+------
+DEBUGGING
+
+using laravel/telescope
+
+install it with composer
+composer require laravel/telescope
+php artisan telescope:install
+php artisan migrate
+
+can debug via the /telescope path locally
+if want to access in non-local environment, add the admin email in TelescopeServiceProvider's gate() function
+
+can dump out variables to the /telescope page
+
+dump($projects);
+
+cache will also be reflected
+
+cache()->rememberForever('alvin-key', function () {
+            return ['my-number' => 133 ];
+        });
+// and grab it
+cache()->get('alvin-key');
+
+mail can be checked
+create new mailable class for a mailing scenario (-m to specify mail blade template)
+php artisan make:mail ProjectCreated -m mail.project-created
+
+objects can be passed in mail class __construct and accessible in the blade template
+it needs to be 'public' in the mail class
+
+-----
+Laravel recommends Vue as front end
+
+Usage of Vue is similar as React, it needs to be bundled by webpack
+
+laravel-mix (wrapper for webpack) is a very good plugin to do this, adjust basic setting through webpack.mix.js
+
+npm install
+npm run dev --watch
+
+and then pull the compiled js acnd scss files in the main php file. We can use vue components straight away.
+
+--
+laravel-mix can extract the app files into different smaller files (like manifest and vendor) and also version them (when they are included in the main php template)
+
+// in webpack.mix.js
+mix.js('resources/js/app.js', 'public/js')
+    .sass('resources/sass/app.scss', 'public/css')
+    .extract()
+    .version();
+
+// once transpiled, in mix-manifest.json, we can see that each js file is tied to a versioning id
+
+{
+  "js/app.js": "/js/app.js?id=casdf123",
+  "js/manifest.js": "..",
+  "js/vendor.js": ".."
+}
+
+// in main.blade.php
+<script src="{{ mix('/js/app.js') }}"></script> // this will modify the app.js versioning accordingly after every change
+// same with css
+<link rel="stylesheet".. href="{{ mix('/css/app.css') }}">
+
+-----
+The public/ folder contains compiled app.js and app.css
+The uncompiled versions are under resources/
+
+So the compilation still make use of node
+
+npm install
+npm run dev
+
+-----
+TESTING
+
+for separate testing configuration, need to create a .env.testing file
+can configure new testing database there
+if got telescope installed, need to turn it off, due to compatibility issue
+insert into .env.testing:
+TELESCOPE_ENABLED=false
+
+and remember to clear cache (if phpunit is ran and encountered issue with telescope before):
+php artisan config:clear
+
+to run ALL tests:
+vendor/bin/phpunit
+to run specific test files:
+vendor/bin/phpunit tests/Feature/<filename>
+to run specific test:
+vendor/bin/phpunit --filter <test_name or filename>
+can alias:
+alias pt="vendor/bin/phpunit --filter"
+pt <test_name>
+
+Laravel's TestCase is extending PHPUNIT test framework's TestCase
+https://phpunit.readthedocs.io/en/8.2/assertions.html for all the 'basic' assertions
+
+Feature test: testing a specific feature, still hitting end point
+Unit test: testing a model (or related to model)
+
+// use the RefreshDatabase trait to cleanup the database before and after every test but will cost time
+use RefreshDatabase; // this part will take 10 seconds
+
+// a test can be specified by appending a 'test' before a test function
+// or use the /** @test */ before the function
+
+$this->actingAs(factory('App\User')->create()); // actingAs will log in current user
+
+--
+Making test attributes more specific
+
+instead of 
+
+    /** @test */
+    public function a_project_requires_a_title() {
+
+        $this->post('/projects',[])->assertSessionHasErrors('title');
+    }
+
+where a 'project' might have many attributes, since we are only testing for the absence of title
+
+    /** @test */
+    public function a_project_requires_a_title() {
+        // making it more specific with a factory data
+        $attributes = factory('App\Project')->raw(['title'=>'']);
+
+        $this->post('/projects',$attributes)->assertSessionHasErrors('title');
+    }
+
+--
+Assertion
+
+There are some 'Concerns' for Testing/TestCase
+
+- InteractsWithExceptionHandling
+  - $this->withoutExceptionHandling()
+- InteractsWithDatabase
+  - $this->assertDatabaseHas() (and many more..)
+
+These can be accssed from TestCase instance (within TestCase class)
+
+we can simulate http request as well
+
+$this->post('<someRoutes>',$someAttributes)->assertRedirect  (these are from TestResponse class)
+                                          ->assertSession..
+                                          ->assertSee
+                                          ->assertCookie..
+
+--
+        $this->withoutExceptionHandling(); // this means Laravel will NOT handle any exceptions - including auth exception
+- take care to use this in cases when you are asserting FOR (positive cases)
+- take care to remove it to test negative cases (testing for exception errors, coz then it will throw error before the assertion)
+
+
+---
+
+TDD test are usually in the pattern of Arrange -> Act -> Assert
+The Arrange part (i.e. creating the world) can become tedious and (top) heavy over time
+
+There's the idea of creating a class-based model factory to help in this part
+https://tighten.co/blog/tidy-up-your-tests-with-class-based-model-factories
+
+in other worlds, when a model factory (the final model  we need to test on) need the support of a few model factories to set_it_up, we could group all of them in a class
+
+
+
+
+
+-----
+Deployment optimization
+
+optimize autoloader
+composer install --optimize-autoloader --no-dev
+
+cache stuffs
+php artisan config:cache
+php artisan route:cache
+
+-----
+PHP nuisance
+
+Closures are anonymous functions in PHP
+https://php.net/Closure, mostly used as callback functions or can be assigned as a constant (much like JS)
+<?php
+echo preg_replace_callback('~-([a-z])~', function ($match) {
+    return strtoupper($match[1]);
+}, 'hello-world');
+// outputs helloWorld
+?>
+
+when inheriting variables from parent scope, need to use the 'use' word
+
+$message = 'hello';
+
+// No "use"
+$example = function () {
+    var_dump($message);
+};
+$example();//nothing
+
+// Inherit $message
+$example = function () use ($message) {
+    var_dump($message);
+};
+$example();//'hello'
+
+// if redefine parent scope variable, wont change the function scope
+$message = 'world';
+$example(); // still same, 'hello'
+
+// if want to able to 'follow' the parent scope, need to pass in as 'reference' with amperstamp
+// Inherit by-reference
+$example = function () use (&$message) {
+    var_dump($message);
+};
+$example();
+
+// The changed value in the parent scope
+// is reflected inside the function call
+$message = 'world';
+$example();
+
+// Closures can also accept regular arguments
+$example = function ($arg) use ($message) {
+    var_dump($arg . ' ' . $message);
+};
+$example("hello");
+
+--
+Traits are mechanism for code reuse (basically copy n pasting code) in classes
+A Trait is intended to reduce some limitations of single inheritance by enabling a developer to reuse sets of methods freely in several independent classes living in different class hierarchies
+https://www.php.net/manual/en/language.oop5.traits.php
+sort of like mixins
+Trait precedence order: currenct class implementation > trait implementation > base method implementation
+<?php
+class Base {
+    public function sayHello() {
+        echo 'Hello ';
+    }
+}
+
+trait SayWorld {
+    public function sayHello() {
+        parent::sayHello();
+        echo 'World!';
+    }
+}
+
+class MyHelloWorld extends Base {
+    use SayWorld;
+}
+
+$o = new MyHelloWorld();
+$o->sayHello();
+?>
+=> Hello World!
+
+Associative array
+$fruits = array("a" => "orange", "b" => "banana", "c" => "apple")
+$fruits['a']; // gives orange
+// can do array addition like this
+$fruits += [ d=>"kiwi" ];
+
+--
+General paradigm concept Laravel is using
+Traits - Reuse of multiple functions (or pieces of code, like inheritance)
+Concerns - ?? A concern is a particular set of information that has an effect on the code of a computer program
+Macros (used as a trait 'Macroable') - A way to inject methods into an EXISTING (Macroable) class
+
+// add the macro of getting the FIRST word from the first Collection item
+\Illuminate\Database\Eloquent\Collection::macro("firstWordOfFirstElement",function() {
+    return explode(" ",$this->first())[0];
+});
+ 
+// create a collection:
+$collection = collect("Apples are fruits","Computers are not food","Bananas are also fruits");
+ 
+// and use the macro...
+dd($collection->firstWordOfFirstElement()); //returns Apples
+
+
+

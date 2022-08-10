@@ -1,0 +1,615 @@
+checkout https://golang.org/cmd/go/ for all the commands
+
+go wants to put everything under 'one' directory, i.e. ~/go/ directory
+
+A repo contains one more modules
+A module is a collection of related Go packages
+A package is a collection of source files in the same directory that are compiled
+together
+
+A file named go.mod there declares the module path: the import path prefix for all packages within the module.
+Each module's path not only serves as an import path prefix for its packages, but also indicates where the go command should look to download it.
+
+for new project
+go mod init github.com/.../... -- initiailze new module  (this is to enable dependency tracking too)
+go get <your packages>
+
+go list ...   -- to list every packages in the system
+
+The first statement in a Go source file must be package name. Executable commands must always use package main. 
+
+package main
+
+import "fmt"
+
+func main() {
+        fmt.Println("Hello, world.")
+}
+
+
+----- by default the builtin package is imported
+
+https://golang.org/pkg/builtin
+
+fmt.Println(b)
+
+a name is exported if it begins with a capital letter. Println is an `exported name`
+
+When importing a package, you can refer only to its exported names. Any "unexported" names are not accessible from outside the package.
+"unexported" names begins with un-capitalized letter
+
+message := fmt.Sprintf("Hi, %v, Welcome!", name)
+
+the :=  operator is a shortcut for declaring and initializing variable in one line
+the long way is
+
+var message string
+message = fmt.Sprintf("Hi, %v, Welcome!", name)
+
+
+var y float64
+y = -math.SqrtPhi
+
+vs
+
+y := float64(-math.SqrtPhi)
+
+or, directly type inference
+
+y := -math.SqrtPhi
+
+--------
+-- arrays and slices
+b := [5]int{1,2,3,4,5}
+  
+// slice of array
+d := b[0:3] // includes the first element but excludes the last
+// slices are reference to arrays
+// * Changing the elements of a slice modifies the corresponding elements of
+// its underlying array.
+// low and high bounds can be omitted - full slice can be assigned, i.e. d := b[:]
+
+fmt.Println(d)
+
+d[0] = 100 // change d
+fmt.Println(b) // b changes here [100 2 3 4 5]
+fmt.Println(d) // [100 2 3]
+
+---
+Slice literal is like an array literal without the length
+Array literal  [3]bool{true, true, false}
+
+// creates same array as above, then build a slice that references it 
+Slice literal  []bool{true, true, false}
+
+// a slice literal of a struct
+s := []struct {
+    i int
+    b bool
+}{
+    {2, true},
+    {3, false},
+    {5, true},
+    {7, true},
+    {11, false},
+    {13, true},
+}
+fmt.Println(s)
+
+-- the zero value of a slice is nil
+var s []int
+if s == nil {
+    fmt.Println("nil!")
+}
+
+-- the zero value of a pointer is nil as well
+
+the `make` built-in function allocates and initializes an object of type slice, map and chan (only). It returns Type.
+the corresponding built-in function is `new` which returns back the pointer *Type 
+
+The `append` built-in function appends elements to the end of a slice. If it has sufficient capacity, the destination is resliced to accommodate the new elements. If it does not, a new underlying array will be allocated. Append returns the updated slice.
+*That means the capacity of the slice would seemingly change/increase
+
+s = append(s, 2, 3, 4)
+//len=5 cap=6 [0 1 2 3 4]
+s = append(s, 4, 8)  // for e.g only appending 2 new elements but the cap doubles
+//len=7 cap=12 [0 1 2 3 4 4 8]
+
+--- `range` form of `for` loop iterates over a slice or a map
+var pow = []int{1, 2, 4, 8, 16, 32, 64, 128}
+
+func main() {
+	for i, v := range pow {
+		fmt.Printf("2**%d = %d\n", i, v)
+	}
+}
+
+for i, _ := range pow
+for _, value := range pow
+for i := range pow   // all valid syntaxes
+
+-- map
+// map is a keyword - to create map with keys of a certain type and values of
+// another type (or same type)
+
+type Vertex struct {
+	Lat, Long float64
+}
+
+var m map[string]Vertex
+
+m = make(map[string]Vertex)  // returns map of given type
+
+// map literal
+var m = map[string]Vertex{
+	"Bell Labs": Vertex{
+		40.68433, -74.39967,
+	},
+	"Google": Vertex{
+		37.42202, -122.08408,
+	},
+}
+
+// also valid, shorter form
+var m = map[string]Vertex{
+	"Bell Labs": {40.68433, -74.39967},
+	"Google":    {37.42202, -122.08408},
+}
+
+// an element can be deleted
+delete(m, key)
+
+elem, ok = m[key]
+
+If key is in m, ok is true. If not, ok is false.
+If key is not in the map, then elem is the zero value for the map's element type. 
+that means for map[string]int, elem would be 0 (NOT nil)
+The zero value for `a map` is nil
+
+--
+map[string]interface{}
+interface is a way of referring to a value without specifying its type. 
+only specifies what method it has
+interface{} simply specifies no methods at all
+It is useful becoz
+The type interface{} applies to any value. A variable declared as interface{} can hold a string value, an integer, any kind of struct, a pointer to an os.File, or indeed anything you can think of.
+
+// fmt.Println
+func Println(a ...interface{})
+
+// great in unmarshalling arbitrary JSON schema
+
+{
+   "name":"John",
+   "age":29,
+   "hobbies":[
+      "martial arts",
+      "breakfast foods",
+      "piano"
+   ]
+}
+
+var p map[string]interface{}
+err = json.Unmarshal(data, &p)
+
+---
+-- Ellipsis (...) in Golang
+
+it is used in variadic function
+a user is allowed to pass zero or more arguments in the variadic function
+
+func main() {
+    sayHello()
+    sayHello("Rahul")
+    sayHello("Mohit", "Rahul", "Rohit", "Johny")
+}
+   
+// using Ellipsis
+func sayHello(names ...string) {
+    for _, n := range names {
+        fmt.Printf("Hello %s\n", n)
+    }
+}
+
+Hello Rahul
+Hello Mohit
+Hello Rahul
+Hello Rohit
+Hello Johny
+
+
+-- function as values (functional programming)
+func compute(fn func(float64, float64) float64) float64 {
+	return fn(3, 4)
+}
+
+func main() {
+	hypot := func(x, y float64) float64 {
+		return math.Sqrt(x*x + y*y)
+	}
+	fmt.Println(hypot(5, 12)) // functions can be passed around - 13
+
+	fmt.Println(compute(hypot)) // 5
+	fmt.Println(compute(math.Pow)) // 81
+}
+
+
+----- init function ---
+https://golang.org/doc/effective_go#init
+
+ Go executes init functions automatically at program startup, after global variables have been initialized.
+ It can be used to verify or repair correctness of program state before real execution begins
+
+----- methods -----
+Go does not have classes!
+But can define methods on types (Haskell's class type?)
+
+A method is a function with a special `receiver` argument
+
+type Vertex struct { // a type `struct`
+	X, Y float64
+}
+
+// this is like impl in Haskell, Rust or even Elixir
+// all these 3 impl will have the data type, i.e. Vertex.<implementation name..>
+// so same here with golang
+// basically implementation 'methods' for the type struct (data, state), in the
+// same package
+
+// notice typically methods are in first letter uppercase 
+func (v Vertex) Abs() float64 { // Abs method has a receiver of type Vertex named V
+	return math.Sqrt(v.X*v.X + v.Y*v.Y) // struct fields can be accessed using dot
+}
+// You can only declare a method with a receiver whose type is defined in the
+// same package as the method. You cannot declare a method with a receiver whose
+// type is defined in another package.
+
+// You can declare method on non-struct types too
+// for e.g.
+// type MyFloat float64
+
+take care here, `type` keyword declares new type
+
+
+// while function can have first letter small letter
+func main() {
+	v := Vertex{3, 6}
+    v.Scale(10) // GO also allows us to cheat here.. normally it should be called
+    with &v
+    // so this works too: (&v).Scale(10implementations must embed )
+	fmt.Println(v.Abs()) // 5
+}         
+           
+-- pointer receivers (allows us to cheat on two fronts)
+// allow us to modify 
+func (v *Vertex) Scale(f float64) {
+	v.X = v.X * f // here, to access the struct field, we could write (*v).X -->
+    which works too
+	v.Y = v.Y * f // but GO allows us to cheat with just writing v.X
+    // seems a bit confusing, but yeah
+}
+
+-- value receivers (allows us to cheat with passing in reference pointers as
+well)
+// value receivers receive a copy of the original Vertex value, hence cannot
+// modify the values directly
+func (v Vertex) Scale(f float64) {  //(&p).Scale .. is perfectly fine
+    ...
+}
+
+conclusion, when using `receivers`, we dont really need to care about the
+reference or dereferencing of values.. (is it a good thing?)
+But its more common to use a pointer receiver, since the method can modify the
+value that the receiver points to
+
+
+// if instead of using pointer receiver, we use value receiver, the code doesnt
+// error out, it simple doesnt change the underlying value
+// for e.g. if instead of *Vertex, we used Vertex like below instead
+func (v Vertex) Scale(f float64) {
+	v.X = v.X * f // this doesnt modify the value
+	v.Y = v.Y * f
+}
+
+
+--- Interfaces --
+An interface type is defined as a set of method signatures. 
+
+A value of interface type can hold any value that implements those methods. 
+
+1. A method with the same name can be overloaded with different receivers
+   (which i guess name + receiver make up the full signature)
+2.  
+
+type Abser interface { // think of as an `interface` to methods
+	Abs() float64
+}
+
+type MyFloat float64
+type Vertex struct {
+	X, Y float64
+}
+
+// function polymorphism
+func (f MyFloat) Abs() float64 { 
+    // this method means that type MyFloat implements interface Abser
+    // but we dont need to explicitly declare that it does so
+    ...
+}
+
+func (v *Vertex) Abs() float64 {
+    // this method means that type *Vertex implements interface Abser
+    ...
+}
+
+func main() {
+	var a Abser
+	f := MyFloat(-math.Sqrt2)
+	v := Vertex{3, 4}
+
+	a = f  // a MyFloat implements Abser
+    fmt.Println(a.Abs())
+    a = &v // a *Vertex (pointer) implements Abser - & means referencing v's address
+    fmt.Println(a.Abs())
+}
+
+under the hood, an interface just store the value and concrete type (value, type)
+like, 
+(-1.4142135623730951, main.MyFloat)
+(&{3 4}, *main.Vertex) 
+
+-- nil receiver
+It is common for GO practice to anticipate nil receiver and write methods which
+will handle it
+
+func (t *T) M() {
+	if t == nil { // if we dont have this, it will just true nil pointer
+        derefence exception 
+		fmt.Println("<nil>")
+		return
+	}
+	fmt.Println(t.S)
+}
+
+func main() {
+    ...    
+	var t *T 
+	i = t // t is not being initiailzed with anything and its just a null
+    pointer
+	describe(i)
+	i.M() // we call here
+    ...
+}
+
+--- the empty interface
+
+interface{}
+An empty interface may hold values of any type. (Every type implements at least
+zero methods.) 
+Empty interfaces are used by code that handles values of unknown type. For
+example, fmt.Print takes any number of arguments of type interface{}. 
+
+func main() {
+	var i interface{}
+	describe(i) // (<nil>, <nil>)
+
+	i = 42
+	describe(i) // (42, int)
+
+	i = "hello"
+	describe(i) // (hello, string)
+}
+
+func describe(i interface{}) {
+	fmt.Printf("(%v, %T)\n", i, i)
+}
+
+
+-- type assertions
+Provides access to an interface value's underlying concrete value
+t, ok := i.(T)
+
+var i interface{} = "hello"
+
+s := i.(string)
+fmt.Println(s)
+
+s, ok := i.(string)
+fmt.Println(s, ok) // ok is true
+	
+f, ok := i.(float64) // ok is false
+fmt.Println(f, ok)
+
+f = i.(float64) // panic
+fmt.Println(f)
+
+--
+type switches 
+switch v := i.(type) { // the `type` here is a keyword
+    case T:
+        // here v has type T
+    case S:
+        // here v has type S
+    default:
+        // no match; here v has the same type as i
+}
+
+--- Stringers interface (just like `show` in Haskell)
+type Stringer interface {
+    String() string
+}
+
+type Person struct {
+	Name string
+	Age  int
+}
+
+func (p Person) String() string { // implicit implementation of String()
+	return fmt.Sprintf("%v (%v years)", p.Name, p.Age)
+}
+
+func main() {
+	a := Person{"Arthur Dent", 42}
+	z := Person{"Zaphod Beeblebrox", 9001}
+	fmt.Println(a, z) // Arthur Dent (42 years) Zaphod Beeblebrox (9001 years)
+}
+
+--- error interface
+type error interface {
+        Error() string
+}
+
+i, err := strconv.Atoi("42") // functions often return an `error` value
+
+//can use `;` to write one liner code, but linter will newline it
+
+-- example
+
+type ErrNegativeSqrt float64
+
+func (e ErrNegativeSqrt) Error() string {
+	return fmt.Sprintf("cannot Sqrt negative number: %v", float64(e)) // careful
+    here dont use just `e` (instead of float64(e)).. else it will go into infinite loop
+}
+
+func Sqrt(x float64) (float64, error) { // its returning `error` type here
+	if x < 0 {
+		return 0, ErrNegativeSqrt(x)
+	}
+	
+	i := 0
+	z := 1.0
+	for i < 100 {
+		z -= (z*z - x) / (2*z)
+		i++
+	}
+
+	return z, nil
+}
+
+func main() {
+	fmt.Println(Sqrt(2))
+	fmt.Println(Sqrt(-2))
+}
+
+--- io.Reader interface
+
+type Reader interface {
+    func (T) Read(b []byte) (n int, err error)
+}
+...
+	r := strings.NewReader("Hello, Reader!")
+
+	b := make([]byte, 8)
+	for {
+		n, err := r.Read(b)
+		fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
+		fmt.Printf("b[:n] = %q\n", b[:n])
+		if err == io.EOF {
+			break
+		}
+	}
+
+n = 8 err = <nil> b = [72 101 108 108 111 44 32 82]
+b[:n] = "Hello, R"
+n = 6 err = <nil> b = [101 97 100 101 114 33 32 82]
+b[:n] = "eader!"
+n = 0 err = EOF b = [101 97 100 101 114 33 32 82]
+b[:n] = ""
+
+-----
+Revision:
+example.com/
+  - hello/     // and hello here contain the main module, go mod init example/hello
+     - hello.go
+     - go.mod
+  - greetings/   // lets say, greetings here contain the foreign module, first, go mod init example.com/greetings
+     - greetings.go
+     - go.mod
+
+greetings.go:
+package greetings
+
+import "fmt"
+
+func Hello(name string) string{
+    message := fmt.Sprintf("Hi, %v. Welcome!", name)
+    return message
+}
+
+hello.go:
+import (
+    "fmt"
+    "example.com/greetings"
+)
+
+func main() {
+    message := greetings.Hello("Galdys")
+    fmt.Println(message)
+}
+
+and then in hello/ where the main package resides, to relocate the dependency of greetings.go, do
+
+go mod edit -replace example.com/greetings=../greetings
+go mod tidy
+
+hello/go.mod:
+module example.com/hello
+
+go 1.16
+
+replace example.com/greetings => ../greetings        // this line with `replace` directive tells the relocation
+
+require example.com/greetings v0.0.0-00010101000000-000000000000   // this line  with `require` directive tells the dependency
+
+
+------
+Go Tests:
+
+ending a file with *_test.go tells the `go test` command the file contains test functions
+
+test functions have the form Test<name> (i.e. start with 'Test..')
+
+test functions take a pointer to the testing package's testing.T type as a parameter
+
+https://golang.org/pkg/testing/#T
+https://golang.org/src/testing/testing.go?s=30576:30610#L666  (its a struct)
+
+go test
+go test -v 
+
+the builtin testing pkg doesnt even offer assert method, need to manually write t.FatalF
+
+
+------
+Compile and installing application:
+go build - compile code into executable in current path only
+go list -f '{{.Target}}' - check full install path
+// optional
+// can add the install path to system env $PATH
+export PATH=$PATH:/home/alvinvoo/go/bin/hello 
+
+// or add it to go's own env $GOBIN
+go env -w GOBIN=/path/to/your/bin
+
+go install, will install the binary into {user home}/go/bin directory
+basically all user go's stuffs is under {user home}/go
+/home/alvinvoo/go/bin
+
+
+----
+defer
+
+Defer is often used to perform clean-up actions, such as closing a file or unlocking a mutex. Such actions should be performed both when the function returns normally and when it panics.
+
+The deferred call’s arguments are evaluated immediately, even though the function call is not executed until the surrounding function returns.
+
+If there are several deferred function calls, they are executed in last-in-first-out order.
+
+func main() {
+    fmt.Println("Hello")
+        for i := 1; i <= 3; i++ {
+            defer fmt.Println(i)
+        }
+    fmt.Println("World")
+}

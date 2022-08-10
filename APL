@@ -1,0 +1,2318 @@
+The symbolic rules for the scalar dyadic functions:
+
+S←S∘S             S←S∘S
+V←S∘V             M←S∘M
+V←V∘S             M←M∘S
+V←V∘V  ***        M←M∘M  ***
+
+where: S=scalar, V=vector, M=matrix
+
+*** Must be the same shape or you get a LENGTH ERROR
+
+    ∘=any scalar dyadic function
+(+ × - ÷ ⌈ ⌊ * ⍟ | ○ ! < ≤ ≥ > = ≠ ∧ ∨ ⍲ ⍱)
+
+--
+The symbolic rules for the scalar monadic functions:
+
+S←∘S
+V←∘V
+M←∘M
+
+where: S=scalar, V=vector, M=matrix
+
+    ∘=any scalar monadic function
+(| - ⌈ ⌊ ÷ ~ × * + ! ? ○ ⍟)
+
+
+Matrices manipulation
+,[2] -> col wise
+,[1] -> row wise
+remember its row by col
+      MAT1←2 3⍴⍳6
+      MAT1
+1 2 3
+4 5 6
+      MAT2←10+MAT1
+      MAT2
+11 12 13
+14 15 16
+      MAT1,[2]MAT2
+1 2 3 11 12 13
+4 5 6 14 15 16
+     MAT1,MAT2  <-- default concat is col wise
+1 2 3 11 12 13
+4 5 6 14 15 16
+
+      MAT1,[1]MAT2
+ 1  2  3
+ 4  5  6
+11 12 13
+14 15 16
+      MAT1⍪MAT2  <-- same as cat-bar, apl+< (shift + ,)
+ 1  2  3
+ 4  5  6
+11 12 13
+14 15 16
+
+---------------
+Let's build four different variables. Each gets assigned the number 5:
+
+      A←5
+      B←1⍴5
+      C←1 1⍴5
+      D←1 1 1⍴5
+
+When displayed by APL, each of these arrays will LOOK the same. 
+To see the differences, you need to use shape (monadic ⍴).
+      ⍴A
+            (blank)
+      ⍴B
+1           (A vector gets you one)
+      ⍴C
+1 1         (A matrix gets you two)
+      ⍴D
+1 1 1       (A three-dimensional array)
+
+To get RANK, use ⍴⍴
+      CM←0 4⍴''
+      CM
+      ⍴CM
+0 4
+      ⍴⍴CM
+2   ⍝ Rank 2 means matrix
+
+--
+⊂ (APL + z - zip!)
+⊃ (APL + x - xplode!)
+Monadic ⊂ (enclose), 
+just enclose      
+      ⊂5
+5 ⍝ Simple scalar cannot be enclosed
+      ⊂2 4 6
+ 2 4 6  ⍝ A scalar 
+      10 20 40+⊂2 4 6  ⍝ Since its a scalar, its applied to each of the LHS items
+ 12 14 16  22 24 26  42 44 46 
+      (⊂10 20 30)+⊂2 4 6
+ 12 24 36 ⍝ This is a _nested_ scalar
+       ⍝ The above is simply same as
+      ⊂10 20 30+2 4 6
+ 12 24 36
+      ⊂⍳5
+ 1 2 3 4 5
+      ⊂⊂⍳5
+  1 2 3 4 5 ⍝ Notice indentation on left again, this is nested, nested scalar
+
+--
+to enclose by either splitting rows or cols (into a 1D array)
+
+⊂[?] where ? is simply the axis
+by default ⊂ will mean the _last_ axis
+
+          1  2  3  4                      1  2  3  4           
+          5  6  7  8                      5  6  7  8           
+          9 10 11 12                      9 10 11 12           
+              ↓                               ↓                
+         +---------+                     +---------+           
+         |         |                     |         |           
+         |   ⊂[1]  |                     |   ⊂[2]  |           
+         |by row   |                     |by col   |           
+         +---------+                     +---------+           
+              ↓                               ↓                
+(1 5 9)(2 6 10)(3 7 11)(4 8 12)  (1 2 3 4)(5 6 7 8)(9 10 11 12)
+         gets (4 (3))                    gets (3 (4))
+Can enclose more than 1 dimension at a time
+For example, the expression ⊂[1 3]A splits both the 1st and 3rd dimensions of A. 
+Thus, if A has shape 10 20 30, the result is a 20-item vector of 10 by 30 matrices, i.e. (20 (10 30)) in our notation.
+
+Dyadic ⊂ (partitioning) - takes only positive number
+each number of left indicates _new_ 'space'
+
+      1 1 2 2 3 3 4 4 4⊂⍳9
+ 1 2  3 4  5 6  7 8 9 
+      0 1 0 0⊂1 2 3 4  ⍝ All zeros are dropped
+ 2  ⍝ This is an enclosed scalar
+      1 2 3 3 3⊂3 5⍴⍳15
+ 1   2   3 4 5    ⍝ Column wise its grouped
+ 6   7   8 9 10   
+ 11  12  13 14 15 
+      1 1 2 2⊂4 4⍴⍳16
+ 1 2    3 4
+ 5 6    7 8
+ 9 10   11 12
+ 13 14  15 16
+      1 1 2 2⊂[1]4 4⍴⍳16 ⍝ Partition at the row wise
+ 1 5   2 6    3 7    4 8
+ 9 13  10 14  11 15  12 16
+⍝ 1 5 is one group, 9 13 is another group
+
+--
+Vector assignment:-
+      A B C ←(1) (2) (⍳3)
+      A
+1
+      B
+2
+      C
+1 2 3
+
+--
+Opposite of enclose - disclose
+To get the below behaviour needs to set Migration Level to 3, i.e. following IBM's APL2
+https://help.dyalog.com/18.0/index.htm#Language/System%20Functions/ml.htm
+⎕ML←3 ⍝ Default is 1
+Monadic ⊃
+
+3 items->   (1 2 3 4)(5 6 7 8)(9 10 11 12)  (1 2 3 4)(5 6 7 8)(9 10 11 12)
+                         ↓                              ↓                
+                     +-------+                     +--------+            
+                     |  ⊃[1] |gets (4 3)           |  ⊃[2]  |gets (3 4)            
+                     +-------+                     +--------+            
+                         ↓                              ↓                
+                      1  5  9                      1  2  3  4            
+                      2  6 10                      5  6  7  8            
+                      3  7 11                      9 10 11 12            
+                      4  8 12                
+
+      ⊃(1 2 3)(4 5 6)
+ 1 2 3           When the axis is omitted, the
+ 4 5 6           last dimension is assumed. (Default is col wise, ⊃[2])
+
+disclose is _inverse_ of enclose
+      ⊂[1]5 2⍴⍳10
+ 1 3 5 7 9  2 4 6 8 10 
+      ⊃[1](1 3 5 7 9)(2 4 6 8 10 )
+1  2
+3  4
+5  6
+7  8
+9 10 ⍝ which is 5 2⍴⍳10
+
+
+      ⊃[2](1 2)(3 4 5)(6 7 8 9)
+ 1 2 0 0         Shorter items are padded with
+ 3 4 5 0         zeros to the length of the
+ 6 7 8 9         longest item.
+
+
+
+Dyadic ⊃ (PICK function)
+Left argument is like array `index`
+      NV←(2 3 4) (2 4⍴⍳8) 'DOG'
+      3⊃NV
+DOG
+      2⊃NV
+ 1 2 3 4
+ 5 6 7 8
+
+When pick is given a vector left argument, it uses each element to perform one level of disclosing. In that way, you can disclose an array from deep within a nested array by using pick just once.
+      2 1 ⊃ (1 2)(3 4 5)
+3
+
+      CM
+BOB
+MARY
+PAUL
+      (⊂2 3)⊃CM
+R
+      2⊃⊂[2]CM
+MARY
+      CM[2;]
+MARY  ⍝ Same thing
+
+Monadic ↑ First pick
+      NV←(2 3 4) (2 4⍴⍳8) 'DOG'
+      ↑NV
+2 3 4
+
+Dyadic ↑ Take 
+      ¯1↑'Pine'
+e
+      mat
+1  2  3  4
+5  6  7  8
+9 10 11 12
+
+      2 ¯3 ↑ mat  ⍝ Take last 3 elements of first 2 rows
+2 3 4
+6 7 8
+
+      ¯2 ↑ mat
+5  6  7  8
+9 10 11 12
+
+      ¯2 3 ↑ 7  ⍝ Useful for padding, pads ' ' for characters
+0 0 0
+7 0 0
+
+
+∊ Enlist (flatten the array)
+      NV←(2 3 4) (2 4⍴⍳8) 'DOG'
+      ∊NV
+2 3 4 1 2 3 4 5 6 7 8 DOG ⍝ Notice DOG here are 3 homogenous items
+      ⍴∊NV
+14
+
+≡ DEPTH (for ranked objects)
+      ≡¯1.2
+0
+      NV←'ABC' (1 2 3) ((4 5) ((6 7) 8)) 'CAT'
+      ≡NV
+4
+      ≡2 4 6 8
+1
+      ≡5
+0
+
+--
+↓ Split the last dimension
+      ↓3 5⍴⍳15  ⍝ Last dimension is 3
+ 1 2 3 4 5  6 7 8 9 10  11 12 13 14 15 
+      ⊂[2]3 5⍴⍳15  ⍝ Seems to be same as this
+ 1 2 3 4 5  6 7 8 9 10  11 12 13 14 15 
+
+      ↓[1]3 5⍴⍳15  ⍝ And this.. same as below
+ 1 6 11  2 7 12  3 8 13  4 9 14  5 10 15 
+      ⊂[1]3 5⍴⍳15
+ 1 6 11  2 7 12  3 8 13  4 9 14  5 10 15 
+
+Dyadic ↓ means Drop
+      ¯1↓'Pine'
+Pin
+      mat
+1  2  3  4
+5  6  7  8
+9 10 11 12
+
+      1 ¯2 ↓ mat
+5  6
+9 10
+
+      1 ↓ mat  ⍝ also works (1 0 ↓ mat)
+5  6  7  8
+9 10 11 12
+
+      TAB
+6 ¯2 5 4
+8  7 3 9
+3 ¯1 0 2
+      2↑[2]TAB ⍝ Can use axis operator, [2] -> col, [1] -> row
+6 ¯2
+8  7
+3 ¯1
+      ¯1↓[1]TAB ⍝ By default its [1] row
+6 ¯2 5 4
+8  7 3 9
+------
+Scalar relational functions are: <, ≤, =, ≥, >, ≠
+
+APL + 3 to 8
+<≤=≥>≠
+
+**The only valid relational functions for character data are = and ≠.
+
+Other relational funcitons ≡, ∊, ×
+
+      7≡1⍴7 , need to identical in every way (rank, shape and datatype)
+0
+
+      ''≡⍳0
+0
+
+The empty character vector ('') and empty numeric vector (⍳0) have the same rank (1, since they are vectors) and they have the same shape (0, i.e. no elements) and their values are even the same (since they don't have any). However, their datatypes are different (character vs. numeric) so they are not equivalent.
+
+Membership or 'element of'
+      4 9∊2 3⍴⍳6
+1 0
+      (3 3⍴⍳6)∊4 9
+0 0 0
+1 0 0
+the shape of the result of ∊ is the same as the shape of the left argument
+      16 3 8 4 9∊3
+0 1 0 0 0
+      16 3 8 4 9=3 ⍝ Use the quicker function
+0 1 0 0 0
+
+Monadic ×  (signum), "Are the elements of the right argument nonzero numbers? Works only on numbers only"
+      ×36 0 5 15 0
+1 0 1 1 0
+      ×5 0 ¯25 6.3 ¯2
+1 0 ¯1 1 ¯1
+
+--
+Logical functions:
+AND ∧  (APL + 0)
+Dyadic scalar function
+(also lowest common multiple - LCM)
+
+      15 ^ 35
+105
+      105 ÷ 15
+7
+      105 ÷ 35
+3
+
+NOT ~  (APL + T)
+
+OR ∨  (APL + 9)
+(also greatest common divisor - GCD)
+      0 1 0 1 ∨ 0 0 1 1
+0 1 1 1
+
+      15 1 2 7 ∨ 35 1 4 0
+5 1 2 7
+
+Dyadic ~ without
+
+left arg ~ (minus off) right arg
+
+      1 2 3 4 ~ 3 4
+1 2
+
+nand ⍲ (basically ~∧) - unlike the And and Or, only takes in 1 and 0
+      ~0 0 1 1 ∧ 0 1 0 1
+1 1 1 0
+      0 0 1 1 ⍲ 0 1 0 1
+1 1 1 0
+nor ⍱ (~∨)
+
+
+---
+⍝ Indexed assignment
+AMTS[2]←5.95  ⍝
+
+just like
+      A
+2
+      A+←2
+      A
+4
+      A,←2
+4 2
+      A[2]←3
+      A
+4 3
+⍝ Can  hange a couple at once
+      AMTS
+26.49 5.95 62.83 ¯5.09 8.49 ¯18.25
+      AMTS[1 5]←27.49 8.99
+      AMTS
+27.49 5.95 62.83 ¯5.09 8.99 ¯18.25
+
+change the negatives to ¯99
+      BITVEC←AMTS<0
+      INDS←BITVEC/⍳⍴BITVEC  ('slashiotarho' - filter out the index)
+      AMTS[INDS]←¯99
+
+One weird thing:
+      CV←'ELEPHANT'
+      ⍝ replace all Es by Us
+      ((CV='E')/CV)←'U' ⍝ Assigment like this actually works
+      CV
+ULUPHANT
+      ⍝ More intuitive way maybe to get the indices, but above way shorter
+      CV[(CV='E')/⍳⍴CV]←'U'
+
+
+----
+Selecting matrix using index []
+
+[ROWS;COLS]
+
+      TAB
+6 ¯2 5 4
+8  7 3 9
+3 ¯1 0 2
+      TAB[1 2;2 3]
+¯2 5
+ 7 3
+      TAB[1;1 3 4]
+6 5 4
+      TAB[1 2 3;2]
+¯2 7 ¯1         
+      TAB[;2] ⍝ Same as above
+¯2 7 ¯1      
+      TAB[3;]
+3 ¯1 0 2
+
+
+----
+Seems like all operators have the axis operator 
+
+      TAB
+6 ¯2 5 4
+8  7 3 9
+3 ¯1 0 2
+      1 0 1/[1]TAB ⍝ Select rows, also slash-bar ⌿ (APL + /)
+6 ¯2 5 4
+3 ¯1 0 2
+      1 0 1 1/[2]TAB ⍝ Select cols , this is also the default if [] is omitted
+6 5 4
+8 3 9
+3 0 2      
+      1 1 0 0/TAB
+6 ¯2
+8  7
+3 ¯1
+
+Reduction, 
+      B
+1  2  3  4
+5  6  7  8
+9 10 11 12
+
+      +/[1]B  ⍝ Add up column wise (affecting rows, afterwards, 'rows' is reduced)
+15 18 21 24
+      +/B  ⍝ Add up row wise
+10 26 42
+      
+Any of the 21 scalar dyadic function works (+ × - ÷ * ⍟ ⌈ ⌊ | ○ ! > ≥ < ≤ = ≠ ∧ ∨ ⍲ ⍱)
+      ×/3 2 5 4
+120
+
+
+   -/25 3 2 4 ⍝ right-to-left precedence produces "alternating sum"
+
+                                   +25
+                                   - 3
+   -/25 3 2 4   →   25-3-2-4   →   + 2
+                                   - 4
+                                   ---
+                                    20
+so the 21 new functions, most are useless, only 6 are useful:
++/  sum; how many     ⌈/  largest      ∧/  all
+×/  product           ⌊/  smallest     ∨/  any
+
+We can also do N-wise reduction
+      +/ 1 2 3 4 5
+15      
+      2 +/ 1 2 3 4 5
+3 5 7 9
+      3 +/ 1 2 3 4 5
+6 9 12
+
+
+Summary on matrix reduction:
+    3  7 ¯2  4 | 12      +/[2]M     ⍝ The result is displayed vert: 12 13 19
+    0  5  2  6 | 13   ←    or               
+    1  8  9  1 | 19       +/M               
+    -----------+---                         
+    4 20  9 11 | 44   ←  +/+/[1]M  or  +/+⌿M
+         ↑                   or          or 
++/[1]M  or  +⌿M          +/+/[2]M  or  +/+/M (most commonly used)
+
+Another expression to sum up all elements
+      +/(×/⍴M)⍴M
+44
+This is useful for higher dimension arrays
+The expression (×/⍴A)⍴A will convert any array (scalar, vector, matrix or higher dimension array) into a vector of its elements.
+
+We can use monadic , (ravel) to perform the same function
+Hence, expression (+/,M) is the common expression that rivals +/+/M in frequency of use for computing the grand total of a matrix.
+
+--
+careful of rank of array being reduced on:
+
+      ,/'TWO' 'FOUR' 'SIX' 'EIGHT' ⍝ Concat reduce an array of vectors
+ TWOFOURSIXEIGHT ⍝ result is a nested scalar
+
+      ⊃,/'TWO' 'FOUR' 'SIX' 'EIGHT' ⍝ Disclose it
+TWOFOURSIXEIGHT
+
+      ⊃+/(1 2 3 4)(10 20 30 40)(100 200 300 400)
+111 222 333 444
+
+below two cases same
+      ,/3 2⍴6
+ 6 6  6 6  6 6 
+      ⊂[2]3 2⍴6
+ 6 6  6 6  6 6 
+
+--
+Extreme case:
+      +/0⍴5  ⍝ Reducing a vector always return a scalar
+0
+      +/⍬ ⍝ means this
+0
+      ∧/0⍴1
+1      
+      ∧/⍬
+1
+      ∨/⍬
+0
+      ⌊/⍳0
+1.797693135E308
+The reduction of an empty vector is the identity element for the minimum function, i.e. the n where X=X⌊n for all X. For ⌊, n is infinity. This number is the biggest number the computer can represent. 
+
+      COST
+ 68 56 57 74
+ 95 54 23 25
+ 41 55 98 72
+      ⌈/COST  ⍝ /[2]
+74 95 98
+      ⌊⌿COST  ⍝ /[1]
+41 54 23 25
+      COST>25
+ 1 1 1 1
+ 1 1 0 0
+ 1 1 1 1
+      ∧/COST>25
+1 0 1
+      ∨⌿COST<25
+0 0 1 0
+      ∧/,COST>10
+1
+      +/,COST>50
+9
+      ⌈/⌊/COST
+56
+      ⍴45
+
+      ⍴,45
+1   ⍝ One element vector
+      ,45
+45
+⍝ In fact can see the difference
+      ]display 45
+45
+      ]display ,45
+┌→─┐
+│45│
+└~─┘
+  
+
+----
+Scan operator
++\    ÷\    ⌈\    ○\    ≥\    =\    ∨\
+×\    *\    ⌈\    !\    <\    ≠\    ⍲\
+-\    ⍟\    |\    >\    ≤\    ∧\    ⍱\
+
+scan operator performs the reduction functino cummulatively
+
+      V←3 2 5 4
+      ×\V
+3 6 30 120
+      (×/3),(×/3 2),(×/3 2 5),(×/3 2 5 4)
+3 6 30 120
+
+Each scan function is defined in terms of its corresponding reduction function. Since -/ computes alternating sums, it follows that -\ computes cumulative alternating sums. 
+
+so
+      -\25 3 2 4
+25 22 24 20
+
+again, mostly these 6 scans are useful:
++\  cumu. sum; how many     ⌈\  cumu. largest      ∧\  cumu. all, leading
+×\  cumu. product           ⌊\  cumu. smallest     ∨\  cumu. any, once
+
+      +\⍬
+     (nada)
+
+--
+Dyadic ⍳ - search (indices)
+      37 39 32 45 36 ⍳ 45
+4
+      19 29⍳0 ⍝ Not found, gonna be greater than length of array
+3
+*the result corresponds on the shape of right argument
+⍝ that means it can search any shape
+      2 2⍴45 39 32 36
+45 39
+32 36
+      37 39 32 45 36 ⍳ 2 2⍴45 39 32 36
+4 2
+3 5
+
+      3 3⍴⍳9
+1 2 3
+4 5 6
+7 8 9
+      (3 3⍴⍳9)⍳1 2 3 ⍝ matches row
+1
+--
+ some edge cases
+      37 39 32 39 36 ⍳ 39
+2
+      37 39 32 39 36 ⍳ 39 39
+2 2
+      35 ⍳ 36 35
+RANK ERROR
+      35 ⍳ 36 35  ⍝ Left argument must be a scalar
+
+so, for the case of needing to find indices of multiple same RHS, still use slashiotarho
+      L←(37 39 32 39 36)
+      (L∊39)/⍳⍴L
+2 4
+
+---
+Note, membership (element of) vs index
+⍝ membership - search target on the left
+⍝ index - search target on the right
+      AGES ← 12?52
+      AGES
+32 22 30 36 11 48 42 52 3 16 47 2
+      11 15 16∊AGES  ⍝ is it in the list?
+1 0 1
+      AGES⍳11 15 16  ⍝ where is it?
+5 13 10
+
+---------
+Program execution modes:
+
+APL Line editor  (old school)
+      ∇ POKER   ⍝ ∇ APL + G
+[1]  ∇
+
+APL full screen editor  (opens up another editor screen)
+      )ED ∇POKER    ⍝ to define a program
+      )ED POKER     ⍝ to edit an existing program
+
+To run the program, simply type the name
+      POKER
+
+)ED can edit other stuffs too
+   )ED ∇POKER   Open a function
+   )ED →CVEC    Open a character vector
+   )ED -CMAT    Open a character matrix
+   )ED ∊NEST    Open a nest of character vectors
+
+Statement separator symbol ⋄ (diamond, APL + ~)
+    ⍝ Dont be confused, statements are executed one by one from left to right, so A←0 first
+    A←0 ⋄ MAT←15 12⍴0 ⋄ TMP←1 1 1
+
+---
+6 types of Functions Headers:
+                     Explicit Result    No Result (But maybe have side effects)   
+                    +---------------+---------------+
+Niladic (no args)   |     Z←FN1     |      FN4      |
+--------------------+---------------+---------------+
+Monadic (right arg) |     Z←FN2 R   |      FN5 R    |
+--------------------+---------------+---------------+
+Dyadic (two args)   |   Z←L FN3 R   |    L FN6 R    |
+                    +---------------+---------------+
+
+)FNS ⍝ to display functions
+
+Use the )ERASE and )CLEAR system commands to erase some or all functions
+
+         PMT←MORTGAGE (10 15 20 25) .095 AMOUNTS ; strand notation
+
+Within the function, use strand notation assignment:
+
+   [0]   PMT←MORTGAGE PARAMS;TERM;INT;AMT
+   [1]  ⍝ Compute the monthly mortgage payment etc.
+   [2]   (TERM INT AMT)←PARAMS ⍝ Term,interest,balance ; strand notation assignment, some sort of pattern matching
+
+4 system commands for listing or erasing the variables and functions in your active workspace
+         )VARS            (What variables do I have?)
+   A  B  C  TABLE
+         )FNS             (What functions do I have?)
+   DEAL  HYP
+         )ERASE B TABLE HYP    (Erase these objects.)
+         )CLEAR                (Erase everything.)
+   CLEAR WS
+         )SAVE <somename>    (to save)
+         )SAVE               (to resave active workspace)
+         )LOAD <somename>
+         )WSID               (to check active workspace ID)
+         )LIB                (To get a list of workspace already stored)
+         )COPY <someotherws> (to COPY the contents of <someotherws> into current active ws, this overwrites vars or funs with same name)
+         )PCOPY <someotherws> (COPY, but do not overwrite vars or funs in current ws)
+         )PCOPY SYSTEM RUN BUILD V37 TOTAL (can only copy selectively, this command copies into the active workspace selected functions (RUN and BUILD) and selected variables (V37 and TOTAL) from the stored workspace named SYSTEM.)
+         )DROP <somews>
+
+
+Windows files ending with '.DWS' are APL workspaces. Those ending with '.DCF' are APL files ('DCF' stands for Dyalog Component File).
+
+      )CLEAR
+CLEAR WS
+      ⎕LX←'10+⍳5'   ⍝ Latent eXpression, auto-run at ws startup; notice the quotes
+      )SAVE TEST
+TEST SAVED 12/31/2009 23:59:59
+      )LOAD TEST
+TEST SAVED 12/31/2009 23:59:59
+11 12 13 14 15
+
+      )XLOAD  ⍝ doesnt auto-run ⎕LX
+      ⍝ Under a program control, use ⎕LOAD to load a ws
+      ⍝ for e.g. (in a program)
+      ⎕LOAD 'C:\APLX\SYSTEM'
+
+---
+Branching (GOTO)
+
+⍝ Conditional branching
+   [6]   →(REGION='N')/NORTH
+   [7]   →(REGION='S')/SOUTH
+   [8]   →(REGION='E')/EAST
+   [9]   →(REGION='W')/WEST
+                :
+   [27] NORTH: etc.
+
+⍝ Can be simplified - "multi-target branching"
+   [6]   →(REGION='NSEW')/NORTH,SOUTH,EAST,WEST
+   [7]   ⍝ will come here if neither 'NSEW'
+             :
+   [32] NORTH: etc.
+⍝ But be aware that IF its neither of 'NSEW', it will go to next line [7]
+
+Remember, the APL selection functions are / (if you know the condition), ↑ (if you know how many you want from the front or back), ↓ (if you know how many you don't want from the front or back), [] (if you know the indices), and ⊃ (if you know the index).
+
+⍝ A special technique for []
+we can use it to CREATE a bigger array from smaller array
+      ' 0'[1 2 1 1]
+ 0  ⍝ notice here is blank-0-blank-blank, from 2 elem array to 4 elem array
+
+it can also select from a custom shape vector, end result will be that vector
+      '0123'[2 2⍴⍳4]
+01
+23
+
+⍝ Commonly used techniques for target branching
+    →(REGION='NSEW')/NORTH,SOUTH,EAST,WEST
+    →(NORTH,SOUTH,EAST,WEST)[REGION]  ⍝ used when REGION is an index
+    →REGION⊃NORTH,SOUTH,EAST,WEST  ⍝ used when REGION is an index
+
+    →0 ⍝ exits function
+
+⍝ if FLAG is 1, go to PRINT; if FLAG is 2, go to CALC; if FLAG is 3, go to CHANGE; and if FLAG is 9, exit the function
+    →(FLAG=1 2 3 9)/PRINT,CALC,CHANGE,0
+    →(PRINT,CALC,CHANGE,0)[FLAG⌊4]
+    →(FLAG⌊4)⊃PRINT,CALC,CHANGE,0
+
+
+LOOP:
+   [26]  R←POL[6]×SRATE-.5
+   [27]  I←1
+   [28] LOOP:CRUNCH I
+   [29]  I←I+1
+   [30]  →(I≤50)/LOOP
+   [31]  R←R+TOTAL
+
+⍝ How to generalize and include N ← 0 condition (no iteration)
+⍝ on the left, LOOP will not run if N ← 0; on right, at least once
+   [26]  I←1              Original solution:
+   [27] LOOP:→(I>N)/END       [26]  I←1
+   [28]  CRUNCH I             [27] LOOP:CRUNCH I
+   [29]  I←I+1                [28]  I←I+1
+   [30]  →LOOP                [29]  →(I≤N)/LOOP
+   [31] END:R←R+TOTAL         [30]  R←R+TOTAL
+
+If encounter INFINITE loop, hit Ctrl + PAUSE
+the debug menu will popup, just quit the function
+
+Avoid loop whenever possible:
+NOT-SO-FAST LOOP --
+
+   [5]  LOOP:RATE←(1+INTEREST)*I
+   [6]   AMT[I]←(DEP[I]+INC[I]+FLOW[I])×RATE
+   [7]   I←I+1
+   [8]   →(I≤⍴DEP)/LOOP
+
+This loop can stand some improvement...
+
+FASTER LOOP --
+
+   [5]   ACC←1+INTEREST
+   [6]   TOTAL←DEP+INC+FLOW
+   [7]   N←⍴DEP
+   [8]  LOOP:RATE←ACC*I
+   [9]   AMT[I]←TOTAL[I]×RATE
+   [10]  I←I+1
+   [11]  →(I≤N)/LOOP
+
+FASTEST (NO LOOP) --
+
+   [5]  AMT←(DEP+INC+FLOW)×(1+INTEREST)*⍳⍴DEP
+
+---
+Dieresis (¨) - (or better, MAP or EACH)
+
+      ⍳¨3 4 5
+ 1 2 3  1 2 3 4  1 2 3 4 5    V←∘V from (⍳3)(⍳4)(⍳5)
+
+      ⍳3 4   ⍝ Returns all possible combinations of this matrix (in nested arrays)
+ 1 1  1 2  1 3  1 4
+ 2 1  2 2  2 3  2 4
+ 3 1  3 2  3 3  3 4
+      ]display ⍳3 4
+┌→────────────────────────┐
+↓ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ │
+│ │1 1│ │1 2│ │1 3│ │1 4│ │
+│ └~──┘ └~──┘ └~──┘ └~──┘ │
+│ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ │
+│ │2 1│ │2 2│ │2 3│ │2 4│ │
+│ └~──┘ └~──┘ └~──┘ └~──┘ │
+│ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ │
+│ │3 1│ │3 2│ │3 3│ │3 4│ │
+│ └~──┘ └~──┘ └~──┘ └~──┘ │
+└∊────────────────────────┘
+      ≡ ⍳3 4
+2
+
+      5⍴¨6 7
+ 6 6 6 6 6  7 7 7 7 7    V←S∘V
+      ]display 5⍴¨6 7
+┌→────────────────────────┐
+│ ┌→────────┐ ┌→────────┐ │
+│ │6 6 6 6 6│ │7 7 7 7 7│ │  from (5⍴6) (5⍴7)
+│ └~────────┘ └~────────┘ │
+└∊────────────────────────┘
+
+      3 4⍴¨6 7
+ 6 6 6  7 7 7 7    V←V∘V from (3⍴6) (4⍴7)
+      3 4⍴¨⊂6 7
+ 6 7 6  6 7 6 7    V←V∘S from (3⍴6 7) (4⍴6 7)
+      (⊂3 4)⍴¨6 7
+ 6 6 6 6   7 7 7 7   V←S∘V from (3 4⍴6) (3 4⍴7)
+ 6 6 6 6   7 7 7 7
+ 6 6 6 6   7 7 7 7
+
+      5 6,¨7 8
+ 5 7  6 8       V←V∘V from (5,7) (6,8)
+      5 6,¨⊂7 8
+ 5 7 8  6 7 8   V←V∘S from (5,7 8) (6,7 8)
+      3 4?¨10 1000
+ 6 9 2  475 219 35 769  V←V∘V from (3?10) (4?1000)
+
+Remember the each (¨) operator in two different ways:
+
+1. Each (¨) is the LOOPING operator. It can be used to replace loops. Bear in mind, though, that its arguments and/or results may need to be nested arrays.
+
+2. Each (¨) is the SCALARIZING operator. It can convert any function into a scalar function. Think of it when you need to operate on each item of your argument independently.
+
+---
+Control Structures: 
+
+  [3]  →(I>0)⍴L1 ⋄ INITIALIZE
+  [4] L1:CALC I
+
+  [3] :IF I≤0 ⋄ INITIALIZE ⋄ :ENDIF  ⍝ Semicolon is to the left
+  [4]  CALC I
+
+--
+  [3]  →(I<0)⍴L2 ⋄ →(I>0)⍴L1 ⋄ INITIALIZE ⋄ →L3
+  [4] L1:T←CALC 'Again' ⋄ →L3
+  [5] L2:T←CLOSEOUT ⋄ REFRESH
+  [6] L3:MESSAGE MAT
+
+  [3] :IF I=0 ⋄ INITIALIZE
+  [4] :ELSEIF I>0 ⋄ T←CALC 'Again'
+  [5] :ELSE ⋄ T←CLOSEOUT ⋄ REFRESH
+  [6] :ENDIF
+  [7]  MESSAGE MAT
+
+--
+  [3]  →(0=⎕NC 'V')⍴L1 ⋄ →(V≡1)↓L1 ⋄ SPECIAL
+  [4] L1:PROCESS
+
+  [3] :IF 0≠⎕NC 'V' ⋄ :ANDIF V≡1 ⋄ SPECIAL ⋄ :ENDIF
+  [4]  PROCESS
+
+--
+  [3]  →(0=⎕NC 'V')⍴L1 ⋄ →(V≡0)↓L2
+  [4] L1:INIT
+  [5] L2:PROCESS
+
+  [3] :IF 0=⎕NC 'V' ⋄ :ORIF V≡0 ⋄ INIT ⋄ :ENDIF
+  [4]  PROCESS
+
+--  
+  [3]  →(N=10 11 15 17)/L1,L2,L3,L2 ⋄ →L4
+  [4] L1:RED ⋄ →L5
+  [5] L2:YELLOW ⋄ →L5
+  [6] L3:BLUE ⋄ →L5
+  [7] L4:OTHER
+  [8] L5:DISPLAY
+
+  [3] :SELECT N
+  [4] :CASE 10 ⋄ RED
+  [5] :CASELIST 11 17 ⋄ YELLOW
+  [6] :CASE 15 ⋄ BLUE
+  [7] :ELSE ⋄ OTHER
+  [8] :ENDSELECT
+  [9]  DISPLAY
+
+--
+  [3]  I←0
+  [4] LOOP:I←I+1 ⋄ →(I>N)⍴ENDLP
+  [5]  CRUNCH I ⋄ →LOOP
+  [6] ENDLP:UNTIE LIST
+
+  [3] :FOR I :IN ⍳N
+  [4]    CRUNCH I
+  [5] :ENDFOR
+  [6]  UNTIE LIST
+
+--  (do while)
+  [4] LOOP:∆Z←CRUNCH Z
+  [5]  →(0.0001>|∆Z-Z)⍴END
+  [6]  Z←∆Z ⋄ →LOOP
+  [7] END:REPORT ∆Z
+
+  [4] :REPEAT
+  [5]    ∆Z←CRUNCH Z ⋄ DIFF←∆Z-Z ⋄ Z←∆Z
+  [6] :UNTIL 0.0001>|DIFF
+  [7]  REPORT ∆Z
+
+-- (while)
+  [4] LOOP:→(SIZE>100)⍴END
+  [5]  (INCR PARAMS)←BATCH PARAMS
+  [6]  SIZE←SIZE+INCR ⋄ →LOOP
+  [7] END:SHOW SIZE
+
+  [4] :WHILE SIZE≤100
+  [5]    (INCR PARAMS)←BATCH PARAMS
+  [6]    SIZE←SIZE+INCR
+  [7] :ENDWHILE
+  [8]  SHOW SIZE
+
+-- (jump out in the middle, else repeat)
+  [4] LOOP:(D V)←CRUNCH DATA ⋄ →(D=1)⍴END
+  [5]  →(D≠¯1)⍴L3 ⋄ MESSAGE V ⋄ →0
+  [7] L3:(7⊃DATA)←V ⋄ →(D=0)⍴LOOP
+  [8]  (8⊃DATA)←D ⋄ →LOOP
+  [9] END:DISPLAY V
+
+  [4] :REPEAT ⋄ (D V)←CRUNCH DATA
+  [5]   :IF D=1 ⋄ :LEAVE ⋄ :ENDIF
+  [6]   :IF D=¯1 ⋄ MESSAGE V ⋄ :RETURN ⋄ :ENDIF
+  [7]    (7⊃DATA)←V
+  [8]   :IF D=0 ⋄ :CONTINUE ⋄ :ENDIF
+  [9]    (8⊃DATA)←D
+  [10]:ENDREPEAT
+  [11] DISPLAY V
+
+with :CONTINUE, :LEAVE and :RETURN
+:CONTINUE jumps out of the loop logic and goes back to the beginning of the loop, to start another iteration. :LEAVE jumps out of the loop logic and proceeds to the next statement after the bottom of the loop. :RETURN gets you completely out of the function, i.e., does the same thing that →0 does.
+
+---
+Debugging:
+  )SI (State Indicator or Suspension Indicator)
+#.SQRT[2]*
+#.HYP[3] ⍝ Show suspended functions
+  )SINL (State Indicator with Name List)
+  )SINL
+#.SQRT[2]* R N
+#.HYP[3] C A B ASQ BSQ  ⍝ Show suspended functions with name list
+
+
+⍝ If a function errors out (suspended), it's local variables will show global ones with same name
+
++---+-+-----+-+------+-HYP[3]--------+---+       
+|A←3| |ASQ←9| |BSQ←16|               |B←4|       
++---+ +-----+ +------+               +---+       
+|  +--------------SQRT[2]*-------+----+  |       
+|  |                             |N←25|  | +----+
+|  |      if SQRT suspended      +----+  | |A←99|
+|  |             +---+                |  | +----+
+|  |             |R← |                |  |       
+|  +-------------+---+----------------+  |       
+|                +---+                   |       
+|                |C← |                   |       
++----------------+---+-------------------+    
+
+then A value is 3. The global value A is shadowed by the local A.
+
+
+if a function 'bombed', we can )ED open it up, fix the error, save ita nd
+    resume execution globally by
+    → <suspended line number>
+
+Session debugging and fixing:
+      REPORT
+SYNTAX ERROR
+REPORT[7]   etc.
+      )ED REPORT     (to fix it)
+      →7             (to continue)
+VALUE ERROR
+REPORT[18]  etc.
+      )ED REPORT     (to fix it)
+      →18            (to continue)
+LENGTH ERROR
+REPORT[21]  etc.
+
+Use the system command )RESET if your suspensions get out of hand. It clears your state indicator.
+The system command )SIC (State Indicator Clear) does exactly the same thing
+or, can use → (without a right argument) to "Clear one suspended function from the state indicator, along with its associated pendent functions."
+using → repeatedly can accomplish )RESET or )SIC
+
+
+     ⍝ ⎕LC (Line Country - of the SI)
+      )SI
+#.SQRT[2]*
+#.HYP[3]
+#.REPORT[15]*
+#.REPORT[6]*
+      ⎕LC
+2 3 15 6 
+      →⎕LC has the effect of resuming execution at the suspended line of the most recently suspended function
+for e.g.
+      REPORT
+SYNTAX ERROR
+REPORT[7]   etc.
+      )ED REPORT     (to fix it)
+      →⎕LC           (to continue)
+VALUE ERROR
+REPORT[18]  etc.
+      )ED REPORT     (to fix it)
+      →⎕LC           (to continue)
+
+--
+Use ⎕STOP as line break
+
+If you want to suspend a function on a certain line, use the ⎕STOP system function.
+(remember the quote, else the function itself is run)
+    47 ⎕STOP 'MODEL' ⍝ tells function to suspend before line 47
+     MODEL
+MODEL[47]   (function stops with no error message)
+     )SI
+#.MODEL[47]*
+⍝ Now can examine local variables
+
+    10 20 30 40 ⎕STOP 'MODEL' ⍝ To have a few line breaks
+    MODEL
+    MODEL[10]
+(check variables)
+     →⎕LC
+    MODEL[20]
+(check variables)
+     →⎕LC
+
+⍝ To put at every line of a program
+    (⍳100) ⎕STOP 'CALC' ⍝ ⎕STOP ignores nonexistent line numbers
+
+⍝ To cause the function to suspend just before it exits
+    0 ⎕STOP 'CALC'
+
+⍝ To remove the stops
+     (⍳0) ⎕STOP 'CALC'
+
+          or
+
+     999 ⎕STOP 'CALC'
+
+          or
+
+     ¯1 ⎕STOP 'CALC'
+
+Use ⎕TRACE for tracking in program:
+      (⍳100) ⎕TRACE 'CALC'
+      CALC
+   CALC[1]  25
+   CALC[2]  0 0 0 0
+   CALC[3]  6.3714
+   CALC[4]  →10
+   CALC[10]  16
+   CALC[11]  5 8 2.4
+
+⍝ But be careful of results of big size arrays
+⍝ Turning of TRACE:
+   ¯1 ⎕TRACE 'CALC'
+
+---
+⎕ - Evaluated input/output
+⍞ - Character input/output
+
+
+Thorn ⍕ (APL + ') - formatter
+                                  2 8 5   (2 by 3  
+   31    36.5 28 ¯6      5        3 0 1    numeric 
+   ↓          ↓          ↓          ↓      matrix) 
++-----+    +-----+    +-----+    +-----+           
+|  ⍕  |    |  ⍕  |    |  ⍕  |    |  ⍕  |           
++-----+    +-----+    +-----+    +-----+           
+   ↓          ↓          ↓          ↓     (2 by 6  
+  '31'  '36.5 28 ¯6'    '5'      ' 2 8 5  character
+                                   3 0 1'  matrix) 
+
+dyadic, left argument can take in pairs of
+Field-width and number of decimal places:
+
+      6 2 ⍕ 3.125 0.002
+··3.13··0.00
+
+the opposite:-
+Hydrant ⍎ (APL + ;) - executer
+
+      ⍎'43'
+43              (the number 43)
+      ⍴⍎'43'
+                (the scalar 43 has no shape)
+      ⍎'23 65 12'
+23 65 12        (a three-element numeric vector)
+      ⍎'10+⍳5'
+11 12 13 14 15  (it "executes" its argument)
+ 
+
+⎕VFI to convert string to numbers
+
+    ⎕VFI '13.2'
+ 1  13.2 
+    ⎕VFI '12 143 12' ⍝ Its looking at the spaces as separators
+ 1 1 1  12 143 12 
+    ⎕VFI 'Mary has 1 little lamb' ⍝ Just like an array
+ 0 0 1 0 0  0 0 1 0 0 
+
+
+--
+Escape mechanisms:
+   To get out of:             Do this:
+   --------------             --------
+   Execution mode             Press Break key
+   (a function is running)
+
+   ⎕ mode                     Type →  or
+                              )RESET or )SIC or
+                              Enter on empty line
+
+   ⍞ mode                     Press Break, Enter
+ 
+
+-----
+Tips:
+Couple of ways to build character matrix
+1.
+   DESC←4 14⍴'Paper pads    Terminals     Boxes ... '
+
+2,
+   DESC←4 14⍴' '            (Initialize as blank mat.)
+   DESC[1;]←14↑'Paper pads' (Use take (↑) instead of
+   DESC[2;]←14↑'Terminals'      counting spaces.)
+   DESC[3;]←14↑'Boxes of paper'
+   DESC[4;]←14↑'Sep. telephone'
+
+3.
+   )ED -DESC      (Use the full screen editor.)
+                    (- says it's a matrix.)
+   Paper pads          (Type it in.)
+   Terminals
+       ...
+   (Press Esc)   (Close the full screen editor.)
+full range of symbols:
+https://help.dyalog.com/18.0/index.htm#Language/System%20Commands/ed.htm
+      ⎕TS         ⍝ For timestamp
+2021 11 6 16 35 58 582
+
+-----
+      CODE←265 291 265 207
+      QTY←100 3 6 1
+      CODE,[.5]QTY ⍝ Insert of new dimension BEFORE
+265 291 265 207  ⍝ 2 4  ; 2 is inserted before
+100   3   6   1
+      CODE,QTY   ⍝ By default, assume last axis, in this case, its ,[1]
+265 291 265 207 100 3 6 1
+      CODE,[1.5]QTY ⍝ Insert of new dimension AFTER, 
+265 100 ⍝ 4 2  ; 2 is inserted after
+291   3
+265   6
+207   1
+
+The above technique is called 'lamination'
+When you do catenation (i.e ,[1] or ,[2]), the result has the same number of dimensions (rank) as the arguments. When you do lamination, the rank of the result goes up by one.
+
+we can also use disclose
+      ≡CODE QTY  ⍝ take note its has depth of 2
+2
+      ⊃[1]CODE QTY
+265 100
+291   3
+265   6
+207   1
+      ⊃[2]CODE QTY
+265 291 265 207
+100   3   6   1
+--
+Lamination works in matrices as well
+
+imagine a 3 x 4 matrix
+         A←3 4⍴⍳12
+         B←100+A
+         ⍴A,[1]B
+   6 4
+         ⍴A,[2]B
+   3 8
+                 3             4
+          ↑     [1]     ↑     [2]     ↑
+         [.5]         [1.5]         [2.5]
+          |             |             |
+          |             |             |
+          +-------------2-------------+
+
+Use [.5] to get a result with shape 2 3 4. Use [1.5] to get a result with shape 3 2 4. Use [2.5] to get a result with shape 3 4 2.
+
+      A,[.5]B
+  1   2   3   4
+  5   6   7   8
+  9  10  11  12
+
+101 102 103 104
+105 106 107 108
+109 110 111 112
+      A,[1.5]B
+  1   2   3   4
+101 102 103 104
+               
+  5   6   7   8
+105 106 107 108
+               
+  9  10  11  12
+109 110 111 112
+      A,[2.5]B
+ 1 101
+ 2 102
+ 3 103
+ 4 104
+      
+ 5 105
+ 6 106
+ 7 107
+ 8 108
+      
+ 9 109
+10 110
+11 111
+12 112
+
+--
+Taken this into account, you can finally FLIP flip a horizontal vector (for e.g. with length of 4) to be a vertical matrix (4 x 1)
+
+      CODE
+265 291 265 207
+      ,[1.5]CODE
+265
+291
+265
+207
+
+⍝ On side note, this cannot be done by disclose
+      CODE
+265 291 265 207
+      ⊃[1]⊂CODE  ⍝ merely disclose back the one layer enclosure
+265 291 265 207
+
+⍝ But easiest, its to use comma underbar ⍪
+      ⍪2 3 4
+2
+3
+4
+⌸
+
+         5 0 10 0⍕CODE,[1.5]QTY
+       265       100
+       291         3
+       265         6
+       207         1
+         ⍴5 0 10 0⍕CODE,[1.5]QTY
+   4 15       (a 15-column character matrix)
+
+⎕FMT - system function - formatter
+      4 0 6 2⍕3 2⍴⍳6       'I4,F6.2' ⎕FMT 3 2⍴⍳6  ⍝ LHS: Separate different terms format by ,
+   1  2.00              1  2.00
+   3  4.00              3  4.00
+   5  6.00              5  6.00
+
+⎕FMT will always format a vector down, returning a character matrix:
+         'F6.2' ⎕FMT 3 5 7 9
+     3.00
+     5.00
+     7.00
+     9.00
+⍝ If want a vector result, just use ravel
+         ,'F6.2' ⎕FMT 3 5 7 9
+     3.00  5.00  7.00  9.00
+⍝ ⎕FMT ALWAYS RETURNS A MATRIX.
+
+⍝ Example formatting
+      'M<($>N<)>P<$>Q< >O<-   >F8.2' ⎕FMT 25 ¯35 0 15
+ $25.00 
+($35.00)
+    -   
+ $15.00 
+
+⍝ Date formatting
+      DATE←92665 100565 100765 101165
+      DATE
+92665 100565 100765 101165
+      'G<Z9-99-99>' ⎕FMT DATE
+ 9-26-65
+10-05-65
+10-07-65
+10-11-65
+
+⍝ Summary for ⎕FMT (left side argument)
+PHRASES:
+I5 - Integer, width 5
+F5.1 - Fixed pt, width 5, 1 decimal place
+X5 - 5 blank columns
+10A1 - 10 cols of characters, each 1 wide
+G<Z9:999> - Picture fmt
+T40 - Tab to column 40 for next field
+E7.2 - Exponential notation, width 7, 2 significant digits
+<Amount:> - Display this text on every line
+
+QUALIFIERS:
+B - blank if zero
+C - commas for thousands
+K¯2 - scale down by 100
+L - left justify numbers
+Z - zero fill field
+Q<text> - to the right if positive
+M<text> - to the left if negative - prefixes negative results with the text instead of the negative sign.
+N<text> - to the right if negative
+O<text> - to replace zero
+P<text> - to the left if positive
+R<text> - background (behind no.)
+S<,.> - Substitute , for .
+
+--
+\ - expansion 
+/ - compression
+
+      1 0 1 1 0 1 / 1 2 3 4 5 6
+1 3 4 6
+      1 0 1 1 0 1 \ 1 3 4 6
+1 0 3 4 0 6
+      1 0 1 1 0 1 / 'TURKEY'
+TRKY
+      1 0 1 1 0 1 \ 'TRKY'
+T RK Y
+      1 0 1 0 1 \ 'FRED'
+LENGTH ERROR
+      1 0 1 0 1 \ 'FRED' ⍝ Left argument must have as many 1s as there's element in RHS
+      1 0 1 0 1 \ 2 3⍴'HOTDOG'
+H O T                  (expand columns)
+D O G
+      1 0 1 ⍀ 2 3⍴'HOTDOG'
+HOT                    (expand rows)
+
+DOG
+----
+For printing,
+
+⎕VR (Visual / Vector Representation)
+
+      ⎕VR 'MEAN'
+     ∇ R←MEAN V
+[1]    R←(+/V)÷⍴V
+     ∇
+
+
+## seems not working in linux
+⎕WC (Window Create) - to create Windows Object
+
+
+[1]   ⍝ Create printer object, and use pixels, RHS: properties of the new obj, LHS: the obj:
+[2]    'pr'⎕WC'Printer'('Coord' 'Pixel')    ⍝ 'pr' -> printer object  
+
+      )OBS  ⍝ Use system command )OBS to see all created objects
+pr
+
+----
+Dyalog Component Files
+(bits of stored components - usually arrays - that are stored in a file)
+(this was useful last time - when RAM was scarce, and you want to pass variables around workspaces)
+
+      'file?' ⎕FCREATE 0   ⍝ create  `file?.dcf`, 0 means any `tie number` would do (ref num for the file)
+1  ⍝ here, its tie number is 1
+
+      (⍳5) ⎕FAPPEND 1
+      'TESTING' ⎕FAPPEND 1  ⍝ append some arrays into the file `1`
+      2 4 6 8 ⎕FAPPEND 1
+      (TAX+100) ⎕FAPPEND 1 ⍝ this is line 4
+
+      (TAX+100×SALES) ⎕FREPLACE 1 4 ⍝ replace file 1, line 4 with this array result instead
+
+      ⎕FREAD 1 2  ⍝ To read it back from component file 1
+TESTING
+      ⎕FREAD 1 3
+2 4 6 8
+      +/⎕FREAD 1 3
+20
+      ⎕FDROP 1 ¯1 ⍝ Drop last line
+      ⎕FSIZE 1
+1 2 1368 1.844674407E19 ⍝ 
+⍝ The first number is the number of the first component in the file. The second number is the number of the NEXT component to append. If we subtract the first element from the second (2-1), we get the number of components in the file. The third number is how many bytes of actual disk space the file occupies (i.e., the size of the Windows file). 4th is the file size limit
+  1000 ⎕FRESIZE 1 ⍝ Restrict file 1 to 1mil bytes size only
+       ⎕FRESIZE 1 ⍝ Compact file 1
+       ⎕FSIZE 1
+1 2 1152 10000
+'file?' ⎕FERASE 1 ⍝ Deletes file
+'C:\EMPLS' ⎕FTIE 33 ⍝ Reties the file again, when coming back to workspace
+       ⎕FUNTIE 25 33 64 ⍝ Untie file
+       ⎕FNUMS ⍝ Check file ties in used
+7 8 3
+       ⎕FUNTIE ⎕FNUMS ⍝ Deactivates all files
+       ⎕FNAMES ⍝ See all files in used 
+file1
+      ⎕FLIB 'C:\' ⍝ Check all existing files
+C:\RATES
+C:\BASE
+'C:\SALES' ⎕FRENAME 71 ⍝ Rename file
+
+⍝ Unfortunately there's no function to show all, need to write a subfunction for that
+ SHOWALL
+ I←1
+ :While (⎕FSIZE 33)[2]>I
+     I,':',⎕FREAD 33 I
+     I←I+1
+ :EndWhile
+
+---
+Reverse first (dimension) ⊖ (reverse rows for matrix) APL + &
+Reverse (last dimension) ⌽ (reverse columns for matrix) APL + %
+Transpose ⍉ (reverse shape only) APL + ^
+
+      p ← 3 4 ⍴⍳ 12
+      p
+1  2  3  4
+5  6  7  8
+9 10 11 12
+      ⊖p
+9 10 11 12
+5  6  7  8
+1  2  3  4
+      ⌽p
+ 4  3  2 1
+ 8  7  6 5
+12 11 10 9
+      ⍉p   (3 4 matrix becomes 4 3)
+1 5  9
+2 6 10
+3 7 11
+4 8 12
+
+3 dimensions array
+      q←2 3 4⍴⍳24
+      q
+ 1  2  3  4
+ 5  6  7  8
+ 9 10 11 12
+           
+13 14 15 16
+17 18 19 20
+21 22 23 24
+      ⊖q
+13 14 15 16
+17 18 19 20
+21 22 23 24
+           
+ 1  2  3  4
+ 5  6  7  8
+ 9 10 11 12
+      ⊖[2]q
+ 9 10 11 12
+ 5  6  7  8
+ 1  2  3  4
+           
+21 22 23 24
+17 18 19 20
+13 14 15 16
+      ⌽[2]q
+ 9 10 11 12
+ 5  6  7  8
+ 1  2  3  4
+           
+21 22 23 24
+17 18 19 20
+13 14 15 16
+      ⌽q
+ 4  3  2  1
+ 8  7  6  5
+12 11 10  9
+           
+16 15 14 13
+20 19 18 17
+24 23 22 21
+      ⊖[3]q
+ 4  3  2  1
+ 8  7  6  5
+12 11 10  9
+           
+16 15 14 13
+20 19 18 17
+24 23 22 21
+
+
+
+      VEC ← 2 4 6 8
+      ]display ⊂VEC
+┌───────────┐
+│ ┌→──────┐ │
+│ │2 4 6 8│ │
+│ └~──────┘ │
+└∊──────────┘
+      ]display ,⊂VEC
+┌→──────────┐   ⍝ Notice the → ?
+│ ┌→──────┐ │
+│ │2 4 6 8│ │
+│ └~──────┘ │
+└∊──────────┘
+      ⊃[1],⊂VEC ⍝ no idea why
+2
+4
+6
+8
+
+--
+this might shed some light
+      ]display 1 1 0 0 ⊂ 3 4 5 6
+┌→──────┐
+│ ┌→──┐ │
+│ │3 4│ │
+│ └~──┘ │
+└∊──────┘
+      ⊃[1]1 1 0 0 ⊂ 3 4 5 6
+3
+4
+
+---
+⍋ Upgrade, APL + $
+⍒ Downgrade, APL + #
+
+(to generate the ascending or descending indices)
+
+      TOTAL
+748 694 655 815 778 703
+      ⍋TOTAL
+3 2 6 1 5 4
+      ⍒TOTAL
+4 5 1 6 2 3
+can later used to rearrange TOTAL (in asc or desc order)
+      TOTAL[⍒TOTAL]
+815 778 748 703 694 655
+
+Dyadic Upgrade / Downgrade, LHS is to provide collating sequence for character data. 
+
+      ⍋ 'Banana'
+1 2 4 6 3 5
+
+      'an' ⍋ 'Banana'  ⍝ a is 1st, n is 2nd, (B implicitly is 3rd) in a custom seq
+2 4 6 3 5 1  ⍝ aaannB
+
+-
+Major-to-minor sorting
+⍒⍋ accept a right matrix argument
+with major to minor from L to R cols, for e.g.
+Region is Major, Product in btw, Amount is minor
+        REGION  PRODUCT  AMOUNT
+       +-----------------------+
+       |   1       6       75  |
+       |   2       3       20  |
+       |   2       3       10  |
+TRANS← |   1       4       35  |
+       |   4       6       25  |
+       |   2       4       80  |
+       |   2       3       66  |
+       |   2       4       30  |
+       +-----------------------+
+      ⍋TRANS
+4 1 3 2 7 8 6 5
+      TRANS[⍋TRANS;]
+1 4 35
+1 6 75
+2 3 10
+2 3 20
+2 3 66
+2 4 30
+2 4 80
+4 6 25
+
+which can be used to sort a matrix of characters
+      PETS
+ELEPHANT
+DONKEY
+CAT
+BIRD
+DOG
+      ALP←' ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      ALP⍋PETS
+4 3 5 2 1
+      PETS[ALP⍋PETS;]
+BIRD
+CAT
+DOG
+DONKEY
+ELEPHANT
+     ⌽P
+TNAHPELE
+  YEKNOM
+     TAC
+    DRIB
+     GOD
+     1⌽P  ⍝ positive, rotate to the left
+LEPHANTE
+ONKEY  M
+AT     C
+IRD    B
+OG     D
+     ¯1⌽P ⍝ negative, rotate to right
+TELEPHAN
+ MONKEY 
+ CAT    
+ BIRD   
+ DOG 
+      0 ¯1 ¯2 ¯2 ¯2⌽P ⍝ one element per ROW rotation
+ELEPHANT
+ MONKEY 
+  CAT   
+  BIRD  
+  DOG  
+
+--
+⎕AV (Atomic Vector)
+⍝ contains 256 characters in order
+this is for ease of selection and comparison for e.g. with ⍒⍋
+
+for e.g. to get the unique characters of CVEC (without knowing the exact characters beforehand)
+      CVEC
+KLKKRRRLKMRMKL
+      (⎕AV∊CVEC)/⎕AV
+KLMR
+
+another solution, without comparing a large possibility
+
+      CVEC
+KLKKRRRLKMRMKL
+      CVEC⍳CVEC  ⍝ search within itself, since searching only return the FIRST index
+1 2 1 1 5 5 5 2 1 10 5 10 1 2
+      ⍳⍴CVEC    
+1 2 3 4 5 6 7 8 9 10 11 12 13 14
+      (CVEC⍳CVEC)=⍳⍴CVEC   ⍝ compare against its own running index instead
+1 1 0 0 1 0 0 0 0 1 0 0 0 0
+      ((CVEC⍳CVEC)=⍳⍴CVEC)/CVEC
+KLRM
+
+⍝ OR a special "shifting technique", especially useful for dealing with large arrays
+sort, shift, compare, select
+      SORTED←CVEC[⎕AV⍋CVEC]
+      SORTED
+KKKKKLLLMMRRRR
+      1⌽SORTED
+KKKKLLLMMRRRRK
+      SORTED≠1⌽SORTED
+0 0 0 0 1 0 0 1 0 1 0 0 0 1
+      (SORTED≠1⌽SORTED)/SORTED
+KLMR
+
+problem when all the array members r the SAME like KKKKKKK
+solution: instead of using ⌽, shift by dropping first element and stick a junk at back
+      NVEC←30 40 40 30 50 30 30 30
+      SORTED←NVEC[⍋NVEC]
+      SORTED
+30 30 30 30 30 40 40 50
+      1↓SORTED,¯99  ⍝ any same data type junk will do at the back (but how do u know its a real junk?)
+30 30 30 30 40 40 50 ¯99
+      SORTED≠1↓SORTED,¯99
+0 0 0 0 1 0 1 1
+      (SORTED≠1↓SORTED,¯99)/SORTED
+30 40 50
+
+----
+DOT . : f . g (inner product, also called dot product)
+*note, a dot product is different from matrix multiplication
+*the inner column count has to match
+      1 2 3 +.× 4 5 6   ⍝ also, can be written as +/1 2 3 × 4 5 6
+32
+      P←3 4 ⍴⍳12
+      P     
+1  2  3  4
+5  6  7  8
+9 10 11 12
+      +/P×P
+30 174 446      
+
+      A←3 4⍴⍳12
+      A
+1  2  3  4
+5  6  7  8
+9 10 11 12
+      A × 1 2 3 4
+RANK ERROR: Mismatched left and right argument ranks
+      A×1 2 3 4
+       ∧
+      A +.× 1 2 3 4  ⍝ A dot product
+30 70 110
+      ⍝ which is equivalent to
+      +/A × (3 4⍴1 2 3 4)
+30 70 110
+
+*shape is the first dimension of left argument
+
+if we change the left and right function combination of .
+
+      3 ∧.= 3 3 3 3     ⍝ also,  ∧/3=3 3 3 3 
+1
+
+can be used to search through matrix of characters
+      P←5 4⍴'ED  JOANJANNJIMYBE  '
+      ⍝ To search for JOAN
+      P∧.='JOAN'
+0 1 0 0 0
+      ⍝ To get rid of names which starts with 'JA'
+      (~P[;1 2]∧.='JA')⌿P
+ED  
+JOAN
+JIMY
+BE  
+      (P[;1 2]∨.≠'JA')⌿P
+ED  
+JOAN
+JIMY
+BE  
+    
+so they have a name:
+         ∧.=     Match
+         ∨.≠     Mismatch
+
+Epsilon underbar ⍷, (APL + E)
+is `find`
+it takes the whole left argument as search term
+      'an' ⍷ 'banana'
+0 1 0 1 0 0
+      P
+ED  
+JOAN
+JANN
+JIMY
+BE  
+      'AN' ⍷ P
+0 0 0 0
+0 0 1 0
+0 1 0 0
+0 0 0 0
+0 0 0 0
+    ⍝ To get names which contains 'AN'
+    (∨/'AN' ⍷ P)⌿P
+JOAN
+JANN
+
+--
+∘ Jot, APL + j
+
+Dyadic Jot, is beside and bind  (lhs ∘ rhs functions)
+
+      ¯1⌽∘⍳ ¨ 3 4 5  ⍝ applies ⍳, followed by ¯1⌽, to each 3 4 5
+┌─────┬───────┬─────────┐
+│3 1 2│4 1 2 3│5 1 2 3 4│
+└─────┴───────┴─────────┘
+
+      +∘÷/ 5⍴1 ⍝ applies ÷ followed by + in reducing 5⍴1
+1.6
+     ⍝ 1 1 1 1 1 -> from right, ...(1+1÷(1+1÷1))
+
+
+--
+∘.+ (outer product)
+       1 2 3 ∘.× 1 2 3 4
+1 2 3  4
+2 4 6  8
+3 6 9 12  ⍝ final dimensions = LHS row x RHS cols
+
+visualize
+⌈
+ 1
+ 2  x  [1 2 3 4]
+ 3
+  ⌊
+
+dimensions: 3 x 1 ∘ 1 x 4 => 3 x 4
+--
+      A←2 2 ⍴⍳4
+      B←2 1⍴3 6
+      A ∘.× B
+ 3
+ 6
+  
+ 6
+12
+  
+  
+ 9
+18
+  
+12
+24
+      ⍴A ∘.× B
+2 2 2 1
+-
+some e.g.s
+identity matrix
+      (⍳4)∘.=⍳4
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+
+upper triangle
+      (⍳4)∘.≤⍳4
+1 1 1 1
+0 1 1 1
+0 0 1 1
+0 0 0 1
+
+     1.05 1.06 1.07∘.*0 1 2 3
+1 1.05 1.1025 1.157625
+1 1.06 1.1236 1.191016
+1 1.07 1.1449 1.225043
+
+use outer product when want to do every _combination_ with those
+
+----
+ENCODE ⊤ (APL + n)
+      16 16 16⊤418
+1 10 2
+      16 16 16⊤35
+0 2 3
+      7 24 60 60⊤236737   ⍝ 236737 seconds
+2 17 45 37  ⍝ 2 days 17 hours 45 mins 37 secs
+
+⍝ shape = left argument shape x right argument shape
+      7 24 60 60⊤236737 501932 305100 428284 103215
+ 2  5  3  4  1
+17 19 12 22  4
+45 25 45 58 40
+37 32  0  4 15
+
+DECODE ⊥ (APL + b)
+      7 24 60 60⊤236737
+2 17 45 37
+      7 24 60 60⊥2 17 45 37
+236737
+      16 16 16⊤703
+2 11 15
+      16 16 16⊥2 11 15
+703
+      16⊥2 11 15  ⍝ Left scalar extends
+703
+
+--
+0 is infinity
+      51 15 45+.×3600 60 1 ⍝ 51 hr 15 min 45 sec
+184545                ⍝ ... is 184545 seconds
+      24 60 60⊤184545
+3 15 45  ⍝ 3 hours 15 min 45 sec , the other 48 hours is gone
+      0 60 60⊤184545 ⍝ with 0, we get back the 51 hours
+51 15 45
+
+---
+Solving linear algebraic equations
+(or approx by using least-squares to get best coefficients - curve fitting)
+TIME = (a×AGE) + (b×NINT) + (c×NDEP) + d
+
+Given variables, solve for coefficients a b c and d
+TIME    AGE    NINT    NDEP
+----    ---    ----    ----
+ 80      25      3       2 
+ 98      32      5       0 
+112      45      2       1 
+108      35      4       3 
+
+In equations,
+     80 = (a×25)+(b×3)+(c×2)+(d×1)
+     98 = (a×32)+(b×5)+(c×0)+(d×1)
+    112 = (a×45)+(b×2)+(c×1)+(d×1)
+    108 = (a×35)+(b×4)+(c×3)+(d×1)
+
+use Quad-divide ⌹, APL + + (shift =)
+
+      INDEP←4 4⍴25 3 2 1 32 5 0 1 45 2 1 1 35 4 3 1
+      DEP←80 98 112 108
+      DEP⌹INDEP
+2 5 3 9
+
+    Given the coefficients, what's the estimated run time when AGE=37, NINT=4, and NDEP=3? 
+      COEFF←DEP⌹INDEP
+      COEFF
+2 5 3 9
+      37 4 3 1+.×COEFF
+112
+
+using inner product, we can confirm the computed coefficients are correct
+      DEP
+80 98 112 108
+      INDEP
+ 25  3  2  1
+ 32  5  0  1
+ 45  2  1  1
+ 35  4  3  1
+      COEFF
+2 5 3 9
+      INDEP+.×COEFF
+80 98 112 108
+
+--
+Monadic ⌹ is inverse matrix 
+⍝ https://byjus.com/maths/inverse-matrix/#inverse-matrix-3x3-example
+      INDEP
+ 25  3  2  1
+ 32  5  0  1
+ 45  2  1  1
+ 35  4  3  1
+      ⌹INDEP
+ ¯0.06666667 ¯1.85162E¯17  0.03333333  0.03333333
+ ¯0.3         0.25        ¯0.225       0.275
+ ¯0.03333333 ¯0.25        ¯0.1083333   0.3916667
+  3.633333   ¯0.25         0.05833333 ¯2.441667
+      (⌹INDEP)+.×DEP ⍝ can find coefficient by inverse of INDEP matrix
+2 5 3 9
+      DEP⌹INDEP
+2 5 3 9
+In this sense, ⌹ is something like ÷. Just as A÷B is the same as (÷B)×A, likewise A⌹B is the same as (⌹B)+.×A. In fact, A⌹B is exactly the same as A÷B for scalars A and B.
+
+
+--
+For complex equations, for e.g.
+TIME = (a×ln(AGE+1)) + (b×NINT×NDEP) + c
+
+Need to manipulate the values somewhat when constructing the matrix right argument
+      
+      DEP
+80 98 112 108 78 108
+
+      AGE←25 32 45 35 27 42
+      COL1←⍟AGE+1
+
+      NINT←3 5 2 4 1 2
+      NDEP←2 0 1 3 3 2
+      COL2←NINT×NDEP
+
+      COL3←6⍴1
+
+      COEFF←DEP⌹COL1,COL2,[1.5]COL3
+      COEFF
+62.805525 0.73665484 ¯128.52429
+
+To predict run times, for e.g.
+when AGE=37, NINT=4, and NDEP=3
+      ((⍟37+1),(4×3),1)+.×COEFF
+108.77607
+ 
+--
+Question: Finding best fit equation
+Formula #1 (linear):
+
+      SALES←107 108 113 112 119 123 129
+      TIME←   1   2   3   4   5   6   7
+
+SALES = a + (b×TIME)
+
+      C1←SALES⌹1,[1.5]TIME      ⍝ Coefficients
+      E1←(1,[1.5]TIME)+.×C1     ⍝ Expecteds
+      +/(SALES-E1)*2            ⍝ Error measure
+25.285714
+
+Formula #2 (quadratic):
+
+SALES = a + (b×TIME) + (c×TIME*2)
+
+      C2←SALES⌹TIME∘.*0 1 2    ⍝ Coefficients
+      E2←(TIME∘.*0 1 2)+.×C2   ⍝ Expecteds
+      +/(SALES-E2)*2           ⍝ Error measure
+9.8571429
+
+Formula #3 (power):
+
+SALES = a × (TIME*b)
+
+i.e. ln SALES = ln a +  b × ln TIME
+    
+      C3←(⍟SALES)⌹1,[1.5]⍟TIME  ⍝ Coefficients
+      E3←*(1,[1.5]⍟TIME)+.×C3   ⍝ Expecteds, notice the * infront
+      +/(SALES-E3)*2            ⍝ Error measure
+80.477276
+
+Formula #4 (exponential):
+
+SALES = a × (b*TIME)
+
+i.e. ln SALES = ln a +  TIME × ln b 
+
+      C4←(⍟SALES)⌹1,[1.5]TIME   ⍝ Coefficients
+      E4←*(1,[1.5]TIME)+.×C4    ⍝ Expecteds
+      +/(SALES-E4)*2            ⍝ Error measure
+21.532707
+
+Formula #5 (exponential also):
+
+SALES = a + (b×*TIME)  ⍝ b × (e**TIME)
+
+      C5←SALES⌹1,[1.5]*TIME     ⍝ Coefficients
+      E5←(1,[1.5]*TIME)+.×C5    ⍝ Expecteds
+      +/(SALES-E5)*2            ⍝ Error measure
+81.633209
+
+Formula #6 (logarithmic):
+
+SALES = a + (b×lnTIME)
+
+      C6←SALES⌹1,[1.5]⍟TIME     ⍝ Coefficients
+      E6←(1,[1.5]⍟TIME)+.×C6    ⍝ Expecteds
+      +/(SALES-E6)*2            ⍝ Error measure
+87.600917
+
+Formula #7 (reciprocal):
+
+SALES = a + (b÷TIME)
+
+      C7←SALES⌹1,[1.5]÷TIME     ⍝ Coefficients
+      E7←(1,[1.5]÷TIME)+.×C7    ⍝ Expecteds
+      +/(SALES-E7)*2            ⍝ Error measure
+177.17762
+
+Formula #8 (reciprocal also):
+
+SALES = ÷ (a + (b×TIME))
+
+    1 = (a×SALES) + (b×TIME×SALES)  (transformed)
+
+      C8←(7⍴1)⌹SALES,[1.5]TIME×SALES ⍝ Coeffs
+      E8←÷(1,[1.5]TIME)+.×C8      ⍝ Expecteds
+      +/(SALES-E8)*2          ⍝ Error measure
+18.112242
+
+----
+Unicode Converts ⎕UCS
+
+⎕UCS converts (Unicode) characters into integers and vice versa. 
+
+      ⎕UCS 72
+H
+      ⎕UCS 'HELLO WORLD'
+72 69 76 76 79 32 87 79 82 76 68
+      ⎕UCS '火'
+28779
+ ⍝ Character can be 1 byte, 2 bytes or 4 bytes
+
+
+      CMAT←50 20⍴'ABC'
+      ⎕SIZE 'CMAT'
+1020
+
+The variable CMAT occupies 1020 bytes of the active workspace, 20 bytes from the header and trailer, and 1000 bytes from the elements of the array.
+
+
+      NUM←1000?1000
+      ⎕SIZE 'NUM'
+2016
+      NUM[75]←1.5   
+      ⎕SIZE 'NUM'  ⍝ Assiging a float 'promotes' the entire array to 8 bytes per element instead of 2 bytes
+8016
+      NUM[75]←246  ⍝ Can 'demote' a floating array to an integer array
+      ⎕SIZE 'NUM'
+2016
+
+      ⎕DR     ⍝ Data Representation (using internal codes)
+
+      ⎕DR 2 4 6 8
+83                    Small integer
+      ⎕DR 200 4 6 8
+163                   Medium integer
+      ⎕DR 200000 4 6 8
+323                   Large integer
+      ⎕DR 2 4 6 8.5
+645                   Floating point
+
+Below are the codes:
+ 11 Boolean (1 bit)
+ 80 small Unicode character (8 bits)
+ 82 Classic character (8 bits)
+ 83 small integer (8 bits)
+160 medium Unicode character (16 bits)
+163 medium integer (16 bits)
+320 large Unicode character (32 bits)
+323 large integer (32 bits)
+645 floating point (64 bits)
+326 nested or hetero array (160 bits per item)
+
+Dyadic ⎕DR converts between datatypes (just the data header)
+      F←645 ⎕DR 'ELEPHANT'
+      F
+1.292486168E98          1 floating point number
+      L←323 ⎕DR F
+      L
+1346718789 1414414664   2 large integers
+      B←11 ⎕DR L
+      B
+0 1 0 0 0 1 0 1 0 1 0 0 1 ...  64 bits
+      C←82 ⎕DR B   ⍝ In modern APL, maybe using code 80 instead
+      C
+ELEPHANT                8 characters
+
+Binary bits visualization
+C:
+---E---- ---L---- ---E---- ---P---- ---H----
+01000101 01001100 01000101 01010000 01001000 ...
+
+L:
+------------1346718789------------- --------
+01000101 01001100 01000101 01010000 01001000 ...
+
+F:
+----------------------------1.292486168E98--
+01000101 01001100 01000101 01010000 01001000 ...
+
+⎕DR is useful for converting datatype when concatenating to save space
+
+1. Simple catentation:
+
+      VEC1←(1000⍴3 4 5),2.7
+      ⍴VEC1
+1001              1001 elements
+      ⎕SIZE 'VEC1'
+8024              8000+ bytes  ⍝ all elements turned to 8 bytes
+      ⎕DR VEC1
+645               Floating point
+      ¯1↑VEC1
+2.7               The fractional element
+
+2. Catenation after converting to a common datatype:
+
+      VEC2←(1000⍴3 4 5),83 ⎕DR 2.7
+      ⍴VEC2
+1008              1008 elements  ⍝ append 8 more elements (for 2.7 converts to 102 ¯103 ¯103 ¯103 ¯103 ¯103 5 64)
+      ⎕SIZE 'VEC2'
+1024              1000+ bytes  ⍝ still maintain 1 byte per element
+      ⎕DR VEC2
+83                Small integers
+      645 ⎕DR ¯8↑VEC2
+2.7               The fractional element  ⍝ but have to get converted back
+
+If LHS has 2 arguments, then it will first convert the first X[1] before converting for X[2]
+      bits← 0 1 0 0 1 0 0 0 , 0 1 0 0 1 0 1 1
+      80 ⎕DR bits
+HK
+      83 ⎕DR bits
+72 75
+      163 ⎕DR bits
+19272
+
+      0 645 ⎕DR 72 75
+┌─────┬───┐
+│72 75│1 1│
+└─────┴───┘
+      163 645 ⎕DR 72 75  ⍝ first convert to medium integer (16 bits), then convert to floating point (64 bits)
+┌─────┬─┐
+│19272│1│
+└─────┴─┘
+
+      ⎕WA ⍝ Workspace available
+267078768
+
+      ⎕NL ⍝ Name List
+Names of the existing variables (⎕NL 2) or functions (⎕NL 3)
+      +/⎕SIZE ⎕NL 2
+104650       Space occupied by variables
+      +/⎕SIZE ⎕NL 3
+89160        Space occupied by functions
+
+--
+A way to move a function into a file
+      ⍝ Storing the fn in comp. 53 of file 99, and then 'expunge' it locally:
+       (⎕VR 'fnname')⎕FREPLACE 99 53 ⋄ ⎕EX 'fnname'
+ 
+      ⍝ Reading and defining fn in the ws (use it back from file):
+       NAME←⎕DEF ⎕FREAD 99 53
+
+----
+Key ⌸ (APL + K)
+
+The Key operator ⌸ applies the function f to each unique key in X and the major cells of Y having that key.
+
+Dyadic
+      'Banana' {⍺ ⍵} ⌸ 1 1 1 3 4 5  ⍝ {⍺ ⍵} is the function f
+B 1     
+a 1 3 5  ⍝ 'Group' Y elements based on 'Key' X
+n 1 4 
+
+Monadic
+
+      {⍺ ⍵}⌸ 'Banana'
+B 1     
+a 2 4 6 
+n 3 5   
+    ⍝ is equivalent to
+      'Banana' {⍺ ⍵}⌸ ⍳6
+B 1     
+a 2 4 6 
+n 3 5 
+      {⍺,≢⍵}⌸ 'Banana'   ⍝ ≢ here is just tally, find first dimension count, comma for concat
+B 1
+a 3
+n 2
+⍝ same as
+      'Banana' {⍺(≢⍵)}⌸ ⍳6
+B 1
+a 3
+n 2
+      'Banana' {⍺(⍴⍵)}⌸ ⍳6
+B 1 
+a 3 
+n 2 
+
+--
+      ⍴x
+10
+      ⍴y
+10 2
+     x,y
+ IBM   13 75
+ AAPL  45 53
+ GOOG  21  4
+ GOOG  67 67
+ AAPL  93 38
+ MSFT  51 83
+ IBM    3  5
+ AAPL  52 67
+ AAPL   0 38
+ IBM    6 41
+
+      x{⍺ ⍵}⌸y
+ IBM   13 75 
+        3  5 
+        6 41 
+ AAPL  45 53 
+       93 38 
+       52 67 
+        0 38 
+ GOOG  21  4 
+       67 67 
+ MSFT  51 83  
+
+      x{⍺(+⌿⍵)}⌸y
+  IBM    22 121  
+  AAPL   190 196 
+  GOOG   88 71   
+  MSFT   51 83  
+
+⍝ Omitting ⍺
+       x{+⌿⍵}⌸y
+ 22 121
+190 196
+ 88  71
+ 51  83
+
+
+
+---
+
+Tacit programming, also called point-free style, refers to usage of tacit functions that are defined in terms of implicit arguments. 
+
+https://aplwiki.com/wiki/Tacit_programming#3-trains
+(AKA a fork)
+
+(f g h) ⍵ -> (f ⍵) g (h ⍵)
+⍺ (f g h) ⍵ -> (⍺ f ⍵) g (⍺ h ⍵)
+
+
+2-trains or Atop (⍤)
+(g h) ⍵  ->  g ( h ⍵)
+⍺ (g h) ⍵  ->  g (⍺ h ⍵)
+
+(g ⍤ h) ⍵  ->   g ( h ⍵)
+⍺ (g ⍤ h) ⍵  ->  g (⍺ h ⍵)
+
+
+
+
+

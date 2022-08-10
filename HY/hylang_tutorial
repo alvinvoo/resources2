@@ -1,0 +1,156 @@
+hy to start repl
+
+hy --repl-output-fn=repr
+=> [1 2 3]
+[1, 2, 3]
+
+setv to set variables
+get to access stuffs
+
+(setv fruit ["apple" "banana" "cantaloupe"])
+(print (get fruit 0))  ; => apple
+(setv (get fruit 1) "durian")
+(print (get fruit 1))  ; => durian
+
+----
+cut an iterable
+(print (cut "abcdef" 1 4))  ; => bcd, notice cut is [a..b)
+=> (print (cut "abcdef" -2 -4))
+         ; prints.. nothing, seems neg order only works in asc order
+=> (print (cut "abcdef" -4 -2))
+cd
+
+----
+if-else, cond, when, unless (?)
+(if (= 1 1)
+  (print "Math works. The universe is safe.")
+  (print "Math has failed. The universe is doomed."))
+
+(if (do (print "Let's check.") (= 1 1))
+  (do   ; `do` blocks
+    (print "Math works.")
+    (print "The universe is safe."))
+  (do
+    (print "Math has failed.")
+    (print "The universe is doomed.")))
+
+(setv somevar 33)
+(cond
+ [(> somevar 50)
+  (print "That variable is too big!")]
+ [(< somevar 10)
+  (print "That variable is too small!")]
+ [True
+  (print "That variable is jussssst right!")])
+
+; (when CONDITION THEN-1 THEN-2 …) shorthand for (if CONDITION (do THEN-1 THEN-2 …))
+=> (when True (print "hi") (print "another"))
+hi
+another
+
+--
+loops
+
+; while loop
+(setv x 3)
+(while (> x 0)
+  (print x)
+  (setv x (- x 1)))  ; => 3 2 1
+
+; for loops
+for, lfor, gfor, dfor, sfor
+
+(for [x [1 2 3]]
+  (print x))         ; => 1 2 3
+
+=> (for [x [1 2 3]  :if (!= x 2)  y [7 8]]  ; same clauses as lfor
+...  (print x y))
+1 7
+1 8
+3 7
+3 8
+
+--
+`else` form is executed after last iteration of the `for` outermost
+iteration clause
+if there's (break) the loop will terminate earlier and `else` is ignored
+=> (for [element [1 2 3]] (if (< element 3)
+...                             (print element)
+...                             (break))
+...    (else (print "loop finished")))
+1
+2
+
+=> (for [element [1 2 3]] (if (< element 4)
+...                             (print element)
+...                             (break))
+...    (else (print "loop finished")))
+1
+2
+3
+loop finished
+
+
+--
+; rest are comprehension forms
+; lfor -> evaluates to a list
+(print (lfor  x [1 2 3]  (* x 2)))  ; => [2, 4, 6]
+
+=> (lfor x (range 5) (* 2 x))
+[0 2 4 6 8]
+
+available clauses:
+:async
+:do
+:setv
+:if
+
+=> (lfor
+...  x (range 3)
+...  y (range 3)
+...  :if (!= x y)
+...  :setv total (+ x y)
+...  [x y total])
+[[0 1 1] [0 2 2] [1 0 1] [1 2 3] [2 0 2] [2 1 3]]
+
+
+
+----
+Concatenation
+=> (+ [1 2 3] [4 5 6])
+[1 2 3 4 5 6]
+=> (+ "abc" "def")
+"abcdef"
+
+
+----
+unpack-iterable/unpack-mapping
+allow an iterable (list) or mapping object to provide positional
+or keyword arguments to a function
+(arguments ONLY)
+
+=> (defn f [a b c d] [a b c d])  ; takes in [a b c d] output same
+=> (f (unpack-iterable [1 2]) (unpack-mapping {"c" 3 "d" 4}))
+[1 2 3 4]
+
+=> (f #* [1 2] #** {"c" 3 "d" 4})
+[1 2 3 4]
+
+=> (f #* [1] #* [2] #** {"c" 3} #** {"d" 4})
+[1 2 3 4]
+
+=> (setv [a #* b c] [1 2 3 4 5])
+=> [a b c]
+[1 [2 3 4] 5]
+=> [#* [1 2] #* [3 4]]  ; unpacked list, then wrapped in list again
+[1 2 3 4]
+=> {#** {1 2} #** {3 4}} ; unpacked map, wrapped in map again (dict)
+{1 2  3 4}
+
+
+
+
+
+
+
+

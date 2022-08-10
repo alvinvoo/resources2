@@ -1,0 +1,182 @@
+working with gPRC
+
+1. define a service in .proto file
+2. generate server and client code (for protoBuf) using protoc
+3. Use Go gRPC API to write client and server code for service
+
+
+1. rpc methods to be used by client (and implemented by server)
+  - where the argument is by client and response by server
+  - and, also the message type definitions
+  - can the server be the first iniator?
+
+2. At project root dir, run
+
+$ protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+        routeguide/route_guide.proto
+
+the 2 files generated:
+
+route_guide.pb.go, which contains all the protocol buffer code to populate, serialize, and retrieve request and response message types.
+breakdown:
+    protoBuf definition for message type definitions (in .proto)
+    e.g.
+    //in .proto
+    message Point {
+        int32 latitude = 1;
+        int32 longitude = 2;
+    }
+
+    //in .pb.go
+    type Point struct {
+        ...    
+    }
+    func (x *Point) Reset() {
+        ...
+    }
+    func (x *Point) String() string {
+        ...
+    }
+    func (*Point) ProtoMessage() {}
+    func (x *Point) ProtoReflect() protoreflect.Message {
+        ...
+    }
+    //deprecated, replaces by Point.ProtoReflect.Descriptor
+    func (*Point) Descriptor() ([]byte, []int){
+        ...
+    }
+    func (x *Point) GetLatitude() int32 {
+        ...
+    }
+    func (x *Point) GetLongitude() int32 {
+        ...
+    }
+
+--
+
+route_guide_grpc.pb.go, which contains the following:
+
+An interface type (or stub) for clients to call with the methods defined in the RouteGuide service. An interface type for servers to implement, also with the methods defined in the RouteGuide service
+
+breakdown:
+    Protobuf definition for RPC methods  (via a ..Client interface)
+
+    //in .proto
+    service RouterGuide {
+        rpc GetFeature(Point) returns (Feature) {}
+        rpc ListFeatures(Rectangle) returns (stream Feature) {}
+        rpc RecordRoute(stream Point) returns (RouteSummary) {}
+        rpc RouteChat(stream RouteNote) returns (stream RouteNote) {}
+    }
+
+    // in *_grpc.pb.go
+    // for client
+    type RouteGuideClient interface { 
+        GetFeature(ctx context.Context, in *Point, opts ...grpc.CallOption) (*Feature, error)
+        ListFeatures(ctx context.Context, in *Rectangle, opts ...grpc.CallOption) (RouteGuide_ListFeaturesClient, error)
+        // notice the `stream Point`.. there's no parameter for it
+        RecordRoute(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RecordRouteClient, error)
+        // notice the `stream RouteNote`.. there's no parameter for it
+        RouteChat(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RouteChatClient, error)
+
+    }
+
+    // for server (to implement)
+type RouteGuideServer interface {
+	// A simple RPC.
+	//
+	// Obtains the feature at a given position.
+	//
+	// A feature with an empty name is returned if there's no feature at the given
+	// position.
+	GetFeature(context.Context, *Point) (*Feature, error)
+	// A server-to-client streaming RPC.
+	//
+	// Obtains the Features available within the given Rectangle.  Results are
+	// streamed rather than returned at once (e.g. in a response message with a
+	// repeated field), as the rectangle may cover a large area and contain a
+	// huge number of features.
+	ListFeatures(*Rectangle, RouteGuide_ListFeaturesServer) error
+	// A client-to-server streaming RPC.
+	//
+	// Accepts a stream of Points on a route being traversed, returning a
+	// RouteSummary when traversal is completed.
+
+    // Notice: There's no request parameter at all
+	RecordRoute(RouteGuide_RecordRouteServer) error
+    // The RouteGuide_RecordRouteServer stream can be used by the server to both
+    // read and write messages - see route_guide_grpc.pb.go line 268
+
+
+	// A Bidirectional streaming RPC.
+	//
+	// Accepts a stream of RouteNotes sent while a route is being traversed,
+	// while receiving other RouteNotes (e.g. from other users).
+	RouteChat(RouteGuide_RouteChatServer) error
+	mustEmbedUnimplementedRouteGuideServer()
+}
+
+3. Creating the server 
+    - Implementing service interface
+    - Running gPRC server to listen for requests from clients and dispatch them
+      to the right service implementation 
+
+All implementations must embed UnimplementedRouteGuideServer
+
+type routeGuideServer struct {
+	pb.UnimplementedRouteGuideServer
+	...
+}
+...
+
+func (s *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb.Feature, error) {
+        ...
+}
+...
+
+func (s *routeGuideServer) ListFeatures(rect *pb.Rectangle, stream pb.RouteGuide_ListFeaturesServer) error {
+        ...
+}
+...
+
+func (s *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) error {
+        ...
+}
+...
+
+func (s *routeGuideServer) RouteChat(stream pb.RouteGuide_RouteChatServer) error {
+        ...
+}
+...
+
+To build and start a server, we:
+
+    1.Specify the port we want to use to listen for client requests using:
+    lis, err := net.Listen(...).
+    2. Create an instance of the gRPC server using grpc.NewServer(...).
+    3. Register our service implementation with the gRPC server.
+    4. Call Serve() on the server with our port details to do a blocking wait until the process is killed or Stop() is called.
+
+------
+4. Creating the client
+
+In gRPC-Go, RPCs operate in a blocking/synchronous mode, which means that the RPC call waits for the server to respond, and will either return a response or an error.
+
+-- see below client vs server interfaces
+type RouteGuide_RecordRouteClient interface {
+	Send(*Point) error   -- sending stream
+	CloseAndRecv() (*RouteSummary, error)  -- recv one time and close
+	grpc.ClientStream
+}
+..
+type RouteGuide_RecordRouteServer interface {
+	SendAndClose(*RouteSummary) error  -- send one time and close
+	Recv() (*Point, error)  -- receiving stream
+	grpc.ServerStream
+}
+
+
+
+
+

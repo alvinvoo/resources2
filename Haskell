@@ -1,0 +1,2028 @@
+ In Haskell
+we define _what is_ (declarative)
+we dont define _how to_ do stuffs (change states) - imperative
+
+So, there's no states and effects in Haskell
+
+
+an if statement must have an alternative else
+this is becoz in haskell, if statment is an _expression_
+an _expression_ always returns a value
+
+doubleSmallNumber' x = (if x > 100 then x else x*2) + 1 
+
+imagine the function above, if there's only if part, then it won't return any value when if condition is not met
+
+the apostrophe `'` doesnt have any special meaning in Haskell syntax and it's a valid character to use in a function name
+We usually use ' to either denote a strict version of a function (one that isn't lazy) or a slightly modified version of a function or a variable
+
+
+-- comment
+{-
+multiline comment
+-}
+
+-----------
+main = putStrLn "hello world!"
+
+
+----
+List
+- Strings are list (of chars) 
+- lists are a homogenous data structure. It stores several elements of the same type
+
+n++ operator to concate lists together
+
+ghci> [1,2,3,4] ++ [9,10,11,12]  
+[1,2,3,4,9,10,11,12]  
+ghci> "hello" ++ " " ++ "world"  
+"hello world"  
+ghci> ['w','o'] ++ ['o','t']  
+"woot"  
+
+--
+
+: operator to append one item to start of list (called `cons`)
+
+ghci> 'A':" SMALL CAT"  
+"A SMALL CAT"  
+ghci> 5:[1,2,3,4,5]  
+[5,1,2,3,4,5]  
+
+[1,2,3] is actually syntactic sugar for 1:2:3:[]
+so can do this
+
+ghci> [6,6,6]:[1,2,3]
+[6,6,6,1,2,3]
+
+--
+
+!! operator to get list item via index
+
+ghci> "Steve Buscemi" !! 6  
+'B'  
+ghci> [9.4,33.2,96.2,11.2,23.25] !! 1  
+33.2  
+
+--
+
+List can be compared
+
+ghci> [3,2,1] > [2,1,0]  
+True  
+ghci> [3,2,1] > [2,10,100]  -- the first item comparison that return true
+True  
+ghci> [3,4,2] > [3,4]  
+True  
+ghci> [3,4,2] > [2,4]  
+True  
+ghci> [3,4,2] == [3,4,2]  
+True  
+
+--
+
+head vs tail
+
+ghci> head [5,4,3,2,1]  
+5  
+ghci> tail [5,4,3,2,1]  
+[4,3,2,1] 
+
+last vs init
+
+ghci> last [5,4,3,2,1]  
+1 
+ghci> init [5,4,3,2,1]  
+[5,4,3,2]
+
+ghci> length [5,4,3,2,1]  
+5
+ 
+ghci> null [1,2,3]  
+False  
+ghci> null []  
+True  
+
+ghci> reverse [5,4,3,2,1]  
+[1,2,3,4,5]  
+
+ghci> take 3 [5,4,3,2,1]  
+[5,4,3]  
+ghci> take 1 [3,9,3]  
+[3]  
+ghci> take 5 [1,2]  
+[1,2]  
+ghci> take 0 [6,6,6]  
+[] 
+
+ghci> drop 3 [8,4,2,1,5,6]  
+[1,5,6]  
+ghci> drop 0 [1,2,3,4]  
+[1,2,3,4]  
+ghci> drop 100 [1,2,3,4]  
+[]  
+
+ghci> minimum [8,4,2,1,5,6]  
+1  
+ghci> maximum [1,9,2,3,4]  
+9   
+
+ghci> sum [5,2,1,6,3,2,5,7]  
+31  
+ghci> product [6,2,1,2]  
+24  
+ghci> product [1,2,5,6,7,9,2,0]  
+0   
+
+ghci> 4 `elem` [3,4,5,6]  -- elem is infix function?
+True  
+ghci> 10 `elem` [3,4,5,6]  
+False  
+
+----
+Ranges
+(its inclusive)
+(or enumeration)
+
+ghci> [1..20]  
+[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]  
+ghci> ['a'..'z']  
+"abcdefghijklmnopqrstuvwxyz"  
+ghci> ['K'..'Z']  
+"KLMNOPQRSTUVWXYZ"  
+
+ghci> [2,4..20] -- separate the first 2 numbers and specify the upper limit
+[2,4,6,8,10,12,14,16,18,20] -- even numbers
+ghci> [3,6..20]  
+[3,6,9,12,15,18] -- every third number between 1 and 20 
+
+reverse range
+--not [20..1]
+[20,19..1]
+or better
+reverse [1..20]
+
+Let say we want the first 24 multiples of 13. 
+We could do [13,26..24*13]. 
+But there's a better way: take 24 [13,26..]. 
+Because Haskell is lazy, it won't try to evaluate the infinite list immediately 
+because it would never finish
+
+--
+cycle
+takes a list and cycles it into an infinite list
+ghci> take 10 (cycle [1,2,3])  
+[1,2,3,1,2,3,1,2,3,1]  
+ghci> take 12 (cycle "LOL ")  
+"LOL LOL LOL "
+
+repeat 
+takes an element and produces an infinite list of just that element. 
+It's like cycling a list with only one element.
+ghci> take 10 (repeat 5)  
+[5,5,5,5,5,5,5,5,5,5] 
+
+replicate
+replicate 3 10 
+> [10,10,10]
+
+----
+List comprehension
+
+- take idea from set comprehensions
+S = { 2 ∙ x | x ∈ N , x ≤ 10}
+(python?)
+
+lets say, we want the double of first 10 digits
+we could do take 10 [2,4..]
+with list comprehension
+[x*2 | x <- [1..10]] --from right to left, x is drawn from [1..10] and then for every element x, apply x*2
+x*2 (the first part) is called an _output function_, it can be any valid expression
+
+ghci> [x*2 | x <- [1..10]]  
+[2,4,6,8,10,12,14,16,18,20]  
+
+we could add a condition (or predicate) to the comprehension
+
+ghci> [x*2 | x <- [1..10], x*2 >= 12]  -- the 2nd part (part that goes after | should be considered _together_, so the 2nd part happens and piped to first part
+[12,14,16,18,20]
+
+ghci> [ x | x <- [50..100], x `mod` 7 == 3]  
+[52,59,66,73,80,87,94]  
+
+-- more ridiculous 
+boomBangs xs = [ if x < 10 then "BOOM!" else "BANG!" | x <- xs, odd x]   
+
+a function that replaces each odd number greater than 10 with "BANG!" and each odd number that's less than 10 with "BOOM!".
+
+ghci> boomBangs [7..13]  
+["BOOM!","BOOM!","BANG!","BANG!"]  
+
+-- multiple predicates
+ghci> [ x | x <- [10..20], x /= 13, x /= 15, x /= 19]  -- NOT equal is `/=`
+[10,11,12,14,16,17,18,20]  
+
+
+-- When drawing from several lists, comprehensions produce all combinations of the given lists and then join them by the output function we supply.
+ghci> [ x*y | x <- [2,5,10], y <- [8,10,11]]  
+[16,20,22,40,50,55,80,100,110]   
+
+ghci> [ x*y | x <- [2,5,10], y <- [8,10,11], x*y > 50]  
+[55,80,100,110]   
+
+ghci> let adjectives = ["lazy","grouchy","scheming"]  
+ghci> let nouns = ["hobo","frog","pope"]  
+ghci> [adjective ++ " " ++ noun | adjective <- adjectives, noun <- nouns]  
+["lazy hobo","lazy frog","lazy pope","grouchy hobo","grouchy frog",  
+"grouchy pope","scheming hobo","scheming frog","scheming pope"]   
+
+-- custom alternative length function
+length' xs = sum [1 | _ <- xs] 
+
+`_` means we will draw from the list unconditionally without a variable name
+(or from Kotlin, means skipped unamed variable)
+
+-- string are list as well
+removeNonUppercase st = [ c | c <- st, c `elem` ['A'..'Z']] 
+
+ghci> removeNonUppercase "Hahaha! Ahahaha!"  
+"HA"  
+ghci> removeNonUppercase "IdontLIKEFROGS"  
+"ILIKEFROGS"  
+
+nested list comprehensions are possible when working on nested list
+
+ghci> let xxs = [[1,3,5,2,3,1,2,4,5],[1,2,3,4,5,6,7,8,9],[1,2,4,2,1,6,3,1,3,2,3,6]]  
+ghci> [ [ x | x <- xs, even x ] | xs <- xxs]  
+[[2,2,4],[2,4,6,8],[2,4,2,6,2,6]] 
+
+------
+Tuple
+
+Can contain different data types in a tuple
+A tuple is itself a type
+so (1,2) is a type of tuple
+("one",6.0) is another type of tuple
+
+hence [(1,2), ("one",6.0)] cannot be grouped together! (since list is homogenous)
+
+Use tuples when you know in advance how many components some piece of data should have. 
+
+-- only works on 2-tuples (or pairs)
+ghci> fst (8,11)  
+8  
+ghci> fst ("Wow", False)  
+"Wow" 
+ghci> snd (8,11)  
+11  
+ghci> snd ("Wow", False)  
+False  
+
+zip
+takes two lists and then zips them together into one list by joining the matching elements into pairs
+if one list is longer than needed, the rest will get cut off
+
+ghci> zip [1,2,3,4,5] [5,5,5,5,5]  
+[(1,5),(2,5),(3,5),(4,5),(5,5)]  
+ghci> zip [1 .. 5] ["one", "two", "three", "four", "five"]  
+[(1,"one"),(2,"two"),(3,"three"),(4,"four"),(5,"five")]  
+
+ghci> zip [1..] ["apple", "orange", "cherry", "mango"]  -- Becoz Haskell is lazy, we can zip finite lists with infinite lists
+[(1,"apple"),(2,"orange"),(3,"cherry"),(4,"mango")]  
+
+--
+
+Which right triangle that has integers for all sides and all sides equal to or smaller than 10 has a perimeter of 24?
+
+i.e. Solve for
+1) a² + b² = c²
+2) a + b + c = 24
+
+step by step
+-- first get all triangles with sides under/equal 10
+ghci> let triangles = [ (a,b,c) | c <- [1..10], b <- [1..10], a <- [1..10] ]  
+-- we apply more conditions (filters) to _transform_ the solution. Apply condition 1)
+ghci> let rightTriangles = [ (a,b,c) | c <- [1..10], b <- [1..c], a <- [1..b], a^2 + b^2 == c^2]   
+-- Apply condition 2
+ghci> let rightTriangles' = [ (a,b,c) | c <- [1..10], b <- [1..c], a <- [1..b], a^2 + b^2 == c^2, a+b+c == 24]  
+ghci> rightTriangles'  
+[(6,8,10)]  
+
+-----
+Type
+
+Variable types:
+use `:t` or `:type` to examine variable types
+ghci> :t 'a'  
+'a' :: Char  
+ghci> :t True  
+True :: Bool  
+ghci> :t "HELLO!"  
+"HELLO!" :: [Char]  
+ghci> :t (True, 'a')  
+(True, 'a') :: (Bool, Char)  
+ghci> :t 4 == 5  
+4 == 5 :: Bool  
+
+Function types:
+*note: function types (or signature) can only be loaded entirely in a module (i.e. in a hs file and load in one shot to GHCI)
+
+if want to use straight in GHCI, need to enclose in :{ ... :}
+
+removeNonUppercase :: [Char] -> [Char] -- [Char] is synonymous with `String` 
+removeNonUppercase st = [ c | c <- st, c `elem` ['A'..'Z']]  
+
+ghci> :{
+ghci| removeNonUppercase :: [Char] -> [Char] 
+ghci| removeNonUppercase st = [ c | c <- st, c `elem` ['A'..'Z']] 
+ghci> :}
+
+-- for functions that takes in parameter (the `->` instead of a parenthesis grouping
+might be because _everything_ is made up of functions in Haskell.. so it's a bunch of smaller
+functions stacked together
+addThree :: Int -> Int -> Int -> Int  
+addThree x y z = x + y + z  
+-- check with :t works for function too
+Prelude> :t addThree
+addThree :: Num a => a -> a -> a -> a
+
+* `::` read as "has type of"
+
+-- common data types --
+Int (bounded to system 64-bit)
+Integer (not bounded, can be really big numbers)
+Float (Real floating point with single precision)
+Double (Real floating point with double precision)
+Bool
+Char
+String (is [Char])
+() --> empty tuple, also a type, tuples itself is a type (which depends on it's content signature)
+
+-- algebraic data types --
+Maybe --> Just (something) or Nothing
+(behaves much like a list, where it can contain no elements, one element or several elements)
+
+--
+Type classes
+
+A type class can have functions (or speaking formally, the typeclasses define the set of operations)
+A datatype derives from a type class (and 'inherits' these functions)
+
+Prelude> :t (==)
+(==) :: Eq a => a -> a -> Bool
+
+The `Eq a` before `=>` is a "class constraint".
+Above reads as the equality function `==` takes any two values that are of the same type and returns a Bool. The type of those two values must be a member of the Eq class (this was the class constraint)
+
+*All standard Haskell types except for IO (the type for dealing with input and output) and functions are a part of the Eq typeclass.
+
+-- basic type classes --
+
+Eq - used for types that support equality testing
+   - members implement functions == and /= (not equal)
+   - all basic types other than functions are part of Eq
+
+Ord - types that have an ordering(a type that can be GT, GT or EQ)
+    - all basic types other than functions are part of Ord 
+ 
+      ghci> :t (>)  
+      (>) :: (Ord a) => a -> a -> Bool
+
+      ghci> "Abrakadabra" < "Zebra"  
+      True  
+      ghci> "Abrakadabra" `compare` "Zebra"  
+      LT  -- Less Than
+      ghci> 5 >= 2  
+      True  
+      ghci> 5 `compare` 3  
+      GT  -- Greater Than
+
+Show - members that can be presented as string
+     - most used function is `show`
+
+      Prelude> :t show
+      show :: Show a => a -> String
+
+      ghci> show 3  
+      "3"  
+      ghci> show 5.334  
+      "5.334"  
+      ghci> show True  
+      "True"  
+
+Read - opposite typeclass of Show
+     - takes a string and returns a type (which is either implicitly or explicitly implied, AND a member of Read)
+
+      ghci> read "True" || False  
+      True  
+      ghci> read "8.2" + 3.8  
+      12.0  
+      ghci> read "5" - 2  
+      3  
+      ghci> read "[1,2,3,4]" ++ [3]  
+      [1,2,3,4,3] 
+
+      read "5" -- <-- this doesnt work, becoz GHCI doesnt know what to return
+      -- we need to use _explicit_ type annotations
+
+      ghci> read "5" :: Int  --<--- explicitly annotating an Int type, becoz 5 could be Int, Float ...
+      5  
+      ghci> read "5" :: Float  
+      5.0  
+      ghci> (read "5" :: Float) * 4  
+      20.0  
+      ghci> read "[1,2,3,4]" :: [Int]  
+      [1,2,3,4]  
+      ghci> read "(3, 'a')" :: (Int, Char)  
+      (3, 'a')  
+
+Enum - sequentially ordered types
+     - can be used in list ranges
+     - have predefined successors and predecessors (accessible by `succ` and `pred` functions)
+
+      ghci> ['a'..'e']  
+      "abcde"  
+      ghci> [LT .. GT]  
+      [LT,EQ,GT]  
+      ghci> [3 .. 5]  
+      [3,4,5]  
+      ghci> succ 'B'  
+      'C' 
+
+Bounded - members have an upper and a lower bound
+
+      ghci> minBound :: Int  
+      -2147483648  
+      ghci> maxBound :: Char  
+      '\1114111'  
+      ghci> maxBound :: Bool  
+      True  
+      ghci> minBound :: Bool  
+      False  
+
+      ghci> maxBound :: (Bool, Int, Char)  -- tuples are also part of Bounded
+      (True,2147483647,'\1114111')  
+
+Num - numeric typeclass, where members act like numbers
+    - includes real and integral (whole) numbers
+
+      ghci> :t 20  
+      20 :: (Num t) => t   
+      -- so 20 here is a `polymorphic constants`, i.e. they can `act` like any type of Num typeclass
+      -- think of this as 'casting', even though its called 'type annotation' here
+      ghci> 20 :: Int  
+      20  
+      ghci> 20 :: Integer  
+      20  
+      ghci> 20 :: Float  
+      20.0  
+      ghci> 20 :: Double  
+      20.0  
+
+      thats why for operators like * where it accepts all Num types
+      ghci> :t (*)  
+      (*) :: (Num a) => a -> a -> a  
+
+      (5 :: Int) * (6 :: Integer) -- <-- won't work, 2 different types
+      5 * (6 :: Integer) -- this will work, becoz 5 then `acts` like an Integer, that's y an implicit Num type is said to be 'flexible' here
+
+Integral - numeric typeclass, but only includes integral (whole) numbers i.e Int and Integer only
+
+Fractional - only includes floating point numbers, so Float and Double only
+
+*useful function in dealing numbers : fromIntegral (converts Integral type to Num type)
+e.g.
+length [1,2,3,4] + 3.2 -- <-- won't work! coz length :: [a] -> int (returns int type only)
+
+fromIntegral (length [1,2,3,4]) + 3.2 -- after converting it into Num type then works
+
+------
+Functions syntax
+
+1. Pattern matching
+Something like parameter matching (overloading?)
+
+lucky :: (Integral a) => a -> String  
+lucky 7 = "LUCKY NUMBER SEVEN!" --function can be defined multiple times with different param signature
+lucky x = "Sorry, you're out of luck, pal!" 
+
+factorial :: (Integral a) => a -> a  
+factorial 0 = 1   --define the more specific  (edge) condition beforehand
+factorial n = n * factorial (n - 1)  --can define function recursively
+
+we need to have a `catch all` condition in pattern matching, else when it's called with unexpected
+param, it will fail
+
+charName :: Char -> String  
+charName 'a' = "Albert"  
+charName 'b' = "Broseph"  
+charName 'c' = "Cecil"  
+
+ghci> charName 'h'  ----> will throw Exception
+
+--
+pattern matching in list
+
+head' :: [a] -> a  
+head' [] = error "Can't call head on an empty list, dummy!"  
+head' (x:_) = x  --notice the parentheses due to `:`
+
+tell :: (Show a) => [a] -> String  
+tell [] = "The list is empty"  
+tell (x:[]) = "The list has one element: " ++ show x  
+tell (x:y:[]) = "The list has two elements: " ++ show x ++ " and " ++ show y  
+tell (x:y:_) = "This list is long. The first two elements are: " ++ show x ++ " and " ++ show y  
+
+--
+we could apply some recursive pattern matching magic (like the factorial)
+
+-- get length recursively
+length' :: (Num b) => [a] -> b  
+length' [] = 0  
+length' (_:xs) = 1 + length' xs 
+
+-- get sum of a list recursively
+sum' :: (Num a) => [a] -> a  
+sum' [] = 0  
+sum' (x:xs) = x + sum' xs  
+
+--
+use `@` to denote pattern binding
+
+capital :: String -> String  
+capital "" = "Empty string, whoops!"  
+capital all@(x:xs) = "The first letter of " ++ all ++ " is " ++ [x] 
+
+ghci> capital "Dracula"  
+"The first letter of Dracula is D"  
+
+---
+2. Guards
+
+guards are indicated by pipe `|`
+A guard is basically a boolean expression. 
+If it evaluates to True, then the corresponding function body is used. If it evaluates to False, checking drops through to the next guard and so on.
+
+bmiTell :: (RealFloat a) => a -> a -> String  
+bmiTell weight height  
+    | weight / height ^ 2 <= 18.5 = "You're underweight, you emo, you!"  
+    | weight / height ^ 2 <= 25.0 = "You're supposedly normal. Pffft, I bet you're ugly!"  
+    | weight / height ^ 2 <= 30.0 = "You're fat! Lose some weight, fatty!"  
+    | otherwise                 = "You're a whale, congratulations!"  
+
+notice the backticks way of defining infix function
+myCompare :: (Ord a) => a -> a -> Ordering  
+a `myCompare` b  
+    | a > b     = GT  
+    | a == b    = EQ  
+    | otherwise = LT  
+
+---
+3. LINQ style - use `where`
+
+bmiTell :: (RealFloat a) => a -> a -> String  
+bmiTell weight height  
+    | bmi <= skinny = "You're underweight, you emo, you!"  
+    | bmi <= normal = "You're supposedly normal. Pffft, I bet you're ugly!"  
+    | bmi <= fat    = "You're fat! Lose some weight, fatty!"  
+    | otherwise     = "You're a whale, congratulations!"  
+    where bmi = weight / height ^ 2  
+          skinny = 18.5 --need to align them at one single column 
+          normal = 25.0  
+          fat = 30.0 
+
+The names we defined in the where section are only visible to that function
+(i.e. this _whole_ block is a function definition!) 
+
+*alignment matters
+
+we could rewrite the where section to use pattern matching
+...  
+where bmi = weight / height ^ 2  
+      (skinny, normal, fat) = (18.5, 25.0, 30.0)  
+
+
+--more complicated but very compact function of taking a list of weight-height pairs (tuples) and return a list of BMIs
+
+calcBmis :: (RealFloat a) => [(a, a)] -> [a]  
+calcBmis xs = [bmi w h | (w, h) <- xs]  
+    where bmi weight height = weight / height ^ 2 --the where portion is a 'helper function' to calcBmis
+
+*it is a common idom to nest multiple `where` bindings whereby there are helper to helper function etc
+
+somefunction ..
+    where ...  (helper to somefunction)
+      where ...  (helper to helper ...)
+
+---
+4. Let-in bindings
+
+`where` bindings are syntactic construct that bind to variables/functions at the end of function, and whole function can see them (including all guards)
+`let` bindings bind to _anywhere_ and are expressions themselve, but are local
+
+let <bindings> in <expression>
+
+cylinder :: (RealFloat a) => a -> a -> a  
+cylinder r h = 
+    let sideArea = 2 * pi * r * h  
+        topArea = pi * r ^2      -- let block
+    in  sideArea + 2 * topArea   -- usage of let block here 
+
+much like if-else (which are also expressions themselves), we can use let as expression
+ghci> 4 * (let a = 9 in a + 1) + 2  
+42  
+ghci> [let square x = x * x in (square 5, square 3, square 2)]  -- in list
+[(25,9,4)]
+-- separate multiple variables by semicolon (when binding inline)
+ghci> (let a = 100; b = 200; c = 300 in a*b*c, let foo="Hey "; bar = "there!" in foo ++ bar)  
+(6000000,"Hey there!") 
+
+rewrite the calcBmis using let
+let is used as a predicate (only binding to names)
+calcBmis :: (RealFloat a) => [(a, a)] -> [a]  
+calcBmis xs = [bmi | (w, h) <- xs, let bmi = w / h ^ 2]  
+
+any predicates/section _after_ (on the right of) let can access it's variables (coz `in` is omitted)
+calcBmis :: (RealFloat a) => [(a, a)] -> [a]  
+calcBmis xs = [bmi | (w, h) <- xs, let bmi = w / h ^ 2, bmi >= 25.0]  
+
+---
+5. Case expression
+Again, this is an 'expression' so it can be used anywhere
+*compared to the simple guard, case can pattern match
+case expression of pattern -> result  
+                   pattern -> result  
+                   pattern -> result  
+                   ...  
+something like switch or when statement
+
+describeList :: [a] -> String  
+describeList xs = "The list is " ++ case xs of [] -> "empty."  
+                                               [x] -> "a singleton list."   
+                                               xs -> "a longer list."
+
+which is equivalent to 
+
+describeList :: [a] -> String  
+describeList xs = "The list is " ++ what xs  
+    where what [] = "empty."  
+          what [x] = "a singleton list."  
+          what xs = "a longer list."  
+
+--------
+Recursion
+
+*common idiom when doing recursion with list, is to split it into a head and a tail
+
+maximum' :: (Ord a) => [a] -> a  -- notice here uses type class `Ord` for comparison
+maximum' [] = error "maximum of empty list"  
+maximum' [x] = x  
+maximum' (x:xs)      --splitting into head and tail here and recursively process the tail
+    | x > maxTail = x  
+    | otherwise = maxTail  
+    where maxTail = maximum' xs  
+
+--if we make use of the native `max` function, the last part can be written as
+..
+maximum' (x:xs) = max x (maximum' xs)  
+
+--
+--notice that we want this to be comparable ordering type but also 
+we want to limit it to Num type
+
+replicate' :: (Num i, Ord i) => i -> a -> [a]  replicate' n x  
+    | n <= 0    = []  
+    | otherwise = x:replicate' (n-1) x  
+
+--replicate' 3 5  [5,5,5]
+
+--
+take' :: (Num i, Ord i) => i -> [a] -> [a]  
+take' n _  
+    | n <= 0   = []  
+take' _ []     = []  
+take' n (x:xs) = x : take' (n-1) xs  
+
+--
+reverse' :: [a] -> [a]  
+reverse' [] = []  
+reverse' (x:xs) = reverse' xs ++ [x]  
+
+--
+zip' :: [a] -> [b] -> [(a,b)]  
+zip' _ [] = []  
+zip' [] _ = []  
+zip' (x:xs) (y:ys) = (x,y):zip' xs ys  
+
+--zip [1,2,3] [2,3] -> [(1,2),(2,3)]
+--zip [1,2,3] ['a','b'] -> [(1,'a'),(2,'b')]
+
+--
+Quicksort
+
+first, we must understand what the filter predicate can do in a list comprehension
+test2 (x:xs) = [a | a <- xs, a <= x]
+test2 [5,1,2,3,5] ----> [1,2,3,5]
+test2 [2,1,2,3,5] ----> [1,2]
+
+so test2 here filters off the first element `x` and return only the tail elements which are <= than `x`
+- x inside the list comprehension can be consider as [x]
+
+-- so --
+quicksort :: (Ord a) => [a] -> [a]  
+quicksort [] = []  
+quicksort (x:xs) =   
+    let smallerSorted = quicksort [a | a <- xs, a <= x]  
+        biggerSorted = quicksort [a | a <- xs, a > x]  
+    in  smallerSorted ++ [x] ++ biggerSorted  
+
+ghci> quicksort [10,2,5,3,1,6,7,4,2,3,4,8,9]  
+[1,2,2,3,3,4,4,5,6,7,8,9,10]  
+ghci> quicksort "the quick brown fox jumps over the lazy dog"  
+"        abcdeeefghhijklmnoooopqrrsttuuvwxyz"  
+
+in short, we find a middle pivot, and split the list into smaller & bigger halfs
+and keep doing so recursively (on both halfs) until we hit empty list
+
+--
+td;lr
+
+1. find edge cases (or called identities)
+2. see if the list can be splitted into head and tail via pattern matching
+3. decide on which part to use the recursive call
+
+
+------
+HOF higher order function
+
+Every function in Haskell officially only takes _one_ parameter
+Those that accept several parameters, are `curried` functions
+
+*important concept!
+In Haskell, we can call a function with lesser parameters than intended
+--> partially applied function
+this partially applied function can then be passed into another function or seed with some other data
+
+-----
+
+multThree :: (Num a) => a -> a -> a -> a  
+multThree x y z = x * y * z  
+
+multThree 3 5 9 can be thought of as ((multThree 3) 5) 9
+whereby one function is called partially and fed into another function (recursively)
+
+multThree :: (Num a) => a -> (a -> (a -> a)) (function type can be think of as)
+whereby a function takes a, returns a->(a->a)
+takes a, returns a->a
+takes a, returns a
+
+so we could split the `multThree` function as
+ghci> let multTwoWithNine = multThree 9  
+ghci> multTwoWithNine 2 3  
+54  
+
+take a look at this, we define a function which takes in a param to compare with 100
+compareWithHundred :: (Num a, Ord a) => a -> Ordering  
+compareWithHundred x = compare 100 x --take note of the position of `x` (on the right)
+
+we could simply remove the `x`, since the higher order function `compareWithHundred` is already taking in a param
+compareWithHundred :: (Num a, Ord a) => a -> Ordering  
+compareWithHundred = compare 100 
+
+if we look at the function type, it makes sense as well
+
+-- for info, it's like reducing a math equation, taking a simple example --
+add a b = a + b
+add a = (+) a -- we remove one param since it's available _both sides_
+add = (+) -- we can remove another param (since it's available _both sides) again!
+
+compare :: Ord a => a -> a -> Ordering
+alling compare with 100 turns it into (Num a, Ord a) => a -> Orderiinh
+
+Prelude> :t compare 100
+compare 100 :: (Num a, Ord a) => a -> Ordering
+
+which is same as
+compareWithHundred :: (Num a, Ord a) => a -> Ordering
+
+--
+2/10 = 0.2
+but `/` is an infix function
+(/) :: Fractional a => a -> a -> a
+so below works (surrounding with parentheses is called `sectioning` an infix function)
+Prelude> (/) 10 2
+5.0
+Prelude> (/10) 2
+0.2
+Prelude> (10/) 2
+5.0
+
+---------
+Functions can take functinos as parameters and return functions
+
+applyTwice :: (a -> a) -> a -> a  
+applyTwice f x = f (f x) 
+
+applyTwice takes a function with type (a -> a) and a param type `a` and returns a value with type `a`
+
+ghci> applyTwice (+3) 10  
+16  
+ghci> applyTwice (++ " HAHA") "HEY"  
+"HEY HAHA HAHA"  
+ghci> applyTwice ("HAHA " ++) "HEY"  
+"HAHA HAHA HEY"  
+ghci> applyTwice (multThree 2 2) 9  
+144  
+ghci> applyTwice (3:) [1]  
+[3,3,1]  
+
+
+-- sample implementation of zipWith --
+zip two lists with a certain function
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]  
+zipWith' _ [] _ = []  
+zipWith' _ _ [] = []  
+zipWith' f (x:xs) (y:ys) = f x y : zipWith' f xs ys  
+
+ghci> zipWith' (+) [4,2,5,6] [2,6,2,3]  
+[6,8,7,9]  
+ghci> zipWith' max [6,3,2,1] [7,3,1,5]  
+[7,3,2,5]  
+ghci> zipWith' (++) ["foo ", "bar ", "baz "] ["fighters", "hoppers", "aldrin"]  
+["foo fighters","bar hoppers","baz aldrin"]  
+ghci> zipWith' (*) (replicate 5 2) [1..]  
+[2,4,6,8,10]  
+-- notice below how we want to affect the list of a list
+ghci> zipWith' (zipWith' (*)) [[1,2,3],[3,5,6],[2,3,4]] [[3,2,2],[3,4,5],[5,4,3]]  
+[[3,4,6],[9,20,30],[10,12,12]]  
+
+--
+MAP
+map applies the function to every element in the list
+
+map :: (a -> b) -> [a] -> [b]  
+map _ [] = []  
+map f (x:xs) = f x : map f xs
+
+ghci> map (+3) [1,5,3,1,6]  
+[4,8,6,4,9]  
+ghci> map (++ "!") ["BIFF", "BANG", "POW"]  
+["BIFF!","BANG!","POW!"]  
+ghci> map (replicate 3) [3..6]  
+[[3,3,3],[4,4,4],[5,5,5],[6,6,6]]  
+-- notice below how we want to affect the list of a list
+ghci> map (map (^2)) [[1,2],[3,4,5,6],[7,8]]  
+[[1,4],[9,16,25,36],[49,64]]  
+ghci> map fst [(1,2),(3,5),(6,3),(2,6),(2,5)]  
+[1,3,6,2,2]  
+
+
+--
+FILTER
+filter :: (a -> Bool) -> [a] -> [a]  
+filter _ [] = []  
+filter p (x:xs)   
+    | p x       = x : filter p xs  --guard here is a condtion, when p x is true, do ..
+    | otherwise = filter p xs  -- when p x is false
+
+*`filter` doesnt work on infinite list (it doesnt know the list is never ending)
+*but `takeWhile` does
+
+---
+other examples of using higher order functions:
+
+takeWhile :: (a -> Bool) -> [a] -> [a]
+- takes a predicate which returns true/false and filter the list until condition is false
+
+1. --> find the sum of all odd squares that are smaller than 10,000
+-- either using a fitler or a list comprehension
+ghci> sum (takeWhile (<10000) (filter odd (map (^2) [1..])))  
+166650
+ghci> sum (takeWhile (<10000) [n^2 | n <- [1..], odd (n^2)])  
+166650  
+
+
+2. --> Collatz sequences: Given a natural numbers, divide it by 2 if it's even, multiply it by 3 and add 1 if it's odd, keep taking the result and apply the same thing until it ends with 1.
+
+For e.g, 13, 40, 20, 10, 5, 16, 8, 4, 2, 1
+
+Question: for all starting numbers between 1 and 100, how many chains (sequence) have a length greater than 15?
+
+-- first define the collatz chain
+chain :: (Integral a) => a -> [a]  
+chain 1 = [1]  
+chain n  
+    | even n =  n:chain (n `div` 2)  
+    | odd n  =  n:chain (n*3 + 1)  
+
+-- then calculate the chain length and filter those only > 15
+numLongChains :: Int  
+numLongChains = length (filter isLong (map chain [1..100]))  
+    where isLong xs = length xs > 15  
+
+-------------
+LAMBDAS
+
+- functions (more like expressions) that r only used once
+- with sole purpose of passing into HOF
+- start with \, usually enclosed in parentheses
+
+for e.g. we could replace the isLong function above with a lambda
+
+numLongChains :: Int  
+numLongChains = length (filter (\xs -> length xs > 15) (map chain [1..100]))  
+
+-- more lambdas --
+ghci> zipWith (\a b -> (a * 30 + 3) / b) [5,4,3,2,1] [1,2,3,4,5]  
+[153.0,61.5,31.0,15.75,6.6] 
+ghci> map (\(a,b) -> a + b) [(1,2),(3,5),(6,3),(2,6),(2,5)]  
+[3,8,9,8,7] 
+
+---------------
+FOLD
+
+For those implements type class `Foldable`
+rationale: there's a recurring theme of recursive functions that operated on list
+used to implement any function where you traverse a list once, element by element, and then return something based on that
+
+a fold takes
+1) a binary function (which acts on `head` and `tail` recursively - hence binary)
+2) a start value (the accumulator) (also acts as output for edge case)
+3) a list to fold (the input list)
+
+Take a look at the sum example before
+-- get sum of a list recursively
+sum' :: (Num a) => [a] -> a
+sum' [] = 0
+sum' (x:xs) = x + sum' xs
+
+we can shorten to
+sum' :: (Num a) => [a] -> a  
+sum' xs = foldl (\acc x -> acc + x) 0 xs  --so here `fold` handles the edge case of [] (= start value) as well
+
+-- binary function, acc is the accumated value (starting from start value), x is the `current head/ele`
+(\acc x -> acc + x)
+
+-- taking into account functions are curried
+sum' = foldl (+) 0
+
+--
+another example, `elem`
+
+elem' :: (Eq a) => a -> [a] -> Bool  
+elem' y ys = foldl (\acc x -> if x == y then True else acc) False ys 
+
+*the type of acc and end result is always the same
+
+--- foldr ---
+accumulate from the right
+the params in binary function are reversed, curent ele `x` as first, `acc` as second
+
+map :: (a -> b) -> [a] -> [b]
+map _ [] = []
+map f (x:xs) = f x : map f xs
+
+-- 
+
+map' :: (a -> b) -> [a] -> [b]  
+map' f xs = foldr (\x acc -> f x : acc) [] xs  
+
+we could also use foldl, but ++ is more expensive than :
+
+map' f xs = foldl (\acc x -> acc ++ [f x]) [] xs
+
+*Right folds work on infinite lists, whereas left ones don't!
+If we fold somewhere from right on an infinite list, we could get to the start
+But if we fold from left (start) on an infinite list..
+
+-- foldl1 and foldr1 takes the first (or last) element on the list to be the starting value
+they throw runtime errors if called with empty lists
+
+reverse' :: [a] -> [a]  
+reverse' = foldl (\acc x -> x : acc) []
+.. also can simplify the lambda to just flip(:)
+foldl (flip (:)) []
+
+head' :: [a] -> a  
+head' = foldr1 (\x _ -> x)  
+  
+last' :: [a] -> a  
+last' = foldl1 (\_ x -> x)  
+
+-- but head' and last' [] will have error
+
+--- scan ---
+just like fold, but report the intermediate accumulators in a list (useful for debug fold?)
+
+ghci> scanl (+) 0 [3,5,2,1]  
+[0,3,8,10,11]  
+ghci> scanr (+) 0 [3,5,2,1]  
+[11,8,3,1,0]  -- final result at head
+ghci> scanl1 (\acc x -> if x > acc then x else acc) [3,4,5,3,7,9,2,1]  
+[3,4,5,5,7,9,9,9]  
+ghci> scanl (flip (:)) [] [3,2,1]  
+[[],[3],[2,3],[1,2,3]]  -- final result at last
+
+----------
+Function application $
+
+($) :: (a -> b) -> a -> b  
+f $ x = f x 
+
+$ is right-associative, it has the lowest precedence
+
+first, function with spacing are left-associative f a b c is the same as ((f a) b) c)
+
+so for functions like f (g h a) we need to include a parenthesis, we could instead use `$`
+f $ g h a
+and save on the parentheses
+
+sqrt 3 + 4 + 9, will add 9, 4 and sqrt 3
+we could do sqrt (3 + 4 + 9) or simply sqrt $ 3 + 4 + 9
+
+f(g(h a) is equal to f $ g $ h a
+
+$ can also be used as `the lowest precedence function`
+ghci> map ($ 3) [(4+), (10*), (^2), sqrt]  
+[7.0,30.0,9.0,1.7320508075688772] 
+
+------------
+Function composition
+just like in maths
+
+(.) :: (b -> c) -> (a -> b) -> a -> c  
+f . g = \x -> f (g x) 
+
+*f must take as its parameter a value that has the same type as g's return value
+
+negate . (*3) takes a numbers, multiplies by 3 and negates it
+
+ghci> negate . (*3) $ 15 
+-45
+
+we could use lambda as well but function composition seems much clearer
+ghci> map (\x -> negate (abs x)) [5,-3,-6,7,-3,2,-19,24]  
+[-5,-3,-6,-7,-3,-2,-19,-24]  
+ghci> map (negate . abs) [5,-3,-6,7,-3,2,-19,24]  
+[-5,-3,-6,-7,-3,-2,-19,-24]  
+
+function composition is right-associative
+f (g (z x)) is equivalent to (f . g . z) x
+ghci> map (\xs -> negate (sum (tail xs))) [[1..5],[3..6],[1..7]]  
+[-14,-15,-27] 
+ghci> map (negate . sum . tail) [[1..5],[3..6],[1..7]]  
+[-14,-15,-27] 
+
+for function with more than 1 parameter
+sum (replicate 5 (max 6.7 8.9))
+==> (sum . replicate 5 . max 6.7) 8.9
+==> sum . replicate 5 . max 6.7 $ 8.9
+
+function composition is useful for making `point-free` style
+
+fn x = ceiling (negate (tan (cos (max 50 x))))  
+fn = ceiling . negate . tan . cos . max 50 -- get rid of the same param on both sides
+
+------------------
+MODULE
+
+import <module name>
+
+import Data.List  
+  
+numUniques :: (Eq a) => [a] -> Int  
+numUniques = length . nub -- nub from Data.List return only the first occurence of element in a new list
+
+we can load up names in global namespace using GHCI
+ghci> :m + Data.List Data.Map Data.Set  
+
+import Data.List (nub, sort) -- import these 2 functions only 
+import Data.List hiding (nub)  -- exclude this function
+import qualified Data.Map  -- used when there are 2 same name functions
+-- for e.g. Prelude module already exports `filter` from Data.Map
+-- doing like above, we could call Data.Map.filter to use Data.Map's filter while `filter` alone is still the 'normal' filter
+--import qualified Data.Map as M , give a short name, so could juse M.filter
+
+--
+Data.List functions
+ 
+intersperse
+ghci> intersperse '.' "MONKEY"  
+"M.O.N.K.E.Y"  
+ghci> intersperse 0 [1,2,3,4,5,6]  
+[1,0,2,0,3,0,4,0,5,0,6] 
+
+intercalate
+ghci> intercalate " " ["hey","there","guys"]  
+"hey there guys"  
+ghci> intercalate [0,0,0] [[1,2,3],[4,5,6],[7,8,9]]  
+[1,2,3,0,0,0,4,5,6,0,0,0,7,8,9] 
+
+transpose
+ghci> transpose [[1,2,3],[4,5,6],[7,8,9]]  
+[[1,4,7],[2,5,8],[3,6,9]]  
+ghci> transpose ["hey","there","guys"]  
+["htg","ehu","yey","rs","e"]  
+
+concat
+ghci> concat ["foo","bar","car"]  
+"foobarcar"  
+ghci> concat [[3,4,5],[2,3,4],[2,1,1]]  
+[3,4,5,2,3,4,2,1,1]  
+
+concatMap (first map a function to a list and then concat the updated list)
+ghci> concatMap (replicate 4) [1..3]  
+[1,1,1,1,2,2,2,2,3,3,3,3] 
+
+and
+ghci> and $ map (>4) [5,6,7,8]  
+True  
+ghci> and $ map (==4) [4,4,4,3,4]  
+False 
+
+or
+ghci> or $ map (==4) [2,3,4,5,6,1]  
+True  
+ghci> or $ map (>4) [1,2,3]  
+False  
+
+any , all
+ghci> any (==4) [2,3,5,6,1,4]  --this is like using and/or above
+True  
+ghci> all (>4) [6,9,10]  
+True  
+ghci> all (`elem` ['A'..'Z']) "HEYGUYSwhatsup"  
+False  
+ghci> any (`elem` ['A'..'Z']) "HEYGUYSwhatsup"  
+True
+
+iterate
+ghci> take 10 $ iterate (*2) 1  
+[1,2,4,8,16,32,64,128,256,512]  
+ghci> take 3 $ iterate (++ "haha") "haha"  
+["haha","hahahaha","hahahahahaha"]  
+
+splitAt
+ghci> splitAt 3 "heyman"  
+("hey","man")  
+ghci> splitAt 100 "heyman"  
+("heyman","")  
+ghci> splitAt (-3) "heyman"  
+("","heyman")  
+ghci> let (a,b) = splitAt 3 "foobar" in b ++ a  
+"barfoo" 
+
+takeWhile
+ghci> takeWhile (>3) [6,5,4,3,2,1,2,3,4,5,4,3,2,1]  
+[6,5,4]  
+ghci> takeWhile (/=' ') "This is a sentence"  
+"This" 
+
+dropWhile
+ghci> dropWhile (/=' ') "This is a sentence"  
+" is a sentence"  
+ghci> dropWhile (<3) [1,2,2,2,3,4,5,4,3,2,1]  
+[3,4,5,4,3,2,1]  
+
+span , break ( equals to span (not . x) )
+ghci> break (==4) [1,2,3,4,5,6,7]  
+([1,2,3],[4,5,6,7])  
+ghci> span (/=4) [1,2,3,4,5,6,7]  
+([1,2,3],[4,5,6,7])  
+
+sort
+ghci> sort [8,5,3,2,1,6,4,2]  
+[1,2,2,3,4,5,6,8]  
+ghci> sort "This will be sorted soon"  
+"    Tbdeehiillnooorssstw"  
+
+group
+ghci> group [1,1,1,1,2,2,2,2,3,3,2,2,2,5,6,7]  
+[[1,1,1,1],[2,2,2,2],[3,3],[2,2,2],[5],[6],[7]] 
+
+inits , tails (much like init and tail, but show the recursive process in a list)
+ghci> inits "w00t"  
+["","w","w0","w00","w00t"]  
+ghci> tails "w00t"  
+["w00t","00t","0t","t",""]  
+ghci> let w = "w00t" in zip (inits w) (tails w)  
+[("","w00t"),("w","00t"),("w0","0t"),("w00","t"),("w00t","")]  
+
+isInfixOf (to search for sublist within a list)
+ghci> "cat" `isInfixOf` "im a cat burglar"  
+True  
+ghci> "Cat" `isInfixOf` "im a cat burglar"  
+False  
+ghci> "cats" `isInfixOf` "im a cat burglar"  
+False
+
+isPrefixOf, isSuffixOf (search start and end of a list only)
+ghci> "hey" `isPrefixOf` "hey there!"  
+True  
+ghci> "hey" `isPrefixOf` "oh hey there!"  
+False  
+ghci> "there!" `isSuffixOf` "oh hey there!"  
+True  
+ghci> "there!" `isSuffixOf` "oh hey there"  
+False 
+
+elem, notElem
+
+partition (split the list into those that satisfy the predicate and those that dont)
+ghci> partition (`elem` ['A'..'Z']) "BOBsidneyMORGANeddy"  
+("BOBMORGAN","sidneyeddy")  
+ghci> partition (>3) [1,3,5,6,3,2,1,0,3,7]  
+([5,6,7],[1,3,3,2,1,0,3])  
+
+find (return a Maybe type)
+ghci> find (>4) [1,2,3,4,5,6]  
+Just 5  
+ghci> find (>9) [1,2,3,4,5,6]  
+Nothing  
+ghci> :t find  
+find :: (a -> Bool) -> [a] -> Maybe a  
+
+elemIndex
+ghci> :t elemIndex  
+elemIndex :: (Eq a) => a -> [a] -> Maybe Int  
+ghci> 4 `elemIndex` [1,2,3,4,5,6]  
+Just 3  
+ghci> 10 `elemIndex` [1,2,3,4,5,6]  
+Nothing  
+
+elemIndices
+ghci> ' ' `elemIndices` "Where are the spaces?"  
+[5,9,13]  
+
+findIndex
+ghci> findIndex (==4) [5,3,2,1,6,4]  
+Just 5  
+ghci> findIndex (==7) [5,3,2,1,6,4]  
+Nothing  
+ghci> findIndices (`elem` ['A'..'Z']) "Where Are The Caps?"  
+[0,6,10,14]  
+
+zip3 .. all the way to zip7
+zipWith3 .. all the way to zipWith7
+
+lines and unlines
+ghci> lines "first line\nsecond line\nthird line"  
+["first line","second line","third line"]  
+ghci> unlines ["first line", "second line", "third line"]  
+"first line\nsecond line\nthird line\n"  
+
+words and unwords
+ghci> words "hey these are the words in this sentence"  
+["hey","these","are","the","words","in","this","sentence"]  
+ghci> words "hey these           are    the words in this\nsentence"  
+["hey","these","are","the","words","in","this","sentence"]  
+ghci> unwords ["hey","there","mate"]  
+"hey there mate" 
+
+nub
+ghci> nub [1,2,3,4,3,2,1,2,3,4,3,2,1]  
+[1,2,3,4]  
+ghci> nub "Lots of words and stuff"  
+"Lots fwrdanu"
+
+delete (first occurence only)
+ghci> delete 'h' "hey there ghang!"  
+"ey there ghang!"  
+ghci> delete 'h' . delete 'h' $ "hey there ghang!"  
+"ey tere ghang!"  
+ghci> delete 'h' . delete 'h' . delete 'h' $ "hey there ghang!"  
+"ey tere gang!"
+
+\\ (list difference function)
+ghci> [1..10] \\ [2,5,9]  
+[1,3,4,6,7,8,10]  
+ghci> "Im a big baby" \\ "big"  
+"Im a  baby"  
+
+union and intersect
+ghci> "hey man" `union` "man what's up"  
+"hey manwt'sup"  
+ghci> [1..7] `union` [5..10]  
+[1,2,3,4,5,6,7,8,9,10]  
+
+ghci> [1..7] `intersect` [5..10]  
+[5,6,7]  
+
+insert - inserts into last position where it's LTE next element
+ghci> insert 4 [3,5,1,2,8,2]  
+[3,4,5,1,2,8,2]  
+ghci> insert 4 [1,3,4,4,1]  
+[1,3,4,4,4,1]  
+
+length, take, drop, splitAt, !! and replicate take an Int (or return an Int)
+there's a corresponding counterpart in Data.List which lets us take Num (easier to operate as Num can convert to Fractional type as well)
+
+genericLength, genericTake, genericDrop, genericSplitAt, genericIndex and genericReplicate.
+
+let xs = [1..6] in sum xs / length xs  -- error
+let xs = [1..6] in sum xs / genericlength xs  -- fine
+
+--
+
+nub, delete, union, intersect and group -- use == to test for equality
+-- counterparts --
+nubBy, deleteBy, unionBy, intersectBy and groupBy -- takes an equality functon and compare 
+
+
+sort, insert, maximum and minimum
+-- counterparts --
+sortBy, insertBy, maximumBy and minimumBy -- takes a function to determine ordering
+
+can use Data.Function's `on`
+on :: (b -> b -> c) -> (a -> b) -> a -> a -> c  -- read this as g = (a -> b), which takes 2 a types,
+-- and returns b types which then f takes 2 b types and produce c, which is the end product
+f `on` g = \x y -> f (g x) (g y)  
+
+-- so this is a double processing of g, then f on top of g for both x and y
+
+-- (==) `on` (> 0) returns an equality function that looks like \x y -> (x > 0) == (y > 0)
+
+-- groupBy usage --
+ghci> let values = [-4.3, -2.4, -1.2, 0.4, 2.3, 5.9, 10.5, 29.1, 5.3, -2.4, -14.5, 2.9, 2.3]  
+ghci> groupBy (\x y -> (x > 0) == (y > 0)) values  
+[[-4.3,-2.4,-1.2],[0.4,2.3,5.9,10.5,29.1,5.3],[-2.4,-14.5],[2.9,2.3]] 
+ghci> groupBy ((==) `on` (> 0)) values  
+[[-4.3,-2.4,-1.2],[0.4,2.3,5.9,10.5,29.1,5.3],[-2.4,-14.5],[2.9,2.3]]  
+
+-- sortBy usage --
+ghci> let xs = [[5,4,5,4,4],[1,2,3],[3,5,4,3],[],[2],[2,2]]  
+ghci> sortBy (compare `on` length) xs  
+[[],[2],[2,2],[1,2,3],[3,5,4,3],[5,4,5,4,4]]  
+
+*When you're dealing with By functions that take an equality function, you usually do (==) `on` something and when you're dealing with By functions that take an ordering function, you usually do compare `on` something
+
+--------
+Data.Char
+
+isControl checks whether a character is a control character.
+isSpace checks whether a character is a white-space characters. That includes spaces, tab characters, newlines, etc.
+isLower checks whether a character is lower-cased.
+isUpper checks whether a character is upper-cased.
+isAlpha checks whether a character is a letter.
+isAlphaNum checks whether a character is a letter or a number.
+isPrint checks whether a character is printable. Control characters, for instance, are not printable.
+isDigit checks whether a character is a digit.
+isOctDigit checks whether a character is an octal digit.
+isHexDigit checks whether a character is a hex digit.
+isLetter checks whether a character is a letter.
+isMark checks for Unicode mark characters. Those are characters that combine with preceding letters to form latters with accents. Use this if you are French.
+isNumber checks whether a character is numeric.
+isPunctuation checks whether a character is punctuation.
+isSymbol checks whether a character is a fancy mathematical or currency symbol.
+isSeparator checks for Unicode spaces and separators.
+isAscii checks whether a character falls into the first 128 characters of the Unicode character set.
+isLatin1 checks whether a character falls into the first 256 characters of Unicode.
+isAsciiUpper checks whether a character is ASCII and upper-case.
+isAsciiLower checks whether a character is ASCII and lower-case.
+
+since all these functions only apply to char, we need `all` or `any` to effectively check a string
+ghci> all isAlphaNum "bobby283"  
+True  
+ghci> all isAlphaNum "eddy the fish!"  
+False  
+
+reimplement `words`
+ghci> words "hey guys its me"  
+["hey","guys","its","me"]  
+ghci> groupBy ((==) `on` isSpace) "hey guys its me"  
+["hey"," ","guys"," ","its"," ","me"]  
+ghci> groupBy ((==) `on` (not . isSpace)) "hey guys its me"
+["hey"," ","guys"," ","its"," ","me"] 
+
+generalCategory :: Char -> GeneralCategory
+(there are 31 GeneralCategories)
+-- use `:info GeneralCategory` to find out
+ghci> generalCategory ' '  
+Space  
+ghci> generalCategory 'A'  
+UppercaseLetter  
+ghci> generalCategory 'a'  
+LowercaseLetter  
+ghci> generalCategory '.'  
+OtherPunctuation  
+ghci> generalCategory '9'  
+DecimalNumber  
+ghci> map generalCategory " \t\nA9?|"  
+[Space,Control,Control,UppercaseLetter,DecimalNumber,OtherPunctuation,MathSymbol] 
+
+toUpper converts a character to upper-case. Spaces, numbers, and the like remain unchanged.
+toLower converts a character to lower-case.
+toTitle converts a character to title-case. For most characters, title-case is the same as upper-case.
+
+digitToInt converts a character to an Int. To succeed, the character must be in the ranges '0'..'9', 'a'..'f' or 'A'..'F'. (-- based on unicode table)
+ghci> map digitToInt "34538"  
+[3,4,5,3,8]  
+ghci> map digitToInt "FF85AB"  
+[15,15,8,5,10,11] 
+
+-- (the reverse) intToDigit
+ghci> intToDigit 15  
+'f'  
+ghci> intToDigit 5  
+'5'  
+
+-- ord and chr functions convert characters to their corresponding numbers and vice versa --
+ghci> ord 'a'  
+97  
+ghci> chr 97  
+'a'  
+ghci> map ord "abcdefgh"  
+[97,98,99,100,101,102,103,104]  
+
+--------------
+Data.Map
+- offers association lists that are much faster to process (called maps and implemented with trees)
+
+-- a general list with pairs (tuple)
+phoneBook =   
+    [("betty","555-2938")  
+    ,("bonnie","452-2928")  
+    ,("patsy","493-2928")  
+    ,("lucille","205-2928")  
+    ,("wendy","939-8282")  
+    ,("penny","853-2492")  
+    ] 
+
+lets implement `lookup` from Data.List
+lookup :: Eq a => a -> [(a, b)] -> Maybe b
+λ> lookup "patsy" phoneBook
+Just "493-2928"
+
+findKey :: (Eq k) => k -> [(k,v)] -> Maybe v  
+findKey key [] = Nothing  
+findKey key ((k,v):xs) = if key == k  
+                            then Just v  
+                            else findKey key xs  
+
+-- or use foldr --
+findKey :: (Eq k) => k -> [(k,v)] -> Maybe v  
+findKey key = foldr (\(k,v) acc -> if key == k then Just v else acc) Nothing  
+
+ghci> findKey "penny" phoneBook  
+Just "853-2492"  
+ghci> findKey "betty" phoneBook  
+Just "555-2938"  
+ghci> findKey "wilma" phoneBook  
+Nothing 
+
+Data.Map offers much more utility functions to process this kinda map (dictionary like structures)
+
+import qualified Data.Map as Map -- qualified import as class with Prelude and Data.List 
+
+-- need to convert normal associative list to Map before we could use them with Map functions --
+ghci> Map.fromList [("betty","555-2938"),("bonnie","452-2928"),("lucille","205-2928")]  
+fromList [("betty","555-2938"),("bonnie","452-2928"),("lucille","205-2928")]  
+ghci> Map.fromList [(1,2),(3,4),(3,2),(5,5)]  
+fromList [(1,2),(3,2),(5,5)] -- dups are just discarded 
+
+-- for the example above --
+λ> Map.lookup "patsy" $ Map.fromList(phoneBook)
+Just "493-2928"
+
+Map.fromList :: (Ord k) => [(k, v)] -> Map.Map k v 
+-- since Map arrange data in a tree, it needs the key to be Orderable, instead of just Eq
+
+empty
+ghci> Map.empty  
+fromList []  
+
+insert
+ghci> Map.insert 3 100 Map.empty  
+fromList [(3,100)]  
+ghci> Map.insert 5 600 (Map.insert 4 200 ( Map.insert 3 100  Map.empty))  
+fromList [(3,100),(4,200),(5,600)]  
+ghci> Map.insert 5 600 . Map.insert 4 200 . Map.insert 3 100 $ Map.empty  
+fromList [(3,100),(4,200),(5,600)] 
+
+null
+ghci> Map.null Map.empty  
+True  
+ghci> Map.null $ Map.fromList [(2,3),(5,5)]  
+False 
+
+size
+ghci> Map.size Map.empty  
+0  
+ghci> Map.size $ Map.fromList [(2,4),(3,3),(4,2),(5,4),(6,4)]  
+5 
+
+singleton
+ghci> Map.singleton 3 9  
+fromList [(3,9)]  
+ghci> Map.insert 5 9 $ Map.singleton 3 9  
+fromList [(3,9),(5,9)]  
+
+member
+ghci> Map.member 3 $ Map.fromList [(3,6),(4,3),(6,9)]  
+True  
+ghci> Map.member 3 $ Map.fromList [(2,5),(4,5)]  
+False  
+
+map and filter
+ghci> Map.map (*100) $ Map.fromList [(1,1),(2,4),(3,9)]  
+fromList [(1,100),(2,400),(3,900)]  
+ghci> Map.filter isUpper $ Map.fromList [(1,'a'),(2,'A'),(3,'b'),(4,'B')]  
+fromList [(2,'A'),(4,'B')]  
+
+toList
+ghci> Map.toList . Map.insert 9 2 $ Map.singleton 4 3  
+[(4,3),(9,2)]  
+
+keys and elems (returns the key and value)
+
+fromListWith takes a lambda which decides what to do with duplicate keys
+
+phoneBook =   
+    [("betty","555-2938")  
+    ,("betty","342-2492")  
+    ,("bonnie","452-2928")  
+    ,("patsy","493-2928")  
+    ,("patsy","943-2929")  
+    ,("patsy","827-9162")  
+    ,("lucille","205-2928")  
+    ,("wendy","939-8282")  
+    ,("penny","853-2492")  
+    ,("penny","555-2111")  
+    ]  
+
+phoneBookToMap :: (Ord k) => [(k, String)] -> Map.Map k String  
+phoneBookToMap xs = Map.fromListWith (\number1 number2 -> number1 ++ ", " ++ number2) xs 
+-- here duplicate key's values are combined as string --
+
+ghci> Map.lookup "patsy" $ phoneBookToMap phoneBook  
+"827-9162, 943-2929, 493-2928" 
+ghci> Map.lookup "betty" $ phoneBookToMap phoneBook  
+"342-2492, 555-2938" 
+
+phoneBookToMap :: (Ord k) => [(k, a)] -> Map.Map k [a]  
+phoneBookToMap xs = Map.fromListWith (++) $ map (\(k,v) -> (k,[v])) xs  
+-- here combined as list --
+
+insertWith takes a lambda which decides what to do when insertion with duplicate keys
+ghci> Map.insertWith (+) 3 100 $ Map.fromList [(3,4),(5,103),(6,339)]  
+fromList [(3,104),(5,103),(6,339)] 
+
+--------------
+Data.Set
+
+-a Set only has unique members
+-a Set will order the members
+
+ghci> let set1 = Set.fromList text1  
+ghci> let set2 = Set.fromList text2  
+ghci> set1  
+fromList " .?AIRadefhijlmnorstuy"  
+ghci> set2  
+fromList " !Tabcdefghilmnorstuvwy" 
+
+difference
+ghci> Set.difference set1 set2  
+fromList ".?AIRj"  
+ghci> Set.difference set2 set1  
+fromList "!Tbcgvw" 
+
+union
+ghci> Set.union set1 set2  
+fromList " !.?AIRTabcdefghijlmnorstuvwy"  
+
+null, size, member, empty, singleton, insert and delete 
+ghci> Set.null Set.empty  
+True  
+ghci> Set.null $ Set.fromList [3,4,5,5,4,3]  
+False  
+ghci> Set.size $ Set.fromList [3,4,5,3,4,5]  
+3  
+ghci> Set.singleton 9  
+fromList [9]  
+ghci> Set.insert 4 $ Set.fromList [9,3,8,1]  
+fromList [1,3,4,8,9]  
+ghci> Set.insert 8 $ Set.fromList [5..10]  
+fromList [5,6,7,8,9,10]  
+ghci> Set.delete 4 $ Set.fromList [3,4,5,4,3,4,5]  
+fromList [3,5]  
+
+isSubsetOf, isPorperSubsetof
+ghci> Set.fromList [2,3,4] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+True  
+λ> Set.fromList [2,3,4] `Set.isProperSubsetOf` Set.fromList [1,2,3,4,5]
+True
+ghci> Set.fromList [1,2,3,4,5] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+True  
+ghci> Set.fromList [1,2,3,4,5] `Set.isProperSubsetOf` Set.fromList [1,2,3,4,5]  
+False  
+ghci> Set.fromList [2,3,4,8] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+False  
+
+filter, map
+ghci> Set.filter odd $ Set.fromList [3,4,5,6,7,2,3,4]  
+fromList [3,5,7]  
+ghci> Set.map (+1) $ Set.fromList [3,4,5,6,7,2,3,4]  
+fromList [3,4,5,6,7,8]  
+
+we can use as `nub`, its faster in processing, but beware the result will be ordered
+ghci> let setNub xs = Set.toList $ Set.fromList xs  
+ghci> setNub "HEY WHATS CRACKALACKIN"  
+" ACEHIKLNRSTWY"  
+ghci> nub "HEY WHATS CRACKALACKIN"  
+"HEY WATSCRKLIN"  
+
+---------------
+Making custom types and typeclasses
+
+Data types and Value Constructors
+
+keyword `data` means defining a new data type
+
+data Bool = False | True  -- the part _after_ `=` are value constructors
+
+data Shape = Circle Float Float Float | Rectangle Float Float Float Float 
+- the `Circle` value constructor has 3 fields, which take floats
+
+-- we could check the type of a value constructor (but not the data type itself!)
+ghci> :t Circle  
+Circle :: Float -> Float -> Float -> Shape  
+ghci> :t Rectangle  
+Rectangle :: Float -> Float -> Float -> Float -> Shape 
+-- to let our Value Constructor print itself when called, we derive from `show` --
+data Shape = Circle Float Float Float | Rectangle Float Float Float Float deriving (Show)  
+
+-- Make a Point type
+-- We use the same name for data type as the value constructor
+-- since there's only one value constructor
+data Point = Point Float Float deriving (Show)  
+data Shape = Circle Point Float | Rectangle Point Point deriving (Show)  
+
+ghci> surface (Rectangle (Point 0 0) (Point 100 100))  
+10000.0  
+ghci> surface (Circle (Point 0 0) 24)  
+1809.5574  
+
+-- we could export all value constructors for a given type, with `..`
+module Shapes   
+( Point(..)  
+, Shape(..)  
+, surface  
+, nudge  
+, baseCircle  
+, baseRect  
+) where
+
+...
+
+---------------------
+Record Syntax
+
+we could use `record syntax` in value constructors, so that we could _get_ the 'data type' parameters easily (like getting member of a class instance)
+(Haskell creates functions that lookup fields in the data type)
+
+data Person = Person { firstName :: String  
+                     , lastName :: String  
+                     , age :: Int  
+                     , height :: Float  
+                     , phoneNumber :: String  
+                     , flavor :: String  
+                     } deriving (Show)  
+
+ghci> let guy = Person "Buddy" "Finklestein" 43 184.2 "526-2928" "Chocolate"  
+ghci> firstName guy -- <-- function auto created by Haskell 
+"Buddy"  
+ghci> height guy  
+184.2 
+
+---------------------
+Type Parameter
+
+data Maybe a = Nothing | Just a  -- 'a' here is a type parameter, it can be anything that Maybe can take
+-- value constructor takes value parameters
+-- type constructor takes type parameters
+i.e.
+Just 'a' has a type of Maybe Char
+Just 84 - a type of (Num t) => Maybe t
+
+*We usually use type parameters when the type that's contained inside the data type's various value constructors isn't really that important (generic type) for the type to work
+
+*Maybe Int is a concrete type (vs Maybe a)
+
+--
+data Vector a = Vector a a a deriving (Show)  -- do not do: data (Num a) => Vector a.. this limits the type param scope right at the start and is quite useless since we need to define (Num a) again anyways for each of the function
+  
+vplus :: (Num t) => Vector t -> Vector t -> Vector t  
+(Vector i j k) `vplus` (Vector l m n) = Vector (i+l) (j+m) (k+n)  
+  
+vectMult :: (Num t) => Vector t -> t -> Vector t  
+(Vector i j k) `vectMult` m = Vector (i*m) (j*m) (k*m)  
+  
+scalarMult :: (Num t) => Vector t -> Vector t -> t  
+(Vector i j k) `scalarMult` (Vector l m n) = i*l + j*m + k*n  
+
+
+---------------------
+Derived instances
+
+A type can be made an instance of a typeclass if it supports that behavior. 
+Example: the Int type is an instance of the Eq typeclass because the Eq typeclass defines behavior for stuff that can be equated.
+
+Typeclasses are more like interfaces (compared to 'classes' from C or Java)
+We dont make data (instances) from typeclasses, instead we make `data type`
+
+We make our type an instance of any of the following typeclasses: Eq, Ord, Enum, Bounded, Show, Read
+by using the `deriving` keyword
+
+--
+λ> :{
+Prelude| data Person = Person { firstName :: String  
+Prelude|                      , lastName :: String  
+Prelude|                      , age :: Int  
+Prelude|                      } deriving (Eq, Show, Read)  -- derived from (Eq, Show and Read)
+Prelude| :}
+λ> :info Person -- will be shown in `:info` as such
+data Person
+  = Person {firstName :: String, lastName :: String, age :: Int}
+  	-- Defined at <interactive>:36:1
+instance [safe] Read Person -- Defined at <interactive>:39:44
+instance [safe] Show Person -- Defined at <interactive>:39:38
+instance [safe] Eq Person -- Defined at <interactive>:39:34
+
+-- now we can compare, print and read a Person
+ghci> let mikeD = Person {firstName = "Michael", lastName = "Diamond", age = 43}  
+ghci> mikeD == mikeD  
+True
+ghci> "mikeD is: " ++ show mikeD  
+"mikeD is: Person {firstName = \"Michael\", lastName = \"Diamond\", age = 43}" 
+ghci> read "Person {firstName =\"Michael\", lastName =\"Diamond\", age = 43}" :: Person  -- remember
+Person {firstName = "Michael", lastName = "Diamond", age = 43}  
+ghci> read "Person {firstName =\"Michael\", lastName =\"Diamond\", age = 43}" == mikeD -- no need to specify if implicit 
+True  
+
+--
+Enum typeclass is for things that have predecessors and successors
+Bounded is for things that have a lowest possible value and highest possible value
+
+-- also take care that the value constructors are nullary like below
+data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday   
+           deriving (Eq, Ord, Show, Read, Bounded, Enum)  
+
+ghci> show Wednesday  
+"Wednesday"  
+ghci> read "Saturday" :: Day  
+Saturday  
+ghci> Saturday > Friday  
+True  
+ghci> Monday `compare` Wednesday  
+LT  
+ghci> minBound :: Day  
+Monday  
+ghci> maxBound :: Day  
+Sunday  
+ghci> succ Monday  
+Tuesday  
+ghci> pred Saturday  
+Friday  
+ghci> [Thursday .. Sunday]  
+[Thursday,Friday,Saturday,Sunday]  
+ghci> [minBound .. maxBound] :: [Day]  
+[Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday]  
+
+------------------
+Type synonyms
+
+we use this, when we want our types to be more descriptive
+
+type String = [Char] 
+
+type PhoneBook = [(String,String)]  -- so we can say
+phoneBook :: PhoneBook -- instead of phoneBook :: [(String,String)] 
+
+we can go further
+type PhoneNumber = String  
+type Name = String  
+type PhoneBook = [(Name,PhoneNumber)]  
+
+-- so our type declaration could look very readable --
+inPhoneBook :: Name -> PhoneNumber -> PhoneBook -> Bool  
+inPhoneBook name pnumber pbook = (name,pnumber) `elem` pbook  
+
+Type synonyms (and types generally) can only be used in the type portion of Haskell (after :: portion)
+
+type synonyms can be parameterized
+type AssocList k v = [(k,v)] 
+
+they can also be partically parameterized
+type IntMap v = Map Int v 
+type IntMap = Map Int   -- like so 
+
+λ> Map.fromList[(1,3),(4,5)] :: IntMap Int
+fromList [(1,3),(4,5)]
+
+----
+data Either a b = Left a | Right b deriving (Eq, Ord, Read, Show)  
+-- this provides a result type of Either a b, where a is some sort of type that can tell us something about the possible failure and b is the type of a successful computation
+(or vice versa)
+-- as compare to Maybe a, where the Nothing value doesnt tell us anything about failure
+
+look at LockerLookup.hs module for an example
+
+---------------------------
+Recursive data structures
+
+Value constructor of some type can contain the same type in it's constructor, i.e. for data structure that is recursive (it contains smaller version of itself) like a list or a binary tree (any search tree) 
+
+for e.g. 3:(4:(5:6:[])) -- a list if just many smaller versions of list
+
+-- we can define some special characters as `infix`, which later used in the constructor
+
+infixr 5 :-:         -- infixr is the fixity declarations 
+data List a = Empty | a :-: (List a) deriving (Show, Read, Eq, Ord)  
+
+ghci> 3 :-: 4 :-: 5 :-: Empty  
+(:-:) 3 ((:-:) 4 ((:-:) 5 Empty)) -- like a list but using :-: and right associative
+
+A fixity states how tightly the operator binds and whether it's left-associative or right-associative
+
+-- *'s fixity is infixl 7 * and +'s fixity is infixl 6
+notice 7 > 6, so * has higher precedence than + and both are left-associative
+
+(4 * 3 * 2 is (4 * 3) * 2)
+5 * 4 + 3 is (5 * 4) + 3
+
+--
+
+look at the BinaryTree.hs example
+
+-----------------------------
+Typeclasses
+class Eq a where  
+    (==) :: a -> a -> Bool  
+    (/=) :: a -> a -> Bool  
+    x == y = not (x /= y)  -- these r not redundant, these vice versa cases are implemented
+    x /= y = not (x == y)  -- such that type instances can implement either == or /= (minimal) case
+
+`class` is for defining new typeclasses and 
+`instance` is for making our types instances of typeclasses
+
+compare this with above, 'class Eq a where' says that 'a' plays the role of whichever type that will be made an instance later on
+
+data TrafficLight = Red | Yellow | Green  
+instance Eq TrafficLight where  -- instance declaration, 'TrafficLight' replace the 'a' with the actual type -- can think as data types 'extend' from Typeclass
+    Red == Red = True  
+    Green == Green = True  
+    Yellow == Yellow = True  
+    _ == _ = False  -- we can do this because Eq typeclass already implemented both vice versa cases 
+
+instance Show TrafficLight where  
+    show Red = "Red light" -- just deriving (Show) would directly translate the value constructor 'Red' 
+    show Yellow = "Yellow light"  
+    show Green = "Green light" 
+
+ghci> Red == Red  
+True  
+ghci> Red == Yellow  
+False  
+ghci> Red `elem` [Red, Yellow, Green]  
+True  
+ghci> [Red, Yellow, Green]  
+[Red light,Yellow light,Green light]   
+
+-- we could have just derive from (Eq, Show), but here for education purpose
+
+--
+subclassing
+
+class (Eq a) => Num a where  -- basically, we cram in a class constraint (Eq a) =>
+   ... 
+-- we state that type 'a' must be an instance of Eq before it can be instance of Num (hence, type Num must be a subclass of Eq)
+
+--
+here we require that (Maybe m) as concrete type before being instantiated with Eq (as parameter) and we also require the constraint that m is a type of Eq (since Maybe m might not be equatable if not so!)
+instance (Eq m) => Eq (Maybe m) where  
+    Just x == Just y = x == y  
+    Nothing == Nothing = True  
+    _ == _ = False
+
+--
+imaginary hierarchy
+
+typeclass   (e.g Eq, Show, Ordering ...)
+   -> (data) type  (e.g Bool, Int, Char, Maybe, Either ...)
+      ->  value       (e.g True, False, Just, Nothing, Left, Right..)
+
+
+--------------------
+Functor typeclass
+
+class Functor f where  
+    fmap :: (a -> b) -> f a -> f b  
+
+like map, but works on more data types constructor (that's what `f` stands for)
+
+map :: (a -> b) -> [a] -> [b]  
+ghci> fmap (*2) [1..3]  -- works like map on list, a list `[]` is a type constructor
+[2,4,6]  
+ghci> map (*2) [1..3]  
+[2,4,6]  
+
+--works on data type Maybe
+instance Functor Maybe where  
+    fmap f (Just x) = Just (f x)  
+    fmap f Nothing = Nothing 
+
+ghci> fmap (*2) (Just 200)  
+Just 400  
+ghci> fmap (*2) Nothing  
+Nothing 
+
+*Functor typeclass wants a type constructor that takes only one type parameter 
+So if we want to apply Functor typeclass on a type which takes 2 parameters like Either a b, we need to ap it to a partial Either a
+
+data Either a b = Left a | Right b  
+instance Functor (Either a) where   
+    fmap f (Right x) = Right (f x)  
+    fmap f (Left x) = Left x  -- the first parameter `a` couldnt change, so f is not applied here
+
+instance Functor (Map k) where
+  fmap f m  = map f m
+
+λ> fmap (++ "eh") $ Map.fromList(list)
+fromList [(1,"abceh"),(2,"cdfeh"),(3,"egheh")]
+
+
+--------------------------
+Kinds
+
+types are the labels of values and kinds are the labels of types
+
+data Maybe a = Nothing | Just a
+
+λ> :t Nothing   -- we can query 'type' of a value (what 'data' type of value is that?)
+Nothing :: Maybe a
+λ> :t Just
+Just :: a -> Maybe a
+λ> :k Maybe   -- we query 'kind' of a type (data type) (what kind of 'data' type is that?)
+Maybe :: * -> *
+
+
+
+----------
+My System stats
+
+All locally installed ghc stuffs (installed using cabal-install?)
+alvinvoo:bin$ cd /opt/ghc/bin 
+alvinvoo:bin$ ls -lrts
+total 0 
+0 lrwxrwxrwx 1 root root 28 Dec 282019 runghc -> /etc/alternatives/opt-runghc 
+0 lrwxrwxrwx 1 root root 29 Dec 282019 haddock -> /etc/alternatives/opt-haddock 
+0 lrwxrwxrwx 1 root root 29 Dec 282019 ghc-pkg -> /etc/alternatives/opt-ghc-pkg 
+0 lrwxrwxrwx 1 root root 26 Dec 282019 ghci -> /etc/alternatives/opt-ghci 
+0 lrwxrwxrwx 1 root root 25 Dec 282019 ghc -> /etc/alternatives/opt-ghc 
+0 lrwxrwxrwx 1 root root 31 Dec 282019 cabal -> /etc/alternatives/opt-ghc-cabal 
+0 lrwxrwxrwx 1 root root 25 Jan 192020 runghc-8.8.2 -> ../8.8.2/bin/runghc-8.8.2
+0 lrwxrwxrwx 1 root root 30 Jan 192020 haddock-ghc-8.8.2 -> ../8.8.2/bin/haddock-ghc-8.8.2
+0 lrwxrwxrwx 1 root root 26 Jan 192020 ghc-pkg-8.8.2 -> ../8.8.2/bin/ghc-pkg-8.8.2
+0 lrwxrwxrwx 1 root root 23 Jan 192020 ghci-8.8.2 -> ../8.8.2/bin/ghci-8.8.2
+0 lrwxrwxrwx 1 root root 22 Jan 192020 ghc-8.8.2 -> ../8.8.2/bin/ghc-8.8.2
+
+Separately there's Stack, which manages the individual projects and have a much older
+cabal and ghc
+/home/alvinvoo/.stack/programs/x86_64-linux/ghc-8.6.5
+alvinvoo:ghc-8.6.5$ ls -lrts
+total 12
+4 drwxr-xr-x 3 alvinvoo alvinvoo 4096 Jan 20  2020 lib
+4 drwxr-xr-x 2 alvinvoo alvinvoo 4096 Jan 20  2020 bin
+4 drwxr-xr-x 4 alvinvoo alvinvoo 4096 Jan 20  2020 share
+lvinvoo:bin$ ls -lrts
+total 32
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  398 Jan 20  2020 hp2ps
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  104 Jan 20  2020 ghci-8.6.5
+0 lrwxrwxrwx 1 alvinvoo alvinvoo   10 Jan 20  2020 ghci -> ghci-8.6.5
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  425 Jan 20  2020 haddock-ghc-8.6.5
+0 lrwxrwxrwx 1 alvinvoo alvinvoo   17 Jan 20  2020 haddock -> haddock-ghc-8.6.5
+4 -rwxr-xr-x 1 alvinvoo alvinvoo 1135 Jan 20  2020 hsc2hs
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  466 Jan 20  2020 ghc-pkg-8.6.5
+0 lrwxrwxrwx 1 alvinvoo alvinvoo   13 Jan 20  2020 ghc-pkg -> ghc-pkg-8.6.5
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  396 Jan 20  2020 hpc
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  442 Jan 20  2020 runghc-8.6.5
+0 lrwxrwxrwx 1 alvinvoo alvinvoo    6 Jan 20  2020 runhaskell -> runghc
+0 lrwxrwxrwx 1 alvinvoo alvinvoo   12 Jan 20  2020 runghc -> runghc-8.6.5
+4 -rwxr-xr-x 1 alvinvoo alvinvoo  434 Jan 20  2020 ghc-8.6.5
+0 lrwxrwxrwx 1 alvinvoo alvinvoo    9 Jan 20  2020 ghc -> ghc-8.6.5
+alvinvoo:bin$ pwd
+/home/alvinvoo/.stack/programs/x86_64-linux/ghc-8.6.5/bin
+// this IS the STACK's cabal packages / directory
+alvinvoo:hackage.haskell.org$ pwd
+/home/alvinvoo/.cabal/packages/hackage.haskell.org
+
+
+
+
+
+
+
+
+
+
+

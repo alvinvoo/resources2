@@ -1,0 +1,251 @@
+
+
+Broker
+  -> Exchange - routing the messages to different queues with help of 1. bindings and 2. routing keys
+       |
+       |  Bindings..
+       V
+  -> Queues ..
+
+
+Message flow in RabbitMQ
+
+1. The producer publishes a message to an exchange. When creating an exchange, the type must be specified. This topic will be covered later on.
+2. The exchange receives the message and is now responsible for routing the message. The exchange takes different message attributes into account, such as the routing key, depending on the exchange type.
+3. Bindings must be created from the exchange to queues. In this case, there are two bindings to two different queues from the exchange. The exchange routes the message into the queues depending on message attributes.
+4. The messages stay in the queue until they are handled by a consumer
+5. The consumer handles the message.
+
+4 types of exchanges
+Direct  Topic  Fanout  Headers
+
+Direct: The message is routed to the queues whose binding key exactly matches the routing key of the message. For example, if the queue is bound to the exchange with the binding key pdfprocess, a message published to the exchange with a routing key pdfprocess is routed to that queue.
+Fanout: A fanout exchange routes messages to all of the queues bound to it.
+Topic: The topic exchange does a wildcard match between the routing key and the routing pattern specified in the binding.
+Headers: Headers exchanges use the message header attributes for routing.
+
+
+Key concepts:
+Producer: Application that sends the messages.
+Consumer: Application that receives the messages.
+Queue: Buffer that stores messages.
+Message: Information that is sent from the producer to a consumer through RabbitMQ.
+Connection: A TCP connection between your application and the RabbitMQ broker.
+Channel: A virtual connection inside a connection. When publishing or consuming messages from a queue - it's all done over a channel.
+Exchange: Receives messages from producers and pushes them to queues depending on rules defined by the exchange type. To receive messages, a queue needs to be bound to at least one exchange.
+Binding: A binding is a link between a queue and an exchange.
+Routing key: A key that the exchange looks at to decide how to route the message to queues. Think of the routing key like an address for the message.
+AMQP: Advanced Message Queuing Protocol is the protocol used by RabbitMQ for messaging.
+Users: It is possible to connect to RabbitMQ with a given username and password. Every user can be assigned permissions such as rights to read, write and configure privileges within the instance. Users can also be assigned permissions for specific virtual hosts.
+Vhost, virtual host: Provides a way to segregate applications using the same RabbitMQ instance. Different users can have different permissions to different vhost and queues and exchanges can be created, so they only exist in one vhost.
+
+A binding is a relationship between an exchange and a queue. This can be simply read as: the queue is interested in messages from this exchange
+The meaning of a binding (routing) key depends on the exchange type. 
+fanout - ignore the value
+direct - a message goes to the queues whose binding key exactly matches the routing key of the message.
+
+-------
+rabbitmq default port is 5672
+
+-- can check running ports like this
+cat /etc/services | grep 5672
+amqp             5672/tcp
+amqp             5672/udp
+amqp             5672/sctp
+
+-- to enable HTTP admin page
+rabbitmq-plugins enable rabbitmq_management
+
+Then navigate to <ip_address_of_host>:15672. Default credentials are username:guest password:guest
+
+-- to list all queues
+sudo rabbitmqctl list_queues
+
+-- for work queues, by default RabbitMQ will do round-robin dispatching
+-- if multiple workers subscribed to same queue, RabbitmQ will dispatch in round-robin
+
+-- to list all exchanges
+sudo rabbitmqctl list_exchanges
+
+-----
+Elixir client
+
+
+iex> {:ok, conn} = AMQP.Connection.open()  # can open to different host
+# {:ok, %AMQP.Connection{pid: #PID<0.165.0>}}
+
+iex> {:ok, chan} = AMQP.Channel.open(conn)
+# {:ok, %AMQP.Channel{conn: %AMQP.Connection{pid: #PID<0.165.0>}, pid:
+# #PID<0.177.0>}
+iex> AMQP.Queue.declare(chan, "test_queue")
+# {:ok, %{consumer_count: 0, message_count: 0, queue: "test_queue"}}
+iex> AMQP.Exchange.declare(chan, "test_exchange")  # we could setup an exchange and bind it to a queue
+# :ok
+iex> AMQP.Queue.bind(chan, "test_queue", "test_exchange")
+# :ok
+iex> AMQP.Basic.publish(chan, "test_exchange", "", "Hello, World!")
+# :ok
+iex> {:ok, payload, meta} = AMQP.Basic.get(chan, "test_queue")
+iex> payload
+# "Hello, World!"
+iex> AMQP.Queue.subscribe(chan, "test_queue", fn payload, _meta -> IO.puts("Received: #{payload}") end)
+# {:ok, "amq.ctag-5L8U-n0HU5doEsNTQpaXWg"}
+iex> AMQP.Basic.publish(chan, "test_exchange", "", "Hello, World!") # we could publish via the exchange
+# :ok
+# Received: Hello, World!
+iex> AMQP.Basic.publish(chan, "", "test_queue", "boo") # or, we could publish with a default exchange (empty string) and directly with routing key as the queue's name
+:ok
+Received: boo
+
+---
+Message acknowledgement
+-- with consumer ack turned on, if a worker dies, all unacknowledged messages will be redelivered
+
+-- if consumer ack is turned on, its a must to send ACK back to channel after processing 
+
+ def wait_for_messages(channel) do
+     receive do # this checks if there's message in current process mailbox
+           {:basic_deliver, payload, meta} ->
+
+            # some processing ..
+            # it is a must to send ACK back to the channel here
+            # delivery_tag is just a running number of the messages sent by
+            # producer
+            AMQP.Basic.ack(channel, meta.delivery_tag)
+
+# meta struct
+%{app_id: :undefined, cluster_id: :undefined, consumer_tag:
+%"amq.ctag-HdV2nPwGLXMsrrdxhYBHnw", content_encoding: :undefined, content_type:
+%:undefined, correlation_id: :undefined, delivery_tag: 1, exchange: "",
+%expiration: :undefined, headers: :undefined, message_id: :undefined,
+%persistent: true, priority: :undefined, redelivered: false, reply_to:
+%:undefined, routing_key: "task_queue", timestamp: :undefined, type: :undefined,
+%user_id: :undefined}
+
+
+# by default, pid is nil (self()), ack is on
+AMQP.Basic.consume(channel, "task_queue")
+
+-- if ACK is not sent back, Rbmq will consume more n more memory with unacked messages
+
+-- to list out (forgotten) unacknowledged messages
+sudo rabbitmqctl list_queues name messages_ready messages_unacknowledged
+
+---
+Message durability
+-- when rbmq quits or crashes, it will forget all queues and messages
+-- to ensure messages are not lost: we need to mark both the queue and messages as durable.
+
+AMQP.Queue.declare(channel, "hello", durable: true)  # RabbitMQ doesn't allow you to redefine an existing queue with different parameters and will return an error to any program that tries to do that.
+
+AMQP.Queue.declare(channel, "task_queue", durable: true)
+
+# tells rbmq to save the massage to disk
+AMQP.Basic.publish(channel, "", "task_queue", message, persistent: true)
+
+# rabbitmq store messages in
+# /var/lib/rabbitmq/mnesia/rabbit@localhost/msg_stores
+
+root@rabbitmq-staging:/var/lib/docker/volumes/rabbitmq_rabbitmq_data/_data/rabbitmq/mnesia# ls -lrts
+total 16
+4 -rw-r--r-- 1 liv3ly root  148 May 20 06:40 rabbit@localhost-feature_flags
+4 -rw-r--r-- 1 liv3ly root    2 Aug 16 04:34 rabbit@localhost.pid
+4 drwxr-xr-x 8 liv3ly root 4096 Aug 16 04:34 rabbit@localhost-plugins-expand
+4 drwxr-xr-x 4 liv3ly root 4096 Aug 16 04:34 rabbit@localhost
+
+# if need a stronger guarantee, we can use publisher confirms
+
+# Sets the message prefetch count or prefetch size (in bytes).
+# This allows you to limit the number of unacknowledged messages. 
+# if prefetch_count is 1 means dont process more than 1 message at any one time
+AMQP.Basic.qos(channel, prefetch_count: 1)
+
+To get round-robin behavior between consumers consuming from the same queue on different connections, 
+set the prefetch count to 1, and the next available message on the server will be delivered to the next available consumer.
+
+If your consumer work time is reasonably consistent and not much greater than two times your network round trip time, you will see significant throughput improvements starting with a prefetch count of 2 or slightly greater as described by benchmarks on RabbitMQ.
+
+-----
+Direct exchange
+
+"direct_logs" is the exchange name
+pub:-
+AMQP.Basic.publish(channel, "direct_logs", binding_key, message)
+
+sub:-
+
+# randomly assigned queue name
+# only one consumer per queue, once consumer connection is closed, queue is
+# deleted
+AMQP.Queue.declare(channel, "", exclusive: true)
+
+AMQP.Queue.bind(channel, queue_name, "direct_logs", routing_key: binding_key)
+
+AMQP.Basic.consume(channel, queue_name, nil, no_ack: true)
+
+-----
+Topic exchange
+A few valid routing key examples: "stock.usd.nyse", "nyse.vmw", "quick.orange.rabbit". There can be as many words in the routing key as you like, up to the limit of 255 bytes.
+There are two important special cases for binding keys:
+    * (star) can substitute for exactly one word.
+    # (hash) can substitute for zero or more words.
+
+When a queue is bound with "#" (hash) binding key - it will receive all the messages, regardless of the routing key - like in fanout exchange.
+When special characters "*" (star) and "#" (hash) aren't used in bindings, the topic exchange will behave just like a direct one.
+
+-----
+to list the exchanges
+sudo rabbitmqctl list_exchanges
+
+A default exchange is created if not specified 
+
+to list down all the exchange-queue bindings
+sudo rabbitmqctl list_bindings
+
+bindings can take an extra `routing_key` param
+meaning of a binding key depends on exchange type, fanout exchanges simply ignores it
+AMQP.Queue.bind(channel, queue_name, exchange_name, routing_key: "black")
+-----
+RPC
+what if we need to run a function on a remote computer and wait for the result? 
+
+*Sphagetti code warning:
+Bearing that in mind, consider the following advice:
+
+    Make sure it's obvious which function call is local and which is remote.
+    Document your system. Make the dependencies between components clear. *Dependency hell
+    Handle error cases. How should the client react when the RPC server is down for a long time?
+
+When in doubt avoid RPC. If you can, you should use an asynchronous pipeline - instead of RPC-like blocking, results are asynchronously pushed to a next computation stage.
+
+--
+Correlation id 
+If there's only one single callback queue per client (instead of per RPC request)
+We need to know which response belongs to which request, which the correlation_id property is used
+Unknow correlation_id is ignored, RPC should ideally be idempotent
+
+          -> Request (with reply_to=xxx, correlation_id=abc)   -> RPC_QUEUE  
+Client                                                                      -> Server (RPC worker)
+          <- Reply correlation_id=abc  <- reply_to=xxx
+
+
+Server 1) Sub to channel (fixed queue xxx) 2) Wait for Client message to process - then pub to channel reply_to queue with correlation_id 
+Client 1) Sub to channel (reply_to queue, for Server return message + correlation_id)  3) Pub to channel (fixed queue xxx + correlation_id)
+
+Some questions:
+
+    How should the client react if there are no servers running?
+    Should a client have some kind of timeout for the RPC?
+    If the server malfunctions and raises an exception, should it be forwarded to the client?
+    Protecting against invalid incoming messages (eg checking bounds) before processing.
+
+----
+Publisher Confirm
+i think mean after customer response (ack), publisher needs to confirm back
+
+
+
+
+
+
+

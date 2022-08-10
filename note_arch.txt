@@ -1,0 +1,92 @@
+pacman -S <package name>   (-S stands for --sync)
+pacman -Ss <package name>  (-s stands for --search)
+
+maintenance:
+
+1. update system
+pacman -Syy 
+-S: sync packages
+-y: download fresh package database
+y: the second y forces the download even if it is upto date
+
+2. upgrade system (all the out of date packages)
+pacman -Syu
+
+Sometimes there will be marginal trust keyring (outdated issue)
+So need to download fresh keyring first
+pacman -Sy archlinux-keyring && pacman -Su
+
+3. upgrade (or install) single package (before install, better to run command 2.)
+pacman -S firefox
+
+4. search package
+pacman -Ss firefox
+
+5. search package with dependencies
+pacman -Si package
+
+5. search which package contains a given file
+pacman -F ssh-keygen
+
+6. Download package w/o installing
+pacman -Sw smplayer
+(will be kept at /var/cache/pacman/pkg - defined in /etc/pacman.conf)
+
+7. Remove package
+pacman -R package
+
+pacman -Rcns package (to remove all dependencies)
+
+pacman -Qdtq (to see orphaned package dependencies)
+
+sudo pacman -R $(pacman -Qdtq) (to remove them)
+
+
+7. Show details about installed package and dependencies
+pacman -Qi package
+
+8. Show complete list of installed packages
+pacman -Q
+
+9. Clean up system
+first check the cache dir
+du -h /var/cache/pacman/pkg
+
+pacman -Sc (to clean up cache)
+
+pacman -Scc (to clear all cache files)
+
+Files:
+pacman settings - /etc/pacman.conf
+cached files dir - /var/cache/pacman/pkg
+database file dir - /var/lib/pacman/sync
+all command logs - /var/log/pacman.log
+
+installing other languages:
+https://wiki.archlinux.org/title/Localization
+https://www.linuxsecrets.com/archlinux-wiki/wiki.archlinux.org/index.php/Fcitx.html
+
+---
+SUDO
+sudo -iu postgres (to sudo and switch to `postgres` user)
+
+---
+to manager network via terminal manually
+nmcli
+nmtui
+
+
+---
+for C920 webcam
+v4l2-ctl --list-devices
+v4l2-ctl -d /dev/video6 --list-ctrls
+
+v4l2-ctl -d /dev/video6 --set-ctrl=exposure_auto=1
+v4l2-ctl -d /dev/video6 --set-ctrl=focus_auto=0
+
+
+---
+KDE
+run below to update application menu
+kbuildsycoca5
+

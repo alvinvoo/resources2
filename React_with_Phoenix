@@ -1,0 +1,126 @@
+State-management technique:
+
+1. Component State with Props (no good in deeply passing props)
+2. Redux (store)
+3. React Context (native to React. Allow applications to pass state to deeply nested child components) - https://reactjs.org/docs/context.html
+4. React Hooks
+Hooks allow you to use state, contexts, and life cycle management without writing class-based components. Hooks were introduced primarily to allow for easier code re-use than class-based components allow.
+https://reactjs.org/docs/hooks-overview.html
+import React, { useState } from 'react';
+function Example() {
+  // Declare a new state variable, which we'll call "count"  
+  const [count, setCount] = useState(0);
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}
+
+different hooks:
+useState
+useEffect
+useContext
+useReducer
+
+how to factor well:
+container components - can wire up logic, configure other components, pull data from other sources, or set up a context.
+presentation components - renders the user interface and accepts input events from the user
+
+--
+reminder of lifecyle: https://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/
+useEffect
+to handle side effects - to deal with componentDidMount, componentDidUpdate, and componentWillUnmount combined.
+2 common side effects in React components - 
+    1. those that dont require cleanup
+    2. those that do require cleanup
+
+useEffect runs both after the _first_ render and after every update
+effects happen "after render"
+
+1. Effect without cleanup
+
+import React, { useState, useEffect } from 'react';
+function Example() {
+  const [count, setCount] = useState(0);
+
+  // count initial set using the `const count` above
+  // and then after every render, it will re-read the updated `count` value
+  // again - since its going to be different after every render
+
+  useEffect(() => { document.title = `You clicked ${count} times`; });
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}
+
+2. Effect with cleanup
+
+import React, { useState, useEffect } from 'react';
+
+function FriendStatus(props) {
+  const [isOnline, setIsOnline] = useState(null);
+
+  useEffect(() => {    
+      function handleStatusChange(status) {      
+          setIsOnline(status.isOnline);    
+      }    
+
+      ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);    
+
+      // Specify how to clean up after this effect:   
+      return function cleanup() {      
+          ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange); 
+     };  
+  });
+
+  if (isOnline === null) {
+    return 'Loading...';
+  }
+  return isOnline ? 'Online' : 'Offline';
+}
+
+React performs the cleanup 1) when component unmounts, 2) also cleans up effects from previous render before running the effects next time (every re-render)
+
+--
+useRef - like a box that hold a mutable value in its .current property
+It’s handy for keeping any mutable value around similar to how you’d use instance fields in classes.
+The only difference between useRef() and creating a {current: ...} object yourself is that useRef will give you the same ref object on every render (it will sustain the value).
+
+
+------
+
+about my_react_example..
+
+Pings.js
+onPing 
+onPingSubscription(pingSubscriptions)(fn)
+sendPing
+sendPing(pingChannel)(fn)  == fn here is appendDataToMessages
+
+all the 'messages' are being joined and displayed in the textarea at line 44
+
+--
+the return teardown.. is returning the
+..
+    return () => {
+      const newSubs = pingSubscriptions.current.filter((pingFn) => fn !== pingFn)
+      console.debug("teardown?" + newSubs) // newSubs seems to be empty everytime
+      pingSubscriptions.current = newSubs
+    }
+
+of onPingSubscription
+but i still dunno why need the filter part above
+and also this part
+..
+    pingSubscriptions.current = [fn, ...pingSubscriptions.current]
+
+coz seems like pingSubscriptions.current = fn alone would work as well

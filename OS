@@ -1,0 +1,41 @@
+BIOS Basic Input/Output Software
+The easiest place for BIOS to find our OS is in the first sector of one of the disks
+(i.e. Cylinder 0, Head 0, Sector 0), known as the boot sector.
+The last two bytes of an intended boot sector must be set to the magic number 0xaa55.
+The x86 architecture handles multi-byte values in little-endian format, whereby less significant bytes proceed more significant bytes
+
+512 bytes boot sector
+e9 fd ff 00 00 00 00 00 00 00 00 00 00 00 00 00  # each byte is 8 bits
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+* truncated *
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 55 aa
+
+a bit is a binary digit
+in binary - 11111111 (8 bit) = 255
+which is equal to hex - FF = 255
+
+due to little-endianness of x86, the 512 byte boot sector is read in reverse order
+with opcodes 0xe9, 0xfd and 0xff performing endless jump (loop - doing nothing)
+
+Note that, when you write an image file to some bootable medium, that does not mean you add the file to the medium’s file system: you must use an appropriate tool to write directly to the medium
+in a low-level sense (e.g. directly to the sectors of a disk).
+
+Can use `od`, `hexdump` or ghex editor to view the hex output
+[alvinvoo@alvinvoo-lenovo os]$ hexdump -C boot_sec.bin
+00000000  e9 fd ff 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+00000010  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+000001f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 55 aa  |..............U.|
+00000200
+
+[alvinvoo@alvinvoo-lenovo os]$ od -t x1 -A n boot_sect_2.bin
+ eb fe 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+*
+ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 55 aa
+
+# use qemu to load the boot sector
+qemu-system-x86_64 boot_sect_2.bin
+
+## First CPU must boot into 16-bit real mode (for backward compatibility with the oldest CPU in Intel family: Intel 8086
+before explicitly to switch up into the more advanced 32-bit (or 64-bit) protected mode

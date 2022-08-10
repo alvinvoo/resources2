@@ -1,0 +1,2775 @@
+mix phx.new <Project Name>
+can pass some control flags
+
+mix phx.new <Project Name> --no-webpack  # to not install node modules
+mix phx.new <Project Name> --no-ecto # not install ecto to comm with database
+
+
+Websockets:
+
+Chrome DevTool > Network 
+> websocket?token=undefined&vsn=2.0.0    -- WebSocket connections
+> websocket?vsn=2.0.0   -- code live reloader
+
+A WebSocket starts its life as a normal web request that becomes “upgraded” to a WebSocket. 
+
+curl 'ws://localhost:4000/socket/websocket?token=undefined&vsn=2.0.0' \
+  -H 'Pragma: no-cache' \
+  -H 'Origin: http://localhost:4000' \
+  -H 'Accept-Language: en,th;q=0.9,vi;q=0.8,id;q=0.7,en-US;q=0.6' \
+  -H 'Sec-WebSocket-Key: bydI5pp+wYC/rklFLYk2dQ==' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36' \
+  -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits' \
+  -H 'Cache-Control: no-cache' \
+  -H 'Connection: Upgrade' \
+  -H 'Sec-WebSocket-Version: 13' \
+  --compressed
+
+connecting with curl -i (with HTTP Header) will show below response
+HTTP/1.1 101 Switching Protocols  --> Which means the connecting HTTP GET is upgraded to a websocket
+cache-control: max-age=0, private, must-revalidate
+connection: Upgrade
+date: Tue, 27 Jul 2021 09:09:58 GMT
+sec-websocket-accept: aWUQQQJ6q7uJ5i2Snv6wvUZgwsI=
+server: Cowboy
+upgrade: websocket
+
+To summarize, a WebSocket connection follows this request flow:
+
+1. Initiate a GET HTTP(S) connection request to the WebSocket endpoint.
+2. Receive a 101 or error from the server.
+3. Upgrade the protocol to WebSocket if 101 is received.
+4. Send/receive frames over the WebSocket connection.
+
+Clients send heartbeat-data messages to the Phoenix Server they’re connected to every 30 seconds. The Phoenix WebSocket process will close a connection if it doesn’t receive a ping within a timeout period, with 60 seconds the default
+
+----
+Phoenix.Socket
+Phoenix.Channel
+Phoenix.PubSub
+
+
+Channels
+Channels are the real-time entry points to our application’s logic and where most of an application’s request handling code lives. A Channel has several different responsibilities to enable real-time applications:
+
+Accept or reject a request to join.
+Handle messages from the client.
+Handle messages from the PubSub.
+Push messages to the client.
+
+A Socket’s responsibilities involve connection handling and routing of requests to the correct Channel. A Channel’s responsibilities involve handling requests from a client and sending data to a client. In this way, a Channel is similar to a Controller in the MVC (Model-View-Controller) design pattern.
+
+# need to first join the channel first, before calling `handle_in` to get
+# response
+alvinvoo:hello_sockets$ wscat -c 'ws://localhost:4000/socket/websocket?vsn=2.0.0'
+Connected (press CTRL+C to quit)
+> ["1","2","ping","ping",{}]
+< [null,"2","ping","phx_reply",{"response":{"reason":"unmatched topic"},"status":"error"}]
+> ["1","1","ping","phx_join",{}]
+< ["1","1","ping","phx_reply",{"response":{},"status":"ok"}]
+> ["1","2","ping","ping",{}]
+< ["1","2","ping","phx_reply",{"response":{"ping":"pong"},"status":"ok"}]
+# if we error out, then need to rejoin again
+> ["1","2","ping","ping2",{}]
+< ["1","1","ping","phx_error",{}]
+> ["1","2","ping","ping",{}]
+< [null,"2","ping","phx_reply",{"response":{"reason":"unmatched topic"},"status":"error"}]
+# need to rejoin again, before the reponse is handle
+> ["1","2","ping","phx_join",{}]
+< ["1","2","ping","phx_reply",{"response":{},"status":"ok"}]
+> ["1","2","ping","ping",{}]
+< ["1","2","ping","phx_reply",{"response":{"ping":"pong"},"status":"ok"}]
+
+
+It is up to the client to respond to the "phx_error" response by ensuring that it rejoins the Channel and responds to the connection drop by reconnecting. 
+The official JavaScript client handles all of this for you so you don’t need to worry about the orchestration of the connection. Any non-official clients will need to handle this properly, however, or they could end up being connected to the Socket but not connected to a Channel.
+
+
+channel "ping", HelloSocketsWeb.PingChannel   -- "ping" here is the `Topic`
+it is best practice to use a "topic:subtopic" format for the topic name.
+
+# if we have a wild card for subtopic
+channel "ping:*", HelloSocketsWeb.PingChannel
+
+> ["1","2","ping:abc","phx_join",{}]
+< ["1","2","ping:abc","phx_reply",{"response":{},"status":"ok"}]
+> ["1","2","ping:abc","ping",{}]
+< ["1","2","ping:abc","phx_reply",{"response":{"ping":"pong"},"status":"ok"}]
+> ["1","2","ping:abcd","ping",{}]
+< [null,"2","ping:abcd","phx_reply",{"response":{"reason":"unmatched topic"},"status":"error"}]
+
+# Dynamic topic names are useful (think of query params)
+For example, the format "notifications:t-1:u-2" could be used to identify a notifications topic for user 2 on team 1
+
+
+[ <join ref> , <message ref>, <topic:subtopic:...>, <event>, <data payload or response>]
+
+Join Ref (owned by client)
+A unique string that matches what the client provided when it connected to the Channel. This helps prevent duplicate Channel subscriptions from the client. 
+In practice, this is a number that is incremented each time a Channel is joined.
+
+Message Ref (owned by client)
+A unique string provided by the client on every message. This allows a reply to be sent in response to a client message. 
+In practice, this is a number which is incremented each time a client sends a message.
+
+Topic
+The topic of the Channel.
+
+Event
+A string identifying the message. The Channel implementation can use pattern matching to handle different events easily.
+
+Payload
+A JSON encoded map (string) that contains the data contents of the message. The Channel implementation can use pattern matching on the decoded map to handle different cases for an event.
+
+PubSub:
+Client -> messages -> Channel
+Endpoint module -> broadcast -> Client
+
+Broadcasting:
+
+$ iex -S mix phx.server
+  Erlang/OTP 20 [erts-9.3.3.3]
+  
+  [info] Running HelloSocketsWeb.Endpoint with cowboy 2.6.3 at 0.0.0.0:4000
+  [info] Access HelloSocketsWeb.Endpoint at http://localhost:4000
+  Interactive Elixir (1.6.6) - press Ctrl+C to exit
+  Webpack is watching the files...
+We start our Phoenix server inside of iex by using the -S switch.
+
+  $ wscat -c 'ws://localhost:4000/socket/websocket?vsn=2.0.0'
+  connected (press CTRL+C to quit)
+  > ["1","1","ping","phx_join",{}]
+  < ["1","1","ping","phx_reply",{"response":{},"status":"ok"}]
+We connect to the "ping" Channel so that our message has a destination.
+
+  iex(1)> HelloSocketsWeb.Endpoint.broadcast("ping", "test", %{data: "test"})
+  :ok
+  iex(2)> HelloSocketsWeb.Endpoint.broadcast("other", "x", %{})
+  :ok
+
+< [null,null,"ping","test",{"data":"test"}]
+
+-------
+
+# for handling incoming ping
+  def handle_in("ping", _payload, socket) do
+    {:reply, {:ok, %{ping: "pong"}}, socket}
+  end
+
+# for intercepting outgoing broadcast 
+  intercept ["request_ping"]   # need to specify intercept macro
+
+
+  def handle_out("request_ping", payload, socket) do
+    # to handle only on broadcasting OUT
+    # intercept and change the socket (event name and data payload) before sending it back
+    # need to add intercept macro
+    push(socket, "send_ping", Map.put(payload, "from_node", Node.self()))
+    {:noreply, socket}
+  end
+
+-- 
+ 	$ iex -S mix phx.server
+ 	iex(1)> HelloSocketsWeb.Endpoint.broadcast("ping", "request_ping", %{})
+ 	:ok
+ 	$ wscat -c 'ws://localhost:4000/socket/websocket?vsn=2.0.0'
+ 	connected (press CTRL+C to quit)
+ 	> ["1","1","ping","phx_join",{}]
+ 	< ["1","1","ping","phx_reply",{"response":{},"status":"ok"}]
+ 	< [null,null,"ping","send_ping",{"from_node":"nonode@nohost"}]
+
+
+
+--------
+
+Client libraries:
+https://hexdocs.pm/phoenix/channels.html#client-libraries
+
+Client side:
+
+let channel = socket.channel("ping", {})
+channel.join()
+  .receive("ok", resp => { console.log("Joined ping", resp) })     
+  .receive("error", resp => { console.log("Unable to join ping", resp) })
+console.log("send ping")
+channel.push("ping") # channel push message buffering is 5 secs (in case DC)
+  .receive("ok", resp => console.log("receive", resp, " ", resp.ping))
+
+console.log("send pong")
+channel.push("pong")
+  .receive("ok", resp => console.log("won't happen"))
+  .receive("error", resp => console.log("won't happen yet"))
+  .receive("timeout", resp => console.log("pong message timeout", resp)) # timeout is 10 secs (in case no reply)
+
+
+--
+Broadcasting (vs Replies - to only the client sender)
+
+
+-------
+Access Restriction
+
+Authentication - prevents non-users from accessing application
+  -> Add authentication to Socket (Socket.connect/3)
+Authorization - prevents users from accessing each other's data
+  -> Add authorization to Channel and Topic  (Channel.join/3)
+
+--
+Authentication:
+The endpoint is the boundary where all requests to your web application start. It is also the interface your application provides to the underlying web servers.
+
+[Phoenix.Endpoint] -> Sockets / Static / Router and all other plugs -> Channels
+
+# how to sign a password with salt
+iex(2)> Phoenix.Token.sign(HelloSocketsWeb.Endpoint, "some salty eye tears", 1)
+"SFMyNTY.g2gDYQFuBgDAKf7yegFiAAFRgA.g3J5Ge81KyT-c9OxDlRfZkWtCbZ0ne7TtNbfwTa3g2E"
+
+SFMyNTY.g2gDYQFuBgDAKf7yegFiAAFRgA.g3J5Ge81KyT-c9OxDlRfZkWtCbZ0ne7TtNbfwTa3g2E
+this can be returned to client ID 1 as token
+(but.. how to login? with password?)
+
+JWT library - https://github.com/joken-elixir/joken
+
+--
+Authorization:
+We could have a Socket that stores the authenticated user ID in Socket state and allows a connection to occur. When a client attempts to join "user:1" Channel, but they are user ID 2, we should reject the Channel join request. The client should only have access to topics that are relevant to them. We can do that with Channel authorization.
+
+1. Socket state based (most preferred)
+   - store users'id or token when socket connection occurs (via id(..))
+   - this state then is available in Socket.assigns and can be used in Channel's 
+   join/3 function
+2. Parameter based
+   - pass parameters only when a Channel topic is joined
+   - let Channel authorize the topic based on the parameters (can be client's
+     auth token)
+
+1 is preferred becoz you can secure your application by passing a single token to the Server on Socket connection, rather than passing the token on every Channel join. This makes it much easier to write the code powering your authorization.
+
+*We can put anything we want in Socket.assigns. Any data that we add to Socket.assigns is for our Channel process only and won’t be seen by other Channel processes, even Channels that use the same Socket.
+
+-----
+
+When to use new Sockets, when to use new Channels?
+Each connected Socket adds one connection to the server, but each connected Channel adds zero new connections to the server.
+
+Sockets are a bit more expensive due to network connections and the heartbeat process.
+
+The heartbeat and additional connections mean that the cost of many idle Channels is less than the cost of many idle Sockets.
+
+Main consideration is still authentication. For e.g. User and Admin features should have 2 different sockets.
+
+As a general rule of thumb, use multiple Channels with a single Socket. Use multiple Sockets if your application has different authentication needs between different parts of the application. This approach leads to a system architecture with the lowest resource usage.
+
+# at client side - user can access socket with authentication
+let authSocket = new Socket("/auth_socket", {
+  params: {token: window.authToken}
+}
+
+# at client side - but when trying to join unauthorized channel, will have
+# unauthorized error
+	$ wscat -c 'ws://localhost:4000/auth_socket/websocket?vsn=2.0.0&token=SF..iM'
+ 	connected (press CTRL+C to quit)
+ 	> ["1","1","user:2","phx_join",{}]
+ 	< ["1","1","user:2","phx_reply",{"response":
+ 	  {"reason":"unauthorized"},"status":"error"}]
+ 	
+ 	> ["1","1","user:1","phx_join",{}]
+ 	< ["1","1","user:1","phx_reply",{"response":{},"status":"ok"}]
+
+# in js code 
+authSocket.onOpen(() => console.log("authSocket connected"))
+authSocket.connect()
+
+let channelauth = authSocket.channel("user:2", {}) # should be user:1
+
+channelauth.join()
+  .receive("ok", resp => { console.log("Joined AUTH", resp) })
+  .receive("error", resp => { console.log("Unable to join AUTH", resp) }) # will error out
+
+---------
+Local Cluster (use Phoenix PubSub’s standard distribution strategy powered by pg2)
+
+# start the server locally at one node
+$ iex --name server@127.0.0.1 -S mix phx.server
+ 	[info] Access HelloSocketsWeb.Endpoint at http://localhost:4000
+ 	iex(server@127.0.0.1)1>
+
+# start another remote node (without webserver); connect to the server node
+	$ iex --name remote@127.0.0.1 -S mix
+ 	Interactive Elixir (1.6.6) - press Ctrl+C to exit (type h() ENTER for help)
+	iex(remote@127.0.0.1)1> Node.list()
+ 	[]
+ 	iex(remote@127.0.0.1)2> Node.connect(:"server@127.0.0.1")
+ 	true
+ 	iex(remote@127.0.0.1)3> Node.list()
+ 	[:"server@127.0.0.1"]
+
+First, connect to the ping topic to establish the connection.
+
+ 	$ wscat -c 'ws://localhost:4000/socket/websocket?vsn=2.0.0'
+ 	> ["1","1","ping","phx_join",{}]
+ 	< ["1","1","ping","phx_reply",{"response":{},"status":"ok"}]
+Next, broadcast a message from the remote node.
+
+ 	iex(r@127)> HelloSocketsWeb.Endpoint.broadcast("ping", "request_ping", %{})
+ 	:ok
+Finally, you can see that the ping request made it to the client:
+
+ 	< [null,null,"ping","send_ping",{"from_node":"server@127.0.0.1"}]
+
+# the message was distributed across the cluster and intercepted by the
+# PingChannel on our server node
+
+This demo shows that we can have a message originate anywhere in our cluster, and the message will make it to the client. This is critical for a correctly working application that runs on multiple servers, and we get it for very low cost by using Phoenix PubSub.
+
+In practice, our remote node would be serving Socket connections, and the entire system would be placed behind a tool that balances connections between the different servers.
+(but the servers would be connected as nodes inside a cluster)
+
+-----
+
+# timer Process to send to `self()` pid, with :send_token message after 5000 milliseconds
+@send_after 5_000
+Process.send_after(self(), :send_token, @send_after)
+
+--
+Recurring channel and Deduping broadcasting buffer examples
+in hello_sockets repo
+
+--------
+Test examples.. under test/ folder
+
+----------
+Pitfalls for Real Time applications
+
+Unknown application health
+We need to know if our deployed application is healthy. When our application experiences a problem, we’re able to identify root cause by looking at all of our metrics. You’ll see how to add measurements to our Elixir applications using StatsD.
+
+Limited Channel throughput
+Channels use a single process on the server to process incoming and outgoing requests. If we’re not careful, we can constrain our application so that long running requests prevent the Channel from processing. We’ll solve this problem with built-in Phoenix functions.
+
+Unintentional data pipeline
+We can build a pipeline that efficiently moves data from server to user. We should be intentional in our data pipeline design so that we know the capabilities and limitations of our solution. We’ll use GenStage to build a production-ready data pipeline.
+
+--
+Application Performance Monitoring (APM)
+
+
+Types of measurements:
+Count occurrences—The number of times that an operation happens. We could count every time a message is pushed to our Channel, or we could count every time a Socket fails to connect.
+
+Count at a point in time—The value of a component of our system at a moment of time. The number of connected Sockets and Channels could be counted every few seconds. This is commonly called a gauge in many measurement tools.
+
+Timing of operation—The amount of time that it takes for an operation to complete. We could measure the time taken to push an event to a client after the event is generated.
+
+We are able to attach additional metadata to our measurements to help tell our application’s story. For example, shared online applications often use the concept of “tenant” to isolate a customer’s data. We could add a tenant_id=XX tag to all metrics to understand the current system health from the perspective of a single tenant.
+
+--
+StatsD and Statix (StatsD client) https://github.com/lexmag/statix
+https://hexdocs.pm/statix/Statix.html
+
+
+$ iex -S mix
+iex(1)> alias HelloSockets.Statix
+iex(1)> Statix.increment("test")
+StatsD metric: test 1|c
+:ok
+iex(2)> Statix.increment("test", 1, tags: ["name:1", "success:true"]) # other options is :sample_rate
+:ok
+StatsD metric: test 1|c|#name:1,success:true
+
+The StatsD metric lines indicate that the metric was successfully sent over UDP to the StatsD server. Tags are not native to the StatsD protocol, but they have become popular with a variety of StatsD tools. 
+
+-------
+
+# Server side StatsD metric logs
+StatsD metric: socket_connect 1|c|#status:success,socket:StatsSocket  #Statix.increment for socket_connect
+StatsD metric: channel_join 1|c|#status:fail,channel:StatsChannel  #Statix.increment for channel_join
+[info] REFUSED JOIN invalid in 4ms
+Parameters: %{}
+[info] JOINED valid in 86µs
+Parameters: %{}
+StatsD metric: channel_join 1|c|#status:success,channel:StatsChannel  #Statix.increment for channel_join
+[debug] HANDLED ping INCOMING ON valid (HelloSocketsWeb.StatsChannel) in 696ms
+Parameters: %{}
+StatsD metric: stats_channel.ping 696|ms  #Statix.measure for stats_channel.ping
+[info] JOINED ping in 77µs
+Parameters: %{}
+[debug] HANDLED ping INCOMING ON valid (HelloSocketsWeb.StatsChannel) in 814ms
+Parameters: %{}
+StatsD metric: stats_channel.ping 814|ms
+[debug] HANDLED ping INCOMING ON valid (HelloSocketsWeb.StatsChannel) in 572ms
+Parameters: %{}
+StatsD metric: stats_channel.ping 572|ms
+[debug] HANDLED ping INCOMING ON valid (HelloSocketsWeb.StatsChannel) in 933ms
+Parameters: %{}
+StatsD metric: stats_channel.ping 933|ms
+[debug] HANDLED ping INCOMING ON valid (HelloSocketsWeb.StatsChannel) in 809ms
+Parameters: %{}
+StatsD metric: stats_channel.ping 809|ms
+
+----------
+Visualizing Measurements
+
+Visualize metrics with graphs
+You can create graphs of your different measurements. You can even combine and compare graphs to correlate potential problems.
+
+Produce dashboards for your team
+You can combine graphs and other visualizations into a “single pane of glass.” This allows you to quickly see the health of your system, maybe from a shared monitor in your office.
+
+Get alerted to problems
+Many metrics systems allow you to set up alerts on values of your measurements. For example, you may want to get an alert when your Channel begins taking a certain amount of time to respond to a particular request.
+
+Detect anomalies
+Some metrics systems are capable of detecting anomalies in your metrics without you configuring known thresholds. This can be useful in identifying unexpected problems. For example, a metric system could automatically detect that your metric values are outside of several standard deviations and then alert you to a potential problem.
+
+----
+
+Phoenix.Channel.reply
+To reply asynchronously to a socket push
+in cases where it cant be handled by {:reply, {status, payload}, socket}
+
+in such cases, socket_ref(socket) should be generated and passed to the external
+process, so the `socket` itself is not leaked
+The socket holds information such as assigns and transport configuration, so it's important to not copy this information outside of the channel that owns it.
+
+def handle_in("parallel_slow_ping", _payload, socket) do
+ 	  ref = socket_ref(socket)
+ 	
+ 	  Task.start_link(fn ->
+ 	    Process.sleep(3_000)
+ 	    Phoenix.Channel.reply(ref, {:ok, %{ping: "pong"}})
+ 	  end)
+ 	
+ 	  {:noreply, socket}
+ 	end
+
+Keep an eye out for times when your code is going through a single process, whether it be a Channel or another process.
+
+--------
+Scalable Data Pipeline traits:
+
+Deliver messages to all relevant clients
+This means that a real-time event will be broadcast to all our connected Nodes in our data pipeline so they can handle the event for connected Channels. Phoenix PubSub handles this for us, but we must consider that our data pipeline spans multiple servers. We should never send incorrect data to a client.
+
+Fast data delivery
+Our data pipeline should be as fast as possible. This allows a client to get the latest information immediately. Producers of data should also be able to trigger a push without worrying about performance.
+
+As durable as needed
+Your use case might require that push events have strong guarantees of delivery, but your use case can also be more relaxed and allow for in-memory storage until the push occurs. In either case, you should be able to adjust the data pipeline for your needs, or even completely change it, in a way that doesn’t involve completely rewriting it.
+
+As concurrent as needed
+Our data pipeline should have limited concurrency so we don’t overwhelm our application. This is use-case dependent, as some applications are more likely to overwhelm different components of the system.
+
+Measurable
+It’s important that we know how long it takes to send data to clients. If it takes one minute to send real-time data, that reduces the application’s usability.
+
+--
+GenStage
+https://hexdocs.pm/gen_stage/GenStage.html
+
+Different data block as different `stage`
+
+GenStage provides two main stage types that are used to model our pipeline:
+
+1. Producer—Coordinates the fetching of data items and then passes to the next consumer stage. Producers can fetch data from a database, or they can keep it in memory. In this chapter, our data pipeline will be completely in memory.
+
+2. Consumer—Asks for and receives data items from the previous producer stage. These items are then processed by our code before more items are received.
+
+--
+:producer
+handle_demand (to handle demand from consumer)
+
+:consumer
+handle_events (Invoked on :producer_consumer and :consumer stages to handle events.)
+
+(for code, refer to repo hello_sockets/pipeline/)
+for a consumer who demands max 10, min 5 from a producer:
+
+iex(2)> Producer.push(%{})
+:ok
+iex(3)> {HelloSockets.Pipeline.Consumer, 1, %{item: %{}}, %{item: %{}}}
+
+nil
+iex(4)> Enum.each((1..50), &Producer.push(%{n: &1}))
+:ok
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 1}}, %{item: %{n: 1}}}
+iex(5)> {HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 2}}, %{item: %{n: 2}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 3}}, %{item: %{n: 3}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 4}}, %{item: %{n: 4}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 5}}, %{item: %{n: 5}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 6}}, %{item: %{n: 6}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 7}}, %{item: %{n: 7}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 8}}, %{item: %{n: 8}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 9}}, %{item: %{n: 9}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 10}}, %{item: %{n: 14}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 15}}, %{item: %{n: 19}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 20}}, %{item: %{n: 24}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 25}}, %{item: %{n: 29}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 30}}, %{item: %{n: 34}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 35}}, %{item: %{n: 39}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 40}}, %{item: %{n: 44}}}
+{HelloSockets.Pipeline.Consumer, 5, %{item: %{n: 45}}, %{item: %{n: 49}}}
+{HelloSockets.Pipeline.Consumer, 1, %{item: %{n: 50}}, %{item: %{n: 50}}}
+
+nil
+
+#due to max 10, min 5 demand, the consumer's events are split into 
+a max batch size of five
+#consumer 'subscribed' to producer and 'demand' for data
+#producer simply passing the state in handle_demand
+#consumer handle_events by inspecting the items passed
+
+------
+ConsumerSupervisor (behaviour)
+
+Instead of just ONE GenStage consumer, have a supervisor that starts children as events flow in.
+
+A ConsumerSupervisor can be used as the consumer in a GenStage pipeline. 
+A new child process will be started per event,
+where the event is appended to the arguments in the child specification.
+
+ConsumerSupervisor is able to start up #max_demand workers at a time
+Each workers still handle the optimal GenStage batch size
+End result is that #max_demand amount of items are processed in parallel at a time
+Since items are processed in parallel, the order of end result in a group is indeterministic 
+
+iex(8)> alias HelloSockets.Pipeline.Producer
+HelloSockets.Pipeline.Producer
+iex(9)> push = &(Producer.push(%{data: %{n: &1}, user_id: 1}))
+#Function<44.40011524/1 in :erl_eval.expr/5>
+iex(10)> Enum.each((1..50), push)
+:ok
+
+
+----
+Based on timed push, increasing #max_demand too much might actually slow down
+overall delivery (again, this depends on system cores, and how much items are pushed instantaneously)
+best seem to be min 5, max 10
+
+
+--------
+How to install existing projects
+
+mix deps.get && mix ecto.setup && mix test
+
+npm --prefix assets install   # to install all npm modules under /assets/package.json dir
+
+$ mix ecto.reset && mix run -e "Sneakers23Mock.Seeds.seed!()"
+$ iex -S mix phx.server
+
+-------
+EEx Templating
+
+https://hexdocs.pm/phoenix/Phoenix.Controller.html#render/3
+
+render(conn, template, assigns)
+
+  def show(conn, %{"messenger" => messenger}) do
+    render(conn, "show.html", messenger: messenger)  # we can pass a Keyword or a map here
+  end
+
+--
+<div class="phx-hero">
+  <h2>Hello World, from <%= @messenger %>!</h2>  # and then in template use @ ala 'assigns.messenger'
+</div>
+
+-------
+Plugs
+Plug is a specification for composable modules in between web applications. 
+It is also an abstraction layer for connection adapters of different web servers.
+The basic idea of Plug is to unify the concept of a "connection" that we operate on.
+
+2 types: Function plugs and module plugs
+
+1. Function plug
+In order to act as a Plug, a function needs to accept a connection struct (%Plug.Conn{}) and options.
+t also needs to return a connection struct (later, to be chained/composed).
+#So.. just like a middleware?
+
+Plug Connection: https://hexdocs.pm/plug/Plug.Conn.html
+
+  # defining a function plug
+  plug :introspect
+
+  ...
+  def introspect(conn, _opts) do
+    IO.puts """
+    Verb: #{inspect(conn.method)}
+    Host: #{inspect(conn.host)}
+    Headers: #{inspect(conn.req_headers)}
+    """
+
+    conn
+  end
+
+2. Module plug
+Let us define a connection transformation in a module. The module only needs to implement two functions:
+
+init/1 which initializes any arguments or options to be passed to call/2
+call/2 which carries out the connection transformation. call/2 is just a function plug that we saw earlier
+
+#defining a Module plug requires a new module which implements init and call
+
+defmodule HelloWeb.Plugs.Locale do
+  import Plug.Conn
+
+  ...
+
+  def init(default), do: default
+  ...
+
+  def call(conn, default) do
+     ...
+  end
+
+
+The endpoint, router, and controllers in Phoenix accept plugs (They are also all plugs).
+
+----
+Controller plugs
+
+defmodule HelloWeb.HelloController do
+  use HelloWeb, :controller
+
+  # this plug will only executed for `index` action
+  plug HelloWeb.Plugs.Locale, "en" when action in [:index]
+
+--
+Plug composition
+
+defmodule HelloWeb.MessageController do
+  use HelloWeb, :controller
+
+  # we can order a series of plugs like this.. which does one action and pass on
+  # the conn to the next plug to do another action etc (in this exact order)
+  plug :authenticate
+  plug :fetch_message
+  plug :authorize_message
+
+  # before this show action
+  def show(conn, params) do
+    ...
+  end 
+
+  defp authenticate ..
+
+  defp fetch_message ..
+
+  defp authorize_message ..
+...
+
+------
+Router
+
+
+Pipelines allow a set of plugs to be applied to different sets of routes.
+
+mix phx.routes to print all routes
+
+# resources macro
+# expand to include all the standard HTTP vers, paths and controller actions
+resources "/businesses", BusinessController, except: [:new, :edit]
+
+resources "/posts", PostController, only: [:index, :show]
+
+For :new and :edit, its for presenting a form in frontend
+A GET request to /users/new will invoke the new action to present a form for creating a new user.
+A GET request to /users/:id/edit will invoke the edit action with an ID to retrieve an individual user from the data store and present the information in a form for editing.
+
+------
+Path Helpers
+
+Function to help us find the path easily (when needed in template)
+
+HelloWeb.Router.Helpers is aliased as Routes by default in the view/0 block defined inside lib/hello_web.ex. 
+This definition is made available to our templates through use HelloWeb, :view.
+Under any of the views/*_view.ex, there's `use HelloWeb, :view` injection
+this let us use Routes.page_path directly in our template
+
+iex> HelloWeb.Router.Helpers.page_path(HelloWeb.Endpoint, :index)
+"/"
+
+<%= link "Welcome Page!", to: Routes.page_path(@conn, :index) %>  # prefer to pass @conn in views instead of an Endpoint
+
+run `mix phx.routes` to see the all the paths
+
+#in IEX - all possible helper functions
+alias HelloWeb.Router.Helpers, as: Routes
+alias HelloWeb.Endpoint
+Routes.user_path(Endpoint, :index)
+"/users"
+
+Routes.user_path(Endpoint, :show, 17)
+"/users/17"
+
+Routes.user_path(Endpoint, :new)
+"/users/new"
+
+Routes.user_path(Endpoint, :create)
+"/users"
+
+Routes.user_path(Endpoint, :edit, 37)
+"/users/37/edit"
+
+Routes.user_path(Endpoint, :update, 37)
+"/users/37"
+
+Routes.user_path(Endpoint, :delete, 17)
+"/users/17"
+
+Routes.user_path(Endpoint, :show, 17, admin: true, active: false)
+"/users/17?admin=true&active=false"
+
+Routes.user_url(Endpoint, :index)
+"http://localhost:4000/users"
+
+------
+Nested resources
+
+resources "/users", UserController do
+  resources "/posts", PostController
+end
+
+...
+# posts for each user
+user_post_path  GET     /users/:user_id/posts           HelloWeb.PostController :index
+user_post_path  GET     /users/:user_id/posts/:id/edit  HelloWeb.PostController :edit
+user_post_path  GET     /users/:user_id/posts/new       HelloWeb.PostController :new
+user_post_path  GET     /users/:user_id/posts/:id       HelloWeb.PostController :show
+user_post_path  POST    /users/:user_id/posts           HelloWeb.PostController :create
+user_post_path  PATCH   /users/:user_id/posts/:id       HelloWeb.PostController :update
+                PUT     /users/:user_id/posts/:id       HelloWeb.PostController :update
+user_post_path  DELETE  /users/:user_id/posts/:id       HelloWeb.PostController :delete
+
+iex> alias HelloWeb.Endpoint
+iex> HelloWeb.Router.Helpers.user_post_path(Endpoint, :show, 42, 17)
+"/users/42/posts/17"
+
+iex> HelloWeb.Router.Helpers.user_post_path(Endpoint, :index, 42, active: true)
+"/users/42/posts?active=true"
+
+-------
+Scoped Routes
+Scopes are a way to group routes under a common path prefix and scoped set of plugs. 
+We might want to do this for admin functionality, APIs, and especially for versioned APIs.
+
+scope "/", HelloWeb do
+  pipe_through :browser
+
+  ...
+  resources "/reviews", ReviewController # this is review_path
+end 
+
+scope "/admin", HelloWeb.Admin, as: :admin do    #notice is to prefix the path helper as admin_review_path
+  pipe_through :browser
+
+  resources "/reviews", ReviewController
+end
+...
+      review_path  GET     /reviews                        HelloWeb.ReviewController :index
+      review_path  GET     /reviews/:id/edit               HelloWeb.ReviewController :edit
+      review_path  GET     /reviews/new                    HelloWeb.ReviewController :new
+      review_path  GET     /reviews/:id                    HelloWeb.ReviewController :show
+      review_path  POST    /reviews                        HelloWeb.ReviewController :create
+      review_path  PATCH   /reviews/:id                    HelloWeb.ReviewController :update
+                   PUT     /reviews/:id                    HelloWeb.ReviewController :update
+      review_path  DELETE  /reviews/:id                    HelloWeb.ReviewController :delete
+...
+admin_review_path  GET     /admin/reviews                  HelloWeb.Admin.ReviewController :index
+admin_review_path  GET     /admin/reviews/:id/edit         HelloWeb.Admin.ReviewController :edit
+admin_review_path  GET     /admin/reviews/new              HelloWeb.Admin.ReviewController :new
+admin_review_path  GET     /admin/reviews/:id              HelloWeb.Admin.ReviewController :show
+admin_review_path  POST    /admin/reviews                  HelloWeb.Admin.ReviewController :create
+admin_review_path  PATCH   /admin/reviews/:id              HelloWeb.Admin.ReviewController :update
+                   PUT     /admin/reviews/:id              HelloWeb.Admin.ReviewController :update
+admin_review_path  DELETE  /admin/reviews/:id              HelloWeb.Admin.ReviewController :delete
+
+---
+versioning API
+
+scope "/api", HelloWeb.Api, as: :api do
+  pipe_through :api
+
+  scope "/v1", V1, as: :v1 do
+    resources "/images",  ImageController
+    resources "/reviews", ReviewController
+    resources "/users",   UserController
+  end
+end
+
+-------
+Pipelines
+Pipelines are a series of `plugs` that can be attached to specific `scopes`
+
+Routes are defined inside scopes and scopes may pipe through multiple pipelines. Once a route matches, Phoenix invokes all plugs defined in all pipelines associated to that route. For example, accessing "/" will pipe through the :browser pipeline, consequently invoking all of its plugs.
+
+-- can pipe through a series of pipelines, Phoenix will invoke them in order
+
+  scope "/reviews" do
+    pipe_through [:browser, :review_checks, :other_great_stuff]
+
+    resources "/", HelloWeb.ReviewController
+  end
+
+
+# pipeline themselves are plugs.. so we could plug a pipeline inside another
+# pipeline
+
+ pipeline :review_checks do
+    plug :browser
+    plug :ensure_authenticated_user
+    plug :ensure_user_owns_review
+  end
+
+  scope "/reviews", HelloWeb do
+    pipe_through [:review_checks]
+
+    resources "/", ReviewController
+  end
+
+-----
+if want to set the root_layout (useful when debugging missing @conn)
+ pipeline :browser do
+   ...
+    plug :put_root_layout, {Sneakers23Web.LayoutView, :app}
+ end
+
+------
+Forward
+A macro that is used to forward a request to a particular plug
+
+defmodule HelloWeb.Router do
+  use HelloWeb, :router
+
+  ...
+
+  scope "/", HelloWeb do
+    ...
+  end
+
+  forward "/jobs", BackgroundJob.Plug
+end
+
+BackgroundJob.Plug can be implemented as any Module Plug discussed in the Plug guide. 
+Note though it is not advised to forward to another Phoenix endpoint. This is because plugs defined by your app and the forwarded endpoint would be invoked twice, which may lead to errors.
+------
+Very useful:
+
+mix phx.gen.json
+Generates controller, views, and context for a JSON resource.
+
+# for e.g.
+mix phx.gen.json Accounts User users name:string age:integer
+The first argument is the context module followed by the schema module and its plural name (used as the schema table name).
+
+Overall, this generator will add the following files to lib/:
+
+1.a context module in lib/app/accounts.ex for the accounts API
+2.a schema in lib/app/accounts/user.ex, with an users table
+3.a view in lib/app_web/views/user_view.ex
+4.a controller in lib/app_web/controllers/user_controller.ex
+5.a migration file for the repository and test files for the context and controller features will also be generated.
+
+
+--
+Libraries
+Ecto
+
+Schemas can also have virtual fields by passing the virtual: true option. These fields are not persisted to the database and can optionally not be type checked by declaring type :any.
+
+To checkout:
+
+
+
+--
+:bcrypt_elixir -> to becrypt password into encrypted_password, make use of :comeonin, 
+need gcc to compile the C lib files into bcrypt_nif.so (for linux)
+
+:guardian -> helps us create tokens, decode them, refresh tokens and revoke them
+# seems like by default, token expiry is 4 weeks
+The default by Guardian.Token.JWT is {4, :weeks}
+
+
+Guardian pipeline: To keep an authentication flow together
+
+
+# to get current user
+current_user = Guardian.Plug.current_resource(conn)
+
+# to revoke a token
+{:ok, claims} = BusiApiWeb.Auth.Guardian.revoke(token)
+
+-------
+Controllers
+They are also plugs
+
+defmodule HelloWeb.PageController do
+  use HelloWeb, :controller   # invokes the __using__/1 macro of HelloWeb module
+
+  def index(conn, _params) do
+    render(conn, "index.html")
+  end
+end
+
+---
+Actions  (Controller actions)
+
+get "/", PageController, :index
+
+get "/", PageController, :test
+
+there are some conventions to the action names:
+
+index - renders a list of all items of the given resource type
+show - renders an individual item by id
+new - renders a form for creating a new item
+create - receives params for one new item and saves it in a datastore
+edit - retrieves an individual item by id and displays it in a form for editing
+update - receives params for one edited item and saves it to a datastore
+delete - receives an id for an item to be deleted and deletes it from a datastore
+
+defmodule HelloWeb.HelloController do
+  ...
+  #conn here is %Plug.Conn{}
+  def show(conn, %{"messenger" => messenger}) do
+    render(conn, "show.html", messenger: messenger)
+  end
+end
+
+# can we do away with validation?
+It is a good practice to pattern match against params in the function signature to provide data in a simple package we can pass on to rendering. 
+
+---
+Rendering
+
+# most basic one is returning text
+def show(conn, %{"messenger" => messenger}) do
+  text(conn, "From messenger #{messenger}")
+end
+
+# rendering pure JSON
+def show(conn, %{"messenger" => messenger}) do
+  json(conn, %{id: messenger})
+end
+
+# render html without views
+def show(conn, %{"messenger" => messenger}) do
+  html(conn, """
+   <html>
+     <head>
+        <title>Passing a Messenger</title>
+     </head>
+     <body>
+       <p>From messenger #{Plug.HTML.html_escape(messenger)}</p>
+     </body>
+   </html>
+  """)
+end
+
+since its not EEx template but multi-line string,
+we interpolate the messenger variable like this #{Plug.HTML.html_escape(messenger)}, instead of this <%= messenger %>.
+
+
+defmodule HelloWeb.HelloController do
+  use HelloWeb, :controller
+
+  def show(conn, %{"messenger" => messenger}) do
+    render(conn, "show.html", messenger: messenger)
+  end
+end
+
+# we can also pass the keyword using Plug.Conn.assign
+  def show(conn, %{"messenger" => messenger}) do
+    conn
+    |> Plug.Conn.assign(:messenger, messenger)
+    |> render("show.html")
+  end
+
+# passing multiple assigns
+  def show(conn, %{"messenger" => messenger}) do
+    conn
+    |> assign(:messenger, messenger)
+    |> assign(:receiver, "Dweezil")
+    |> render("show.html")
+  end
+
+
+------
+Overriding layouts
+def index(conn, _params) do
+  conn
+  |> put_layout("admin.html")
+  |> render("index.html")
+end
+
+-----
+Overriding view format
+
+defmodule HelloWeb.Router do
+  use HelloWeb, :router
+
+  pipeline :browser do
+    plug :accepts, ["html", "text"]  # for e.g. if we want to cater to both html, text
+    plug :fetch_session
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+...
+
+def index(conn, _params) do
+  render(conn, :index)  # substitute name of template "index.html" with :index
+end
+
+...
+
+put a custom "index.text.eex" in ../templates/
+
+...
+
+#can change format using `_format` query string param
+http://localhost:4000/hello?_format=text
+
+-------
+Specifying contents directly in response
+
+def index(conn, _params) do
+  conn
+  |> put_resp_content_type("text/plain")
+  |> send_resp(201, "")  # no body content
+end
+
+--
+def index(conn, _params) do
+  conn
+  |> put_resp_content_type("text/xml")
+  |> render("index.xml", content: some_xml_content)
+end
+
+--
+def index(conn, _params) do
+  conn
+  |> put_status(202)
+  |> render("index.html")
+end
+
+----------
+Redirection
+
+# via redirect and to:
+def index(conn, _params) do
+  redirect(conn, to: "/redirect_test")
+end
+
+# for external fully qualified URL
+def index(conn, _params) do
+  redirect(conn, external: "https://elixir-lang.org/")
+end
+
+# using path helpers
+def index(conn, _params) do
+  redirect(conn, to: Routes.page_path(conn, :redirect_test))
+end
+
+------
+Flash messages
+  def index(conn, _params) do
+    conn
+    |> put_flash(:info, "Welcome to Phoenix, from flash info!")
+    |> put_flash(:error, "Let's pretend we have an error.")
+    |> render("index.html")
+  end
+
+# in html template
+<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+
+-----
+Fallback controller to handle only error cases
+
+defmodule HelloWeb.MyController do
+  use Phoenix.Controller
+
+  action_fallback HelloWeb.MyFallbackController
+
+  def show(conn, %{"id" => id}, current_user) do
+    with {:ok, post} <- fetch_post(id),
+         :ok <- authorize_user(current_user, :view, post) do
+      render(conn, "show.json", post: post) # only deals with success cases
+    end
+  end
+end
+
+# this deals wil all error cases and can be reused across controller actions
+defmodule HelloWeb.MyFallbackController do
+  use Phoenix.Controller
+
+  def call(conn, {:error, :not_found}) do
+    conn
+    |> put_status(:not_found)
+    |> put_view(HelloWeb.ErrorView)
+    |> render(:"404")
+  end
+
+  def call(conn, {:error, :unauthorized}) do
+    conn
+    |> put_status(403)
+    |> put_view(HelloWeb.ErrorView)
+    |> render(:"403")
+  end
+end
+
+
+-----------
+Views and templates
+
+All of the imports and aliases we make in our view will also be available in our templates. 
+That's because templates are effectively compiled into functions inside their respective views.
+
+in our *.html.eex template we could do: 
+<title><%= title() %></title>
+
+# then we can define the function in the view
+defmodule HelloWeb.LayoutView do
+  use HelloWeb, :view
+
+  def title() do
+    "Awesome New Title!"
+  end
+end
+
+---
+We use <%= expression %> to execute Elixir expressions
+
+that means, we can execute any Elixir expressions in the template
+
+<%= if some_condition? do %>
+  <p>Some condition is true for user: <%= @user.name %></p>
+<% else %>
+  <p>Some condition is false for user: <%= @user.name %></p>
+<% end %>
+
+--
+<%= for number <- 1..10 do %>
+  <tr>
+    <td><%= number %></td>
+    <td><%= number * number %></td>
+  </tr>
+<% end %>
+
+-----------
+Templates are precompiled.
+
+defmodule HelloWeb.PageView do
+  use HelloWeb, :view
+
+  # we can overwrite the render function in view
+  def render("index.html", assigns) do
+    "rendering with assigns #{inspect Map.keys(assigns)}"
+  end
+end
+https://hexdocs.pm/phoenix/Phoenix.Template.html
+take note that this function render/2 can be used within a EEx template
+for e.g.
+<%= render("_sizes.html", product: product) %>
+
+it is different than the render(@conn..) functions of Phoenix.Controller (dont confuse here)
+
+# we would see the below when we refresh our page
+rendering with assigns [:conn, :view_module, :view_template]
+
+At compile-time, Phoenix precompiles all *.html.eex templates and turns them into render/2 function clauses on their respective view modules.
+At runtime, all templates are already loaded in memory. There's no disk reads, complex file caching, or template engine computation involved.
+
+------------------
+Ecto
+
+# to generate the context module (plus Ecto model), schema, json view,
+# controller, migration file and tests
+# all in one shot
+mix phx.gen.json Accounts User users name:string age:integer
+
+# similar function exists for html
+mix hx.gen.html Accounts User users name:string username:string:unique
+
+# only Ecto schema struct (model) and migration file
+mix phx.gen.schema User users name:string email:string bio:string number_of_pets:integer
+
+mix ecto.migrate # to do the migration
+
+mix ecto.reset # to discard table
+
+
+---
+Changesets and Validations
+
+lets say, we have this changeset function in User model
+def changeset(%User{} = user, attrs) do
+  user
+  |> cast(attrs, [:name, :email, :bio, :number_of_pets])
+  |> validate_required([:name, :email, :bio, :number_of_pets])
+end
+
+iex> changeset = User.changeset(%User{}, %{})
+
+#Ecto.Changeset<action: nil, changes: %{},
+ errors: [name: {"can't be blank", [validation: :required]},
+  email: {"can't be blank", [validation: :required]},
+  bio: {"can't be blank", [validation: :required]},
+  number_of_pets: {"can't be blank", [validation: :required]}],
+ data: #Hello.User<>, valid?: false>
+
+# we can check if its valid
+iex> changeset.valid?
+false
+
+# we can check its errors
+iex> changeset.errors
+[name: {"can't be blank", [validation: :required]},
+ email: {"can't be blank", [validation: :required]},
+ bio: {"can't be blank", [validation: :required]},
+ number_of_pets: {"can't be blank", [validation: :required]}]
+
+--
+The changeset are there to 1) cast and 2) validate before saving into Repo
+if we look at the context helpers created automatically
+
+  def create_business(attrs \\ %{}) do
+    %Business{}
+    |> Business.changeset(attrs)  # cast and check
+    |> Repo.insert()  # before inserting
+  end
+
+
+iex> alias Hello.{Repo, User}
+[Hello.Repo, Hello.User]
+
+iex> Repo.insert(%User{email: "user1@example.com"})
+[debug] QUERY OK db=4.6ms
+INSERT INTO "users" ("email","inserted_at","updated_at") VALUES ($1,$2,$3) RETURNING "id" ["user1@example.com", {{2017, 5, 23}, {19, 6, 4, 822044}}, {{2017, 5, 23}, {19, 6, 4, 822055}}]
+{:ok,
+ %Hello.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  bio: nil, email: "user1@example.com", id: 3,
+  inserted_at: ~N[2017-05-23 19:06:04.822044], name: nil, number_of_pets: nil,
+  updated_at: ~N[2017-05-23 19:06:04.822055]}}
+
+iex> Repo.insert(%User{email: "user2@example.com"})
+[debug] QUERY OK db=5.1ms
+INSERT INTO "users" ("email","inserted_at","updated_at") VALUES ($1,$2,$3) RETURNING "id" ["user2@example.com", {{2017, 5, 23}, {19, 6, 8, 452545}}, {{2017, 5, 23}, {19, 6, 8, 452556}}]
+{:ok,
+ %Hello.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  bio: nil, email: "user2@example.com", id: 4,
+  inserted_at: ~N[2017-05-23 19:06:08.452545], name: nil, number_of_pets: nil,
+  updated_at: ~N[2017-05-23 19:06:08.452556]}}
+
+iex> Repo.all(User)
+[debug] QUERY OK source="users" db=2.7ms
+SELECT u0."id", u0."bio", u0."email", u0."name", u0."number_of_pets", u0."inserted_at", u0."updated_at" FROM "users" AS u0 []
+[%Hello.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  bio: nil, email: "user1@example.com", id: 3,
+  inserted_at: ~N[2017-05-23 19:06:04.822044], name: nil, number_of_pets: nil,
+  updated_at: ~N[2017-05-23 19:06:04.822055]},
+ %Hello.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  bio: nil, email: "user2@example.com", id: 4,
+  inserted_at: ~N[2017-05-23 19:06:08.452545], name: nil, number_of_pets: nil,
+  updated_at: ~N[2017-05-23 19:06:08.452556]}]
+
+---
+Ecto Query DSL
+
+import Ecto.Query
+Ecto.Query
+
+# to import the `from` macro 
+iex> Repo.all(from u in User, select: u.email)
+[debug] QUERY OK source="users" db=2.4ms
+SELECT u0."email" FROM "users" AS u0 []
+["user1@example.com", "user2@example.com"]
+
+# 
+iex> Repo.one(from u in User, where: ilike(u.email, "%1%"),
+                               select: count(u.id))
+[debug] QUERY OK source="users" db=1.6ms SELECT count(u0."id") FROM "users" AS u0 WHERE (u0."email" ILIKE '%1%') []
+1
+
+# to fetch and transform the data into a map structure
+iex> Repo.all(from u in User, select: %{u.id => u.email})
+[debug] QUERY OK source="users" db=0.9ms
+SELECT u0."id", u0."email" FROM "users" AS u0 []
+[%{3 => "user1@example.com"}, %{4 => "user2@example.com"}]
+
+# enjoy the power of Ecto Query DSL
+https://hexdocs.pm/ecto/Ecto.Query.html#content
+
+# manipulation of Ecto Schema
+https://hexdocs.pm/ecto/Ecto.Schema.html#content
+
+-------
+Contexts
+Contexts are dedicated modules that expose and group related functionality.
+
+A context will group related functionality, such as posts and comments, often encapsulating patterns such as data access and data validation. By using contexts, we decouple and isolate our systems into manageable, independent parts.
+
+This is great because our business logic and storage details (in context and repo) are decoupled from the web layer (controller) of our application
+
+For e.g. the Account context module will be the public API for all account functionality in our system.
+In addition to user account management, we may also handle user login credentials, account preferences, and password reset generation.
+
+Phoenix will push us to think about where we have different responsibilities in our application, and then to wrap up those different areas behind well-named modules and functions that make the intent of our code clear, while encapsulating the details.
+
+***Many authentication solutions couple the user credentials to an account in a one-to-one fashion, but this often causes issues
+***Supporting different login methods, such as social login or recovery email addresses will cause major code changes later one
+
+To sum it up: if you are unsure, you should prefer explicit modules (contexts) between resources.
+
+--
+Example, 
+generate the 'user profile related stuffs first'
+mix phx.gen.html Accounts User users name:string username:string:unique
+
+credentials should be 'separate' and refer back to user.. 
+so we could have multiple credentials for one user
+
+# credentials by email
+# this will inject the new credentials features into our account context - i.e.
+# in-context relationships
+# adding new resources within the same context
+mix phx.gen.context Accounts Credential credentials email:string:unique user_id:references:users
+
+# changes to credentials schema
+  def change do
+    create table(:credentials) do
+      add :email, :string
+-     add :user_id, references(:users, on_delete: :nothing)
++     add :user_id, references(:users, on_delete: :delete_all), # delete_all is ON DELETE CASCADE
++                   null: false
+
+      timestamps()
+    end
+
+    create unique_index(:credentials, [:email])
+    create index(:credentials, [:user_id])
+  end
+
+# after migration, we need to update the Ecto Schema structs, by defining their
+# relationships
+
+lib/hello/accounts/user.ex
++ alias Hello.Accounts.Credential
+
+  schema "users" do
+    field :name, :string
+    field :username, :string
++   has_one :credential, Credential
+
+    timestamps()
+  end
+
+lib/hello/accounts/credential.ex
++ alias Hello.Accounts.User
+
+  schema "credentials" do
+    field :email, :string
+-   field :user_id, :id
++   belongs_to :user, User
+
+    timestamps()
+  end
+
+# in the context accounts.ex
+# we can preload (eager load) the credentials associations into users
+
+  def list_users do
+    User
+    |> Repo.all()
+    |> Repo.preload(:credential)
+  end
+
+  def get_user!(id) do
+    User
+    |> Repo.get!(id)
+    |> Repo.preload(:credential)
+  end
+
+# To associate user input to our schema associations, we need to handle it the way we've handled other user input so far – in changesets
+ - alias Hello.Accounts.User
++ alias Hello.Accounts.{User, Credential}
+  ...
+
+  def update_user(%User{} = user, attrs) do
+    user
+    |> User.changeset(attrs)  # we piped our User changeset into Credentials changeset, so when saving user, the Credential
+                              # validations would be applied as well
++   |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
+    |> Repo.update()
+  end
+
+  def create_user(attrs \\ %{}) do
+    %User{}
+    |> User.changeset(attrs)
++   |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
+    |> Repo.insert()
+  end
+  ...
+
+- alias Hello.Accounts.Credential
+
+the cast_assoc means that now we can insert or update like this, with the email in one shot
+
+Accounts.create_user(%{name: "Alvin2", username: "alvinvoo5", credential: [email: "alvin@example.com"]})
+---
+
+what is Ecto.build_assoc and Ecto.Changeset.put_assoc?
+
+
+---
+Singleton resources are resources that define RESTful routes without an ID
+  resources "/sessions", SessionController, only: [:new, :create, :delete],
+                                              singleton: true
+
+session_path  GET     /sessions/new                          HelloWeb.SessionController :new                                     
+session_path  POST    /sessions                              HelloWeb.SessionController :create                                  
+session_path  DELETE  /sessions                              HelloWeb.SessionController :delete
+
+-------
+Cross context dependencies
+
+Assuming we have a CMS that have Author with roles: 'editor', 'writer' or 'intern'
+It is better to separate Author out as a separate data structure for separate domain
+now Author can have his own fields like 'role' and 'bio'
+
+mix phx.gen.html CMS Page pages title:string body:text views:integer --web CMS   
+# the --web prefix namespace for scope, controllers and views?
+
+
+mix phx.gen.context CMS Author authors bio:text role:string genre:string user_id:references:users:unique
+
+
+# generate custom migration
+mix ecto.gen.migration add_author_id_to_pages
+
+-------
+Running nodes across multiple servers
+
+A node store states for only itself, 
+it can broadcast to every nodes but when other node will only retrieves and reflects their own local state 
+
+We need another GenServer to dispatch 'replication' events (via PubSub library)
+
+Replication is not without its own challenges—it’s possible for nodes to become out of sync from this replicated approach. For non-critical data, the benefits of scalability are often worth the trade-off of potential data incorrectness. 
+We never use the replicated data as a source of truth for important operations, such as the purchase process. 
+Instead, we use the database to ensure that these operations are consistent.
+
+phoenix_pubsub
+https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html
+backend: Phoenix.PubSub.PG2
+
+broadcast_from   -> broadcaster
+
+Refer to lib/sneakers_23/replication.ex
+
+subscribe  -> subscriber
+   -> can use GenServer to handle callers topic
+
+Refer to lib/sneakers_23/replication/server.ex
+
+Supervision tree
+    -> Sneakers23.Replication 
+        -> Sneakers23.Replication.Server (which subscribe / listen to incoming dispatch)
+
+
+----
+Acceptance Testing
+Some problems with realtime application
+    Applications may be open for long periods of time
+    -> For example, signed tokens, which are usually only signed for a short amount of time, need to be re-obtained in order to stay fresh. 
+    -> Memory leaks, a completely different problem, are more likely because the application is not resetting all of its memory like it would on a page load.
+    Persistent connections must be maintained across failures
+    -> Connection could be severed
+    Servers must maintain open connections
+    Servers may be restarted when an application is deployed, causing the open connections to disconnect. The back-end servers would then receive an influx of new connections in a short period of time after the servers restart. This could become expensive depending on whether the server is doing work when a Socket connection opens or Channel join occurs.
+
+The biggest difference between acceptance testing and unit or integration testing is that the system is not simulated or mocked when we do these tests—you execute acceptance tests against a real instance of an application.
+
+
+--
+Client side issues
+First problem (Page Related Actions): After releasing a product, and moving away and coming back to page, still see "Coming Soon"
+Reason: Our product release process sent new HTML over the Channel, but it didn’t invalidate the cached page. 
+
+Second problem (Internet Related Actions): Server (or connection) died when user is viewing the page
+Javascript client will attempt to reconnect once server (or connection) disconnected
+Problem may come when new messages are sent during the disconnection
+Possible solution: Send the most up-to-date data when a Channel loads. This would solve both the caching issue and missing message issue that we’ve seen in this chapter, at the cost of additional processing by the server.
+
+Server side issues
+We will kill various processes to ensure that our application doesn’t reach an incorrect state. A good rule of thumb is to make sure that any custom GenServers, custom Supervisors, and your Ecto Repo can be killed without your application crashing.
+
+First problem: Database shutdown after server is started and page is loaded
+Server Ecto will keep trying to re-connect with the DB
+User can still refresh the page without issue because data is replicated locally
+
+If database is down first, starting server will give error, product page will also receive errors
+
+Second problem: BEAM processes died
+Can use :observer.start to start the observer and kill off some custom process (including the .Repo)
+BEAM should be able to handle the restarts
+
+If Sneakers23.Inventory.Server were to be restarted, the below will pull the inventory data from db again
+  def handle_continue(:load, %{loader_mod: loader_mod}) do
+    {:ok, inventory = %Inventory{}} = loader_mod.load()
+    {:noreply, inventory}
+  en
+
+---
+Automated acceptance test
+Libraries: WebDriver (for e.g. ChromeDriver) and Hound
+
+Download the ChromeDriver and run the binary file
+https://chromedriver.chromium.org/
+
+Configure Phoenix Hound to be able to interface with the Driver
+Take note we also need to turn on a server instance and sql_sandbox (to be used with the live instance)
+
+need to start chromedriver before can use it
+cd location/of/chromedriver
+./chromedriver
+
+https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html
+we use this pool for concurrent transactional tests for SQL sandbox
+PostgreSQL can run concurrent tests but MySQL cant
+
+need to include the below plug for running concurrent and transactional acceptance tests with [Ecto.Adapters.SQL.Sandbox]
+  if Application.get_env(:sneakers_23, :sql_sandbox) do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
+Acceptance tests flex the entire application stack—a browser starts up, executes tasks, navigates to one or more pages, and then shuts down. This process is more expensive than a traditional test that doesn’t leverage a browser
+
+Maintainability of an acceptance test suite can be difficult to achieve due to the brittleness of front end interfaces. It’s common for a design to evolve, for CSS classes to change, and for the order of elements to shift. Any of these occurrences will most likely cause tests to break in the suite.
+
+----
+PubSub
+
+Dynamic subscriptions
+A process can subscribe or unsubscribe to a given topic using PubSub. A Channel process can listen to any PubSub topic, even ones that are different than that Channel’s connected topic.
+
+Functional Core (MVC?)
+Module-
+ Context
+  -> Data Structure
+  -> Help functions (to process the Data Structure)
+Context function
+Channel or Controller
+--
+https://hexdocs.pm/phoenix_pubsub/Phoenix.Tracker.html
+Phoenix.Tracker
+
+Distributed state is a hard problem. Variations in time and network partitions are just some of the challenges you’ll face when writing a distributed system.
+Phoenix Tracker makes distributing a list of processes and metadata about each process an easy endeavor. 
+Tracker uses an advanced data structure to distribute state across a cluster in an efficient and accurate way, which allows us to know how many Channels are connected currently.
+
+Phoenix Tracker maintains accurate and timely presence lists across a cluster of servers. 
+It does so without having a single authoritative source (like a database)—each server contributes to the known state.
+Phoenix Tracker uses a data structure called a conflict-free replicated data type (CRDT) to implement its state tracking.
+
+A CRDT provides replicated state across multiple servers with independent and concurrent updates to the underlying data—each data structure can be updated without asking other copies for permission. There are many different types, but Phoenix Tracker uses an ORSWOT (Observe-Remove-Set-Without-Tombstones) to manage its state.
+
+
+Phoenix.Tracker supervises a collection of Phoenix.Tracker.Shard processes
+
+Under CRDT, there is no single source of truth or global process. 
+Each node runs a pool of Phoenix.Tracker.Shards and node-local changes are replicated across the cluster and handled locally as a diff of changes (Deltas).
+
+                                            Server A  |  Server B
+                   -> Tracker.Shard (process)  <-- Deltas --> Tracker.Shard <-
+Phoenix.Tracker -> -> Tracker.Shard            <-- Deltas --> Tracker.Shard <- <- Phoenix.Tracker
+                   -> Tracker.Shard            <-- Deltas --> Tracker.Shard <-
+                                                      |
+
+*shard (in CS terms) - means a horizontal partition of data, idea is to spread load
+
+# Phoenix.Tracker supervises a collection of Phoenix.Tracker.Shard processes
+  def start_link(opts) do
+    opts =
+      opts
+      |> Keyword.put(:name, __MODULE__) # this is needed
+      |> Keyword.put(:pubsub_server, HelloSockets.PubSub) # this is needed
+
+    # can start link here or start it at the Supervision tree
+    Phoenix.Tracker.start_link(__MODULE__, opts, opts)
+  end
+
+# the init/1 function is called when each shard is created
+  def init(opts) do
+    server = Keyword.fetch!(opts, :pubsub_server) # this should be `HelloSockets.PubSub`
+
+    {:ok, %{pubsub_server: server}} # this is needed
+  end
+
+# for handling of diff deltas
+  def handle_diff(changes, state) do
+    Logger.info inspect({"tracked changes", changes})
+    {:ok, state}
+  en
+
+# handle_diff and init are callbacks
+
+Tracker shards based on the topic, so all changes for a single large topic will end up going through the same Shard GenServer.
+
+  # tracker for a given topic
+    Phoenix.Tracker.track(__MODULE__, pid, topic, user_id, metadata)
+
+
+Even if there are multiple nodes (servers), as long as the 'backend' (servers) is/are connected to the 'app', the
+changes will be broadcasted (auto pub sub) and handle_diff is called on each node (even though it might take some time)
+
+--
+https://hexdocs.pm/phoenix/Phoenix.Presence.html 
+Phoenix.Presence (A special kind of Tracker)
+
+Phoenix Presence is an implementation of Tracker that provides helper functions for working with Channels.
+
+If you want to have every change broadcast to clients on a given topic, then use Presence. 
+If you want to be in control of how diffs are handled, or if you don’t want to broadcast changes to clients, use Tracker.
+
+# this is the broadcasting part to client
+If you find yourself intercepting and discarding handle_out("presence_diff") in your Channel, then Tracker is better for you.
+
+Presence, combined with its JavaScript client, allows us to quickly build real-time lists in our user interface.
+
+-----
+Deployment
+Releases are produced with one of two tools:
+Mix or Distillery (seems outdated).
+
+Self-contained packages
+Your application can be bundled with the BEAM and Erlang Run-Time System, so you do not need any special software installed on your deployment machine. You also ship compiled files as your application, instead of raw source code.
+
+Management scripts
+You get a set of scripts, for free, that allow you to do things such as connect an interactive session to the running server, execute remote calls, and run your application as a daemon.
+
+Start-up customization
+You can easily customize how the BEAM starts up. This allows you to set flags that control how the BEAM behaves. We’ll cover a flag in the next chapter that changes how garbage collection works.
+
+Code preloading
+It’s very important that a server can quickly serve its traffic. Releases load all code at the time of start up to decrease initial latency—this is called embedded mode. If you don’t use a release, modules will be loaded the first time that they’re used.
+
+PAAS (Platform as a service - something like Heroku?)
+https://gigalixir.com/
+https://render.com
+
+---
+Load Balancing websocket
+
+opensource load balancer - HAProxy or nginx
+
+up until now, the way we distribute compute, is to run one server as 
+app@127.0.0.1 
+and run another as node (backend@127.0.0.1), which connects to this active server to share load
+
+But how about load balancing the web sockets with 2 active servers?
+LB usually rely on web requests being stateless and short-lived to provide an even distribution. Load balancers get a bit trickier when persistent connections, such as WebSockets, are involved.
+
+what are the solutions:
+1. application level solutions - disconnect certain clients on old servers so that new server picks up the connections (but gets difficult with many servers)
+
+2. Disconnect WS connections after a period of time (regularly). This would cause your system to be unbalanced only for brief durations. This approach would not balance the system very quickly, and clients would be reconnected throughout their time on the application.
+
+---
+Different types of deployments
+
+1. Rolling Deployments
+May work for short-lived requests but problem occurs with WS.
+New connections will be balanced to existing servers, some servers will
+receive a spike in connections
+
+2. Blue-Green Deployments
+In this strategy, your application cluster remains online while a second cluster is deployed. Once the second cluster is healthy and ready to serve traffic, the load balancer cuts over to it. This can happen either immediately or slowly over time.
+Once second cluster is stable, the first one is removed.
+
+---
+Clustering BEAM nodes together
+
+A WebSocket-based application broadcasts outbound messages to all nodes in the cluster, using PubSub, so that connections on other nodes receive the message for connections that they own.
+
+using :net_kernel.connect_node/1
+to connect the node that invoked it to a specified remote node.
+1. need a way for BEAM nodes to talk over a given port and IP
+You can hard-code the port that BEAM uses for distribution, or you can have the Erlang Port Mapper Daemon running and available between the remote nodes. epmd maps symbolic node names to machine addresses, so your application can use an atom like :my_app@my_host and be mapped to the right port and IP address.
+https://erlang.org/doc/man/epmd.html
+
+2. need a shared cookie between all nodes in the cluster
+The cookie is an atom that is compared between two nodes when they try to connect to each other. If the cookie doesn’t match, the connection is not allowed. Tools like Mix Release and Distillery will automatically set this up for you,
+
+-- node discovery -- 
+Peerage[52] and libcluster[53] both provide a few different ways to perform node discovery.
+https://github.com/bitwalker/libcluster
+
+An alternative (incase cloud provides lock down networking) is to use Redis-based PubSub, i.e. phoenix_pubsub_redis
+https://hex.pm/packages/phoenix_pubsub_redis
+
+
+---
+Origin checking
+in config file, can limit connections origin 
+
+	config :sneakers_23, Sneakers23Web.Endpoint,
+ 	  url: [host: "app.sneakers23.com", port: 80]
+
+# for multiple hosts
+ 	config :sneakers_23, Sneakers23Web.Endpoint,
+ 	  check_origin: [
+ 	    "//app.sneakers23.com",
+ 	    "chrome://extension-id",
+ 	    "https://sneakers23.com"
+ 	  ]
+
+
+# to check per-socket basis
+# MyStoreWeb.Origin.allowed config should be true or false
+ 	socket "/socket", MyStoreWeb.ProductSocket,
+ 	  websocket: [
+ 	    check_origin: {MyStoreWeb.Origin, :allowed?, []}
+ 	  ]
+
+# for all websocket configurations:https://hexdocs.pm/phoenix/Phoenix.Endpoint.html#socket/3-common-configuration
+
+-----
+Managing Elixir CPU usage
+Elixir Scheduler
+
+Key words:
+Scheduler
+A scheduler picks a process and executes the code for that process.
+
+Run Queue
+A list of processes that have work to be performed. A single process only exists in a single run queue.
+
+BEAM design: multiple schedulers, each with their own run queue.
+
+Scheduler 1 -> Run Queue ->->  |
+                               v
+Scheduler 2 -> Run Queue ->->Migration Logic
+                               ^
+Scheduler 3 -> Run Queue ->->  |
+
+The BEAM also has migration logic (aka work stealing) to allow for better load balancing of work across available cores—this is known as work stealing. The end result of this design is that each core can be efficiently used, and locking is decreased.
+
+---
+Pre-emptive scheduling
+
+The BEAM keeps track of how much work a process has performed by incrementing a reduction counter each time (roughly) a function is invoked for that process. After a certain number of reductions, that process is preempted and placed at the end of the run queue and other processes are executed. It is this preemption process that prevents a single process from taking over an entire CPU core, which would starve other processes from executing. 
+
+$ iex
+iex(1)> defmodule Test do def recurse(), do: recurse() end
+iex(2)> :observer.start
+iex(3)> schedulers = :erlang.system_info(:schedulers_online)
+iex(4)> Enum.each((1..schedulers), fn _ -> Task.async(&Test.recurse/0) end)
+iex(5)> Enum.map((1..10000), & &1 + &1) |> Enum.sum()
+100010000
+
+even though all schedulers are maxed out by the infinite recursive at line 4
+but BEAM still able to execute line 5 due to preemptive scheduling 
+
+exceptions: 
+NIF (Native Implemented Function - in C code) cannot be preemptively schedule due to it running outside of Erlang's functional
+paradigm
+
+--
+Single process bottleneck
+Elixir’s scheduler distributes work across CPU cores on a per-process basis.
+These bottlenecks occur when you have many processes, such as Channels, simultaneously making requests to a single process.
+
+One way to avoid a single-process bottleneck is to shard your processes based on a key or some other criteria
+
+With this approach, you end up with many more processes than schedulers. Elixir balances the processes across all schedulers to provide a consistent CPU throughput across all cores. - Good
+
+If you had a single process instead, a single core would receive all of the work. - Bad
+
+-----
+Managing Memory
+
+Elixir's Garbage Collector
+
+
+Each BEAM process has its own stack and heap for SMALL data binaries (less than 64 bytes.) 
+LARGEr binaries are stored in a SHARED MEMORY SPACE with a reference-counted pointer (called ProcBin) that lives in a Process’s heap. 
+This means that there are many data stacks and heaps in our application, one per process, unlike many other languages that have a single stack and heap.
+
+Small data binaries in Private Heap
+Large data stored in Private Heap as reference with pointer (ProcBin)
+to Shared Heap (where the actual binaries are)
+
+The BEAM is different than many other virtual machines because garbage collection happens on a single process, not globally.
+
+Two types of garbage collection in BEAM process:
+1. Generational garbage collection (minor garbage collection)
+2. Full-sweep garbage collection (major garbage collection) 
+
+1. Only looks at recently allocted memory. Reclaims heap memory that is no longer referenced by the process.
+2. Looks at entire heap of a process, reclaims as much memory as possible. Happens much less frequently, only when heap is close to being full, when a certain number of generational collections happens, or when manually called.
+
+Long-lived process maybe get stucked in a state where there is plenty of free memory, but not enough work to trigger a generational pass. A process in this state will live without memory being collected, and it will potentially take up more memory than necessary. Imagine there are thousand of these processes, each using bits of memory (but not enough to trigger GC), memory bloat will be huge.
+
+--
+2 solutions:
+1. Forced full-sweep GC
+2. Process hibernation
+
+defmodule Memory do
+  use GenServer
+
+  def init([]) do
+    {:ok, []}
+  end
+
+  def handle_call({:allocate, chars}, _from, state) do
+    data = Enum.map((1..chars), fn _ -> "a" end)
+    {:reply, :ok, [data | state]}
+  end
+
+  def handle_call(:clear, _from, _state) do
+    {:reply, :ok, []}
+  end
+
+  def handle_call(:noop, _from, state) do
+    {:reply, :ok, state}
+  end
+
+  def handle_call(:clear_hibernate, _from, _state) do
+    {:reply, :ok, [], :hibernate}
+  end
+end
+
+--
+iex(1)> {:ok, pid} = GenServer.start_link(Memory, [])
+{:ok, #PID<0.147.0>}
+iex(2)> :erlang.process_info(pid, :memory)
+{:memory, 2820}
+
+iex(3)> GenServer.call(pid, {:allocate, 4_000})
+:ok
+iex(4)> :erlang.process_info(pid, :memory)
+{:memory, 142804}
+
+iex(5)> GenServer.call(pid, :clear) # just cleaning state doesnt trigger GC
+:ok
+iex(6)> :erlang.process_info(pid, :memory)
+{:memory, 142804}
+
+iex(7)> Enum.each((1..100), fn _ -> GenServer.call(pid, :noop) end)
+:ok
+iex(8)> :erlang.process_info(pid, :memory)
+{:memory, 142804}
+
+iex(9)> :erlang.garbage_collect(pid) # manually Force full-sweep GC
+true
+iex(10)> :erlang.process_info(pid, :memory)
+{:memory, 2820}
+
+--
+# return :hibernate to cause GenServer to hibernate (which force major GC)
+iex(1)> {:ok, pid} = GenServer.start_link(Memory, [])
+{:ok, #PID<0.147.0>}
+iex(2)> :erlang.process_info(pid, :memory)
+{:memory, 2820}
+
+iex(3)> GenServer.call(pid, {:allocate, 4_000})
+:ok
+iex(4)> :erlang.process_info(pid, :memory)
+{:memory, 142804}
+
+iex(5)> GenServer.call(pid, :clear_hibernate)
+:ok
+iex(6)> :erlang.process_info(pid, :memory)
+{:memory, 1212}
+
+#  or set :hibernate_after option to hiberate X seconds after processing last
+#  message
+iex(1)> {:ok, pid} = GenServer.start_link(Memory, [], hibernate_after: 1_000)
+iex(2)> GenServer.call(pid, {:allocate, 4_000})
+iex(3)> GenServer.call(pid, :clear) # need to clear off last message
+iex(4)> Process.sleep(1_000) # can also manually just wait one second
+iex(4)> :erlang.process_info(pid, :memory)
+{:memory, 1212}
+
+Phoenix Channels use the hibernate_after option to enter hibernation 15 seconds after processing their last message.
+
+Channels use hibernation out-of-the-box, but processes that you write need to set it up themselves.
+--
+in iex, to clear for all running Processes
+Process.list() |> Enum.each(&:erlang.garbage_collect/1)
+
+in Mix Release, to adjust the the value of `minor GC neccessary to do major GC`
+(default 65535)
+
+change in vm.args file : -env ERL_FULLSWEEP_AFTER 20 # this changed it from 65535 to 20
+
+-----
+Inspecting Running Application
+
+can use `remote_console` directly at the daemon? 
+
+via the console (iex)
+Process.info/1 provides some useful information
+
+Process.info(self())
+
+message_queue_len—The number of messages waiting to be handled by this process
+total_heap_size—The amount of heap memory that this process is using
+reductions—Represents the amount of work this process has performed
+current_function—The function currently being executed by this process
+
+use Process.info(self(), :dictionary), for more in-depth summary
+
+The observer_cli (based on the recon library) library provides a visual interface to access live information about your application (for all processes).
+
+access with remove shell and :observer_cli.start
+looks just like htop, press `r + enter` to sort process list by reduction count (how many times it has been run)
+to check on process 1 info, press `1 + enter`
+
+
+---
+Qns
+whats the diff between `use` and `@behaviour`?
+
+
+`use` is a macro which will inject and initiates code in the module
+`import` Ecto.Query means we can type _everything_ inside Ecto.Query without specifying 
+the module name again, for e.g. we can just type `from`
+
+page 404.5, when testing admin dashboard, found out that
+item availablilites are not updated 
+because dashboard controller index action is only
+getting initial list of products via the server (state)
+i.e. Sneakers23.Inventory.get_complete_products() only
+(and wasnt refreshed)
+
+
+----
+Ecto https://hexdocs.pm/ecto/getting-started.html#content
+Ecto_sql (adapter) -> what we actually install https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.html
+
+is NOT an ORM nor Active Record
+
+DB wrapper in Repo (Repository) pattern
++ DSL (Query Language)
+
+Repo gives JUST the data that's needed
+Active Record grabs everything
+
+--
+
+mix new PATH [--app APP] [--module MODULE] [--sup] [--umbrella]
+
+--sup generate an OTP application skeleton including a
+supervision tree (application.ex). Normally an app is generated without a supervisor and without
+the app callback.
+
+provided config files are there
+mix ecto.create   # to create new db
+mix ecto.drop     # to drop db
+mix ecto.gen.migration create_users # to manually create migration file
+mix ecto.migrate
+mix ecto.rollback
+
+----
+Schema-less Queries (using Ecto.Query, and App.Repo)
+# for both Repo.insert and Repo.insert_all.. can specify returning attributes
+# for Repo.insert, Repo.update can only be used with Schema
+# for directly updating table, use Repo.insert_all and Repo.update_all (but no
+# auto timestamps())
+# (but seems no _except_)
+iex(5)> Repo.insert_all "users", users_to_insert, returning: [:id, :username]
+21:27:43.810 [debug] QUERY OK db=11.5ms decode=2.4ms queue=2.4ms idle=1689.3ms
+INSERT INTO "users" ("email","inserted_at","updated_at","username") VALUES ($1,$2,$3,$4),($5,$6,$7,$8),($9,$10,$11,$12) RETURNING "id","username" ["lia@example.com", ~U[2021-09-04 13:26:41.924244Z], ~U[2021-09-04 13:26:41.928069Z], "lia", "hugo@example.com", ~U[2021-09-04 13:26:41.928079Z], ~U[2021-09-04 13:26:41.928082Z], "hugo", "alchs@camps.com", ~U[2021-09-04 13:26:41.928087Z], ~U[2021-09-04 13:26:41.928089Z], "alchs"]
+{3,
+ [
+    %{id: 1, username: "lia"},
+    %{id: 2, username: "hugo"},
+    %{id: 3, username: "alchs"}
+ ]}
+
+# for Repo.insert_all, wihtout specifying `returning:` opt, the result will just
+# be {<no of rows inserted>, nil}
+
+Repo.query("select * from bookmarks")  # allow to type raw SQL statement
+[debug] QUERY OK db=0.7ms queue=0.9ms idle=1522.7ms
+select title from bookmarks []
+{:ok,
+%Postgrex.Result{
+columns: ["title"],
+command: :select,
+connection_id: 14517,
+messages: [],
+num_rows: 4,
+rows: [
+["A site with lots of Elixir tutorials"],
+["Alchemist Camp"],
+["Reactor Podcast"],
+["IH"]
+]
+}}
+
+# but weary of SQL injection, use Query DSL
+import Ecto.Query
+
+iex(15)> query = from "bookmarks", select: [:title]
+#Ecto.Query<from b0 in "bookmarks", select: [:title]>
+iex(16)> Repo.to_sql(:all, query)   # there are other 2 options, :update_all, :delete_all.. but :all should be most common (all types of query?)
+{"SELECT b0.\"title\" FROM \"bookmarks\" AS b0", []}
+iex(17)> Repo.all(query)
+[debug] QUERY OK source="bookmarks" db=0.5ms queue=0.4ms idle=14.6ms
+SELECT b0."title" FROM "bookmarks" AS b0 []
+[
+%{title: "A site with lots of Elixir tutorials"},
+%{title: "Alchemist Camp"},
+%{title: "Reactor Podcast"},
+%{title: "IH"}
+]
+
+--
+# different way of using from expr
+
+# should think of it as such:
+get_hugo = from(u in "users", where: u.username == "hugo", select: u.id)
+
+# 2nd way is easier to read, but 1st way is better when dealing with multiple
+# tables
+get_hugo = from u in "users", where: u.username == "hugo", select: u.id
+get_hugo_alt = from "users", where: [username: "hugo"], select: [:id]
+
+Repo.one(get_hugo) #= 2 # get one only, if used to get result with row > 1, will have error
+Repo.all(get_hugo) #= [2]
+
+--
+Join statements
+
+get_lia_bookmarks2 =
+  from(u in "users",
+  where: u.username == "lia",
+  join: b in "bookmarks",
+  on: b.user_id == u.id,
+  join: l in "links",
+  on: b.link_id == l.id,
+  select: [u.username, l.url, b.title]
+)
+
+Repo.all(get_lia_bookmarks2)
+
+--
+why ^pinning?
+#becoz the variable is not visible inside a macro argument
+#the variable needs to be `pinned` so that the compiler knows to interpolate it 
+#_before_ executing the code expression
+
+name = "hugo"
+by_name = from(u in "users", where: u.username == ^name)
+{1, _} = Repo.update_all(by_name, set: [email: "hugolacr@example.com"]
+
+--
+Ecto.Schema 
+
+defmodule Linkly.User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :about
+    field :email
+    field :username
+
+    timestamps()
+  end
+end
+
+--
+# instead of using a DSL query, can use the schema
+iex(23)> Repo.all(User)
+23:39:53.907 [debug] QUERY OK source="users" db=4.2ms queue=0.4ms idle=1225.7ms
+SELECT u0."id", u0."about", u0."email", u0."username", u0."inserted_at", u0."updated_at" FROM "users" AS u0 []
+[
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+              about: nil,
+              email: "lia@example.com",
+              id: 1,
+              inserted_at: ~N[2021-09-04 15:30:19],
+              updated_at: ~N[2021-09-04 15:30:19],
+              username: "lia"
+    },
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          email: "hugo@example.com",
+          id: 2,
+          inserted_at: ~N[2021-09-04 15:30:19],
+          updated_at: ~N[2021-09-04 15:30:19],
+          username: "hugo"
+    },
+  ..
+]
+
+iex(24)> Repo.all(from User, select: [:id])
+23:40:08.243 [debug] QUERY OK source="users" db=0.2ms queue=0.2ms idle=1566.5ms
+SELECT u0."id" FROM "users" AS u0 []
+[
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          email: nil,
+          id: 1,  # just the id, but still return u the resest of the Echo.Schema
+          inserted_at: nil,
+          updated_at: nil,
+          username: nil
+    },
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          email: nil,
+          id: 2,
+          inserted_at: nil,
+          updated_at: nil,
+          username: nil
+    },
+    ..
+]
+
+# like this only the data you need
+iex(26)> Repo.all(from u in User, select: [u.id])
+23:44:30.709 [debug] QUERY OK source="users" db=0.2ms queue=0.3ms idle=1078.1ms
+SELECT u0."id" FROM "users" AS u0 []
+[[1], [2], [3]]
+
+--
+# much simplified version of Repo.all(from u in..., where..)
+lia = Repo.get_by(User, [username: "lia"])
+
+Schema are just maps, they can be created for 'modeling' concept of the app
+not necessary need to tie to table
+
+--
+Recap
+
+### raw SQL
+
+Repo.query  
+
+### executing a query directly
+
+Repo.all  
+Repo.one  
+
+### batch / schema-less actions
+
+Repo.insert_all  
+Repo.update_all  
+Repo.delete_all  
+
+### single queries (with schema, handle auto timestamps)
+
+Repo.insert  
+Repo.update  
+Repo.delete  
+
+### Some other very common queries
+
+Repo.get  
+Repo.get! (and analogues like insert!, delete!)  
+Repo.get_by 
+for e.g. 
+    Repo.get_by(Bookmark, [title: "IH"])
+    Repo.get_by(Bookmark, %{title: "IH"}) # to the same effect
+
+Repo.aggregate (with :count, :avg, etc)  
+for e.g.
+    iex(41)> query = from(b in Bookmark, where: b.link_id == 1)
+#Ecto.Query<from b0 in Linkly.Bookmark, where: b0.link_id == 1>
+    iex(42)> Repo.aggregate(query, :count, :id) # aggregate count by Bookmark.id
+
+    [debug] QUERY OK source="bookmarks" db=1.1ms queue=1.0ms idle=1353.9ms
+    SELECT count(b0."id") FROM "bookmarks" AS b0 WHERE (b0."link_id" = 1) []
+    2
+
+Repo.exist? # can put Schema or query (same like the parameters for other Repo functions)
+# checks if any posts exist
+Repo.exists?(Post)
+# checks if any post with a like count greater than 10 exists
+query = from p in Post, where: p.like_count > 10
+Repo.exists?(query)
+
+----
+Ecto associations
+
+if we have a `bookmarks` schema like so:
+  schema "bookmarks" do
+    field(:title)
+    belongs_to(:link, Link)
+    belongs_to(:user, User)
+
+    timestamps()
+  end
+
+# we can see the NotLoaded association, we could preload those
+iex(1)> bookmark = Repo.get! Bookmark, 1
+11:45:57.770 [debug] QUERY OK source="bookmarks" db=14.2ms decode=1.3ms queue=2.6ms idle=1032.5ms
+SELECT b0."id", b0."title", b0."link_id", b0."user_id", b0."inserted_at", b0."updated_at" FROM "bookmarks" AS b0 WHERE (b0."id" = $1) [1]
+%Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+              id: 1,
+              inserted_at: ~N[2021-09-04 15:30:19],
+              link: #Ecto.Association.NotLoaded<association :link is not loaded>,
+              link_id: 1,
+              title: "A site with lots of Elixir tutorials",
+              updated_at: ~N[2021-09-04 15:30:19],
+              user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+              user_id: 1
+}
+
+iex(2)> Repo.preload(bookmark, [:link, :user])
+
+[debug] QUERY OK source="links" db=1.6ms queue=0.9ms idle=1987.9ms
+SELECT l0."id", l0."url", l0."inserted_at", l0."updated_at", l0."id" FROM "links" AS l0 WHERE (l0."id" = $1) [1]
+
+[debug] QUERY OK source="users" db=2.0ms queue=1.3ms idle=1987.9ms
+SELECT u0."id", u0."about", u0."email", u0."username", u0."inserted_at", u0."updated_at", u0."id" FROM "users" AS u0 WHERE (u0."id" = $1) [1]
+%Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+          id: 1,
+          inserted_at: ~N[2021-09-04 15:30:19],
+          link: %Linkly.Link{  # Link is preloaded
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          id: 1,
+          inserted_at: ~N[2021-09-04 15:30:19],
+          updated_at: ~N[2021-09-04 15:30:19],
+          url: "https://alchemist.camp"
+              },
+link_id: 1,
+         title: "A site with lots of Elixir tutorials",
+         updated_at: ~N[2021-09-04 15:30:19],
+         user: %Linkly.User{  # User is preloaded
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          email: "lia@example.com",
+          id: 1,
+          inserted_at: ~N[2021-09-04 15:30:19],
+          updated_at: ~N[2021-09-04 15:30:19],
+          username: "lia"
+         },
+user_id: 1
+    }
+
+#if we setup the ecto association, then we can use Repo.preload to load the assoc
+
+  schema "users" do
+    field :about
+    field :email
+    field :username
+
+    has_many(:bookmarks, Bookmark)
+
+    timestamps()
+  end
+
+# we could load all the bookmarks for a user
+iex(12)> u1 = Repo.get_by! User, [username: "lia"] 
+...
+
+iex(13)> Repo.preload(u1, [:bookmarks])
+[debug] QUERY OK source="bookmarks" db=1.9ms queue=2.7ms idle=1297.3ms
+SELECT b0."id", b0."title", b0."link_id", b0."user_id", b0."inserted_at", b0."updated_at", b0."user_id" FROM "bookmarks" AS b0 WHERE (b0."user_id" = $1) ORDER BY b0."user_id" [1]
+%Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+              about: nil,
+              bookmarks: [
+                  %Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+          id: 1,
+          ...
+          user_id: 1
+                  },
+                 %Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+          id: 4,
+          ...
+          user_id: 1
+              }
+          ],
+          email: "lia@example.com",
+          id: 1,
+          inserted_at: ~N[2021-09-04 15:30:19],
+          updated_at: ~N[2021-09-04 15:30:19],
+          username: "lia"
+    }
+
+# or even go deeper
+ex(15)> u_b_l = Repo.preload(u1, [bookmarks: [:link]])
+...
+# User preloaded with bookmarks (preloaded with link)
+iex(18)> Enum.at(u_b_l.bookmarks, 0)   
+    %Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+    id: 1,
+    ..
+    link: %Linkly.Link{
+           ..
+          }
+    }
+iex(20)> Enum.map(u_b_l.bookmarks, & {&1.link.url})
+[{"https://alchemist.camp"}, {"https://indiehackers.com"}]
+
+---
+Has [many] through
+
+User [has many] Bookmark
+Bookmark [belonged to] Link
+how to get User -> Link directly
+
+  schema "users" do
+    field :about
+    field :email
+    field :username
+
+    has_many(:bookmarks, Bookmark)
+    has_many :bookmarked_links, through: [:bookmarks, :link]
+
+    timestamps()
+  end
+
+# now we see the `bookmarked_links` assoc in the Schema struct 
+iex(21)> u1 = Repo.get User, 1
+12:43:26.608 [debug] QUERY OK source="users" db=1.7ms idle=1850.8ms
+SELECT u0."id", u0."about", u0."email", u0."username", u0."inserted_at", u0."updated_at" FROM "users" AS u0 WHERE (u0."id" = $1) [1]
+%Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          bookmarked_links: #Ecto.Association.NotLoaded<association :bookmarked_links is not loaded>,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          email: "lia@example.com",
+          id: 1,
+          inserted_at: ~N[2021-09-05 04:36:40],
+          updated_at: ~N[2021-09-05 04:36:40],
+          username: "lia"
+}
+
+iex(22)> u1.bookmarked_links
+#Ecto.Association.NotLoaded<association :bookmarked_links is not loaded>
+iex(23)> u1 = Repo.preload(u1, [:bookmarked_links])
+# notice the 2 queries executed below
+[debug] QUERY OK source="bookmarks" db=3.9ms queue=0.1ms idle=1862.3ms
+SELECT b0."id", b0."title", b0."link_id", b0."user_id", b0."inserted_at", b0."updated_at", b0."user_id" FROM "bookmarks" AS b0 WHERE (b0."user_id" = $1) ORDER BY b0."user_id" [1]
+ 
+[debug] QUERY OK source="links" db=0.7ms queue=0.6ms idle=1878.2ms
+ SELECT l0."id", l0."url", l0."inserted_at", l0."updated_at", l0."id" FROM "links" AS l0 WHERE (l0."id" = ANY($1)) [[1, 3]]
+...
+iex(24)> u1.bookmarked_links                       
+[
+    %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+              id: 1,
+              ..
+              url: "https://alchemist.camp"
+    },
+    %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 3,
+          ..
+          url: "https://indiehackers.com"
+    }
+]
+
+--
+Join through
+
+   schema "link_tags" do
+      belongs_to(:link, Link)
+      belongs_to(:tag, Tag)
+      belongs_to(:user, User)
+   
+      timestamps()
+   end
+
+   schema "links" do
+    field(:url)
+
+    has_many(:bookmarks, Bookmark)
+    has_many(:taggings, LinkTag) # LinkTag is a pivot table
+    many_to_many(:tags, Tag, join_through: LinkTag) #can directly get assoc info from Tag
+
+    timestamps()
+  end
+
+iex(1)> l1 = Repo.get! Link, 1
+%Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 1,
+          inserted_at: ~N[2021-09-05 04:36:39],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          ...
+        }
+
+iex(3)> l1 = Repo.preload(l1, :tags)
+13:17:09.379 [debug] QUERY OK source="tags" db=7.9ms queue=0.1ms idle=1476.9ms
+SELECT t0."id", t0."title", t0."inserted_at", t0."updated_at", l1."link_id"::bigint FROM "tags" AS t0 INNER JOIN "link_tags" AS l1 ON t0."id" = l1."tag_id" WHERE (l1."link_id" = ANY($1)) ORDER BY l1."link_id"::bigint [[1]]
+%Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 1,
+          inserted_at: ~N[2021-09-05 04:36:39],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: [
+              %Linkly.Tag{
+__meta__: #Ecto.Schema.Metadata<:loaded, "tags">,
+          id: 3,
+          inserted_at: ~N[2021-09-05 04:36:40],
+          title: "Elixir",
+          updated_at: ~N[2021-09-05 04:36:40]
+                  },
+              %Linkly.Tag{
+__meta__: #Ecto.Schema.Metadata<:loaded, "tags">,
+          id: 5,
+          inserted_at: ~N[2021-09-05 04:36:40],
+          title: "Projects",
+          updated_at: ~N[2021-09-05 04:36:40]
+              }
+              ],
+              updated_at: ~N[2021-09-05 04:36:39],
+              url: "https://alchemist.camp"
+}
+
+..
+# we can get more information from the pivot link_tags schema
+iex(6)> Repo.preload(l1, taggings: [:user, :tag])
+[debug] QUERY OK source="link_tags" db=2.3ms queue=3.4ms idle=1888.9ms
+SELECT l0."id", l0."link_id", l0."tag_id", l0."user_id", l0."inserted_at", l0."updated_at", l0."link_id" FROM "link_tags" AS l0 WHERE (l0."link_id" = $1) ORDER BY l0."link_id" [1]
+[debug] QUERY OK source="users" db=0.9ms queue=1.0ms idle=1894.6ms
+ SELECT u0."id", u0."about", u0."email", u0."username", u0."inserted_at", u0."updated_at", u0."id" FROM "users" AS u0 WHERE (u0."id" = ANY($1)) [[1, 3]]
+[debug] QUERY OK source="tags" db=0.9ms queue=1.4ms idle=1894.6ms
+ SELECT t0."id", t0."title", t0."inserted_at", t0."updated_at", t0."id" FROM "tags" AS t0 WHERE (t0."id" = ANY($1)) [[3, 5]]
+ %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+              id: 1,
+              ..
+              taggings: [
+                  %Linkly.LinkTag{
+                         id: 1,
+                         ..
+                         link_id: 1,
+                         tag: %Linkly.Tag{
+                                id: 3,
+                                inserted_at: ~N[2021-09-05 04:36:40],
+                                title: "Elixir",
+                                updated_at: ~N[2021-09-05 04:36:40] 
+                            },
+                         tag_id: 3,
+                         updated_at: ~N[2021-09-05 04:36:40],
+                         user: %Linkly.User{
+                                about: nil,
+                                ..
+                                email: "lia@example.com",
+                                id: 1,
+                                inserted_at: ~N[2021-09-05 04:36:40],
+                                updated_at: ~N[2021-09-05 04:36:40],
+                                username: "lia"
+                            },
+                        user_id: 1
+                  },
+                  %Linkly.LinkTag{
+                        ..
+                        }
+              ],
+              ...
+}
+
+---
+2 ways of making a changeset
+Ecto.Changeset.change/1 or /2
+Ecto.Changeset.cast/3 or /4
+
+
+--
+change/1 => to create new change
+change/2 => 1st param is the existing changeset, 2nd param is the change to be made
+internal data -> Use 'change' # no filtering and validation, data that you trust
+
+iex(9)> cs = change(%Link{url: "news.ycombinator.com"})
+#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: #Linkly.Link<>,valid?: true>
+
+iex(10)> cs.data # what's going into the DB
+%Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:built, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: nil,
+          inserted_at: nil,
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: nil,
+          url: "news.ycombinator.com",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+}
+iex(11)> cs.changes
+%{}
+
+iex(12)> Repo.insert(cs)
+[debug] QUERY OK db=4.3ms queue=0.8ms idle=1408.8ms
+INSERT INTO "links" ("url","inserted_at","updated_at") VALUES ($1,$2,$3) RETURNING "id" ["news.ycombinator.com", ~N[2021-09-05 08:29:50], ~N[2021-09-05 08:29:50]]
+{:ok,
+    %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 4,
+          inserted_at: ~N[2021-09-05 08:29:50],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:29:50],
+          url: "news.ycombinator.com",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+    }}
+
+iex(13)> hm = Repo.get! Link, 4
+
+16:31:59.305 [debug] QUERY OK source="links" db=2.5ms queue=0.1ms idle=779.6ms
+SELECT l0."id", l0."url", l0."inserted_at", l0."updated_at" FROM "links" AS l0 WHERE (l0."id" = $1) [4]
+%Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 4,
+          inserted_at: ~N[2021-09-05 08:29:50],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:29:50],
+          url: "news.ycombinator.com",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+}
+
+iex(14)> hm = change(hm, %{url: "lobeste.rs"})
+#Ecto.Changeset<
+    action: nil,
+    changes: %{url: "lobeste.rs"},
+    errors: [],
+    data: #Linkly.Link<>,
+    valid?: true
+    >
+
+iex(15)> hm.data # we see the existing data
+    %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 4,
+          inserted_at: ~N[2021-09-05 08:29:50],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:29:50],
+          url: "news.ycombinator.com",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+    }
+
+iex(16)> hm.changes # we see the changes now
+%{url: "lobeste.rs"}
+iex(17)> Repo.update(hm) # can update it
+[debug] QUERY OK db=13.4ms queue=0.4ms idle=1251.0ms
+UPDATE "links" SET "url" = $1, "updated_at" = $2 WHERE "id" = $3 ["lobeste.rs", ~N[2021-09-05 08:33:24], 4]
+{:ok,
+    %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 4,
+          inserted_at: ~N[2021-09-05 08:29:50],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:33:24],
+          url: "lobeste.rs",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+    }}
+
+-
+
+external data -> Use 'cast'
+Ecto.Changeset.cast/3 or /4
+
+the 3rd parameter allows attributes to be specified (to prevent certain field to be updated)
+
+iex(21)> params = %{username: "mallory", email: "mlly@example.com", about: "an avid linker"}
+%{about: "an avid linker", email: "mlly@example.com", username: "mallory"}
+iex(22)> cs = cast(%User{}, params, [:username, :email])
+#Ecto.Changeset<
+    action: nil,
+    changes: %{email: "mlly@example.com", username: "mallory"},   #only these 2 are changes
+    errors: [],
+    data: #Linkly.User<>,
+    valid?: true
+    >
+iex(23)> cs.changes
+%{email: "mlly@example.com", username: "mallory"}
+iex(24)> Repo.insert(cs)
+[debug] QUERY OK db=4.2ms queue=1.0ms idle=1055.3ms
+INSERT INTO "users" ("email","username","inserted_at","updated_at") VALUES ($1,$2,$3,$4) RETURNING "id" ["mlly@example.com", "mallory", ~N[2021-09-05 08:46:27], ~N[2021-09-05 08:46:27]]
+{:ok,
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          bookmarked_links: #Ecto.Association.NotLoaded<association :bookmarked_links is not loaded>,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          email: "mlly@example.com",
+          id: 4,
+          inserted_at: ~N[2021-09-05 08:46:27],
+          tagged_links: #Ecto.Association.NotLoaded<association :tagged_links is not loaded>,
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:46:27],
+          username: "mallory"
+    }}
+
+-- to update
+iex(27)> cs = cast(hugo, %{username: "rob", about: "some about"}, [:username])
+#Ecto.Changeset<
+    action: nil,
+    changes: %{username: "rob"},
+    errors: [],
+    data: #Linkly.User<>,
+    valid?: true
+    >
+iex(28)> Repo.update cs  
+[debug] QUERY OK db=5.4ms queue=1.4ms idle=1529.4ms
+UPDATE "users" SET "username" = $1, "updated_at" = $2 WHERE "id" = $3 ["rob", ~N[2021-09-05 08:50:49], 2]
+{:ok,
+    %Linkly.User{
+__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+          about: nil,
+          bookmarked_links: #Ecto.Association.NotLoaded<association :bookmarked_links is not loaded>,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          email: "hugo@example.com",
+          id: 2,
+          inserted_at: ~N[2021-09-05 04:36:40],
+          tagged_links: #Ecto.Association.NotLoaded<association :tagged_links is not loaded>,
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 08:50:49],
+          username: "rob"
+    }}
+
+
+--
+Commit changesets Repo.insert or Repo.update
+
+
+---
+Ecto.build_assoc -> building a new assoc
+
+# for e.g. A Bookmark [belonged to] a user. Given a user, build the assoc for
+# Bookmark
+
+iex(47)> mal = Repo.get! User, 4
+
+iex(48)> Ecto.build_assoc mal, :bookmarks
+%Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:built, "bookmarks">,
+          id: nil,
+          inserted_at: nil,
+          link: #Ecto.Association.NotLoaded<association :link is not loaded>,
+          link_id: nil,
+          title: nil,
+          updated_at: nil,
+          user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+          user_id: 4
+}
+
+# build it with title
+iex(49)> bookmark = Ecto.build_assoc mal, :bookmarks, title: "Some title"
+%Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:built, "bookmarks">,
+          id: nil,
+          inserted_at: nil,
+          link: #Ecto.Association.NotLoaded<association :link is not loaded>,
+          link_id: nil,
+          title: "Some title",
+          updated_at: nil,
+          user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+          user_id: 4
+}
+
+# Ecto.Changeset.put_assoc -> replace the entire assoc (including whats already there)
+# but bookmark's link (required field) is empty, so we put_assoc into it
+iex(50)> cs = change(bookmark)
+#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: #Linkly.Bookmark<>,
+    valid?: true>
+iex(51)> cs_2 = put_assoc(cs, :link, url: "https://help.com")
+#Ecto.Changeset<
+    action: nil,
+    changes: %{
+link: #Ecto.Changeset<
+          action: :insert,
+      changes: %{url: "https://help.com"},
+      errors: [],
+      data: #Linkly.Link<>,
+      valid?: true   # this is valid
+          >
+    },
+errors: [],
+    data: #Linkly.Bookmark<>,
+    valid?: true   # this is also valid
+    >
+
+iex(53)> Repo.insert(cs_2)
+[debug] QUERY OK db=0.1ms idle=1789.9ms
+begin []
+
+[debug] QUERY OK db=0.5ms
+INSERT INTO "links" ("url","inserted_at","updated_at") VALUES ($1,$2,$3) RETURNING "id" ["https://help.com", ~N[2021-09-05 09:37:34], ~N[2021-09-05 09:37:34]]
+
+[debug] QUERY OK db=0.9ms
+INSERT INTO "bookmarks" ("link_id","title","user_id","inserted_at","updated_at") VALUES ($1,$2,$3,$4,$5) RETURNING "id" [5, "Some title", 4, ~N[2021-09-05 09:37:34], ~N[2021-09-05 09:37:34]]
+
+[debug] QUERY OK db=1.8ms
+commit []
+{:ok,
+    %Linkly.Bookmark{
+__meta__: #Ecto.Schema.Metadata<:loaded, "bookmarks">,
+          id: 6,
+          inserted_at: ~N[2021-09-05 09:37:34],
+          link: %Linkly.Link{
+__meta__: #Ecto.Schema.Metadata<:loaded, "links">,
+          bookmarks: #Ecto.Association.NotLoaded<association :bookmarks is not loaded>,
+          id: 5,
+          inserted_at: ~N[2021-09-05 09:37:34],
+          taggings: #Ecto.Association.NotLoaded<association :taggings is not loaded>,
+          tags: #Ecto.Association.NotLoaded<association :tags is not loaded>,
+          updated_at: ~N[2021-09-05 09:37:34],
+          url: "https://help.com",
+          users: #Ecto.Association.NotLoaded<association :users is not loaded>
+          },
+link_id: 5,
+         title: "Some title",
+         updated_at: ~N[2021-09-05 09:37:34],
+         user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+         user_id: 4
+    }}
+
+---
+
+cast_assoc (its like put_assoc but with `cast` (i.e. validation))
+
+%User{}
+|> User.changeset(attrs)
+|> cast_assoc(:credential, with: &Credentail.changset/2)  # the `with fun` is the 'casting validation' part
+|> put_change(:is_onboarded, true) # simply put the new is_onboarded: true in the changeset (or overwrite it if exsiting)
+|> Repo.insert()
+
+
+
+#Ecto.Changeset<action: :insert, 
+changes: %{credential: 
+#Ecto.Changeset<action: :insert, changes: %{email: "some email", password: "some password"}, 
+errors: [password: {"has invalid format", [validation: :format]}, email: {"has invalid format", [validation: :format]}], data: #ApiGateway.Accounts.Credential<>, valid?: false>, username: "abc123"}, 
+errors: [], data: #ApiGateway.Accounts.User<>, valid?: false>
+
+
+
+
+
+
+
+

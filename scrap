@@ -1,0 +1,75 @@
+%{__meta__: #Ecto.Schema.Metadata<:loaded, "products">, __struct__: %Sneakers23.Inventory.Product, 
+brand: "brand", 
+color: "color", 
+id: 53,
+%inserted_at: ~N[2021-08-21 09:47:23], 
+
+    items: [%{__meta__: %#Ecto.Schema.Metadata<:loaded, "items">, __struct__: Sneakers23.Inventory.Item,
+        %available_count: 1, id: 74, inserted_at: ~N[2021-08-21 09:47:23], 
+        product: %#Ecto.Association.NotLoaded<association :product is not loaded>, 
+        product_id: %53, 
+        size: "10", 
+        sku: "i1", 
+        updated_at: ~N[2021-08-21 09:47:23]}, 
+            %{__meta__: %#Ecto.Schema.Metadata<:loaded, "items">, __struct__: Sneakers23.Inventory.Item,
+        %available_count: 2, id: 75, inserted_at: ~N[2021-08-21 09:47:23], 
+        product: %#Ecto.Association.NotLoaded<association :product is not loaded>, 
+        product_id:%53, 
+        size: "10", 
+        sku: "i2", 
+        updated_at: ~N[2021-08-21 09:47:23]}],
+
+        %main_image_url: "url", name: "name", order: 1, price_usd: 100, released: false,
+%sku: "p1", updated_at: ~N[2021-08-21 09:47:23]}
+
+
+%Sneakers23.Inventory.Inventory{availability: %{75 =>
+%%Sneakers23.Inventory.ItemAvailability{__meta__: #Ecto.Schema.Metadata<:loaded,
+%"item_availabilities">, available_count: 1, id: 75, inserted_at: ~N[2021-08-21
+%09:53:11], item: #Ecto.Association.NotLoaded<association :item is not loaded>,
+%item_id: 77, updated_at: ~N[2021-08-21 09:53:11]}, 76 =>
+%%Sneakers23.Inventory.ItemAvailability{__meta__: #Ecto.Schema.Metadata<:loaded,
+%"item_availabilities">, available_count: 2, id: 76, inserted_at: ~N[2021-08-21
+%09:53:11], item: #Ecto.Association.NotLoaded<association :item is not loaded>,
+%item_id: 78, updated_at: ~N[2021-08-21 09:53:11]}, 77 =>
+%%Sneakers23.Inventory.ItemAvailability{__meta__: #Ecto.Schema.Metadata<:loaded,
+%"item_availabilities">, available_count: 3, id: 77, inserted_at: ~N[2021-08-21
+%09:53:11], item: #Ecto.Association.NotLoaded<association :item is not loaded>,
+%item_id: 79, updated_at: ~N[2021-08-21 09:53:11]}}, items: %{77 =>
+%%Sneakers23.Inventory.Item{__meta__: #Ecto.Schema.Metadata<:loaded, "items">,
+%id: 77, inserted_at: ~N[2021-08-21 09:53:11], product:
+%#Ecto.Association.NotLoaded<association :product is not loaded>, product_id:
+%55, size: "10", sku: "i1", updated_at: ~N[2021-08-21 09:53:11]}, 78 =>
+%%Sneakers23.Inventory.Item{__meta__: #Ecto.Schema.Metadata<:loaded, "items">,
+%id: 78, inserted_at: ~N[2021-08-21 09:53:11], product:
+%#Ecto.Association.NotLoaded<association :product is not loaded>, product_id:
+%55, size: "10", sku: "i2", updated_at: ~N[2021-08-21 09:53:11]}, 79 =>
+%%Sneakers23.Inventory.Item{__meta__: #Ecto.Schema.Metadata<:loaded, "items">,
+%id: 79, inserted_at: ~N[2021-08-21 09:53:11], product:
+%#Ecto.Association.NotLoaded<association :product is not loaded>, product_id:
+%56, size: "10", sku: "i3", updated_at: ~N[2021-08-21 09:53:11]}}, products:
+%%{55 => %Sneakers23.Inventory.Product{__meta__: #Ecto.Schema.Metadata<:loaded,
+%"products">, brand: "brand", color: "color", id: 55, inserted_at: ~N[2021-08-21
+%09:53:11], main_image_url: "url", name: "name", order: 1, price_usd: 100,
+%released: false, sku: "p1", updated_at: ~N[2021-08-21 09:53:11]}, 56 =>
+%%Sneakers23.Inventory.Product{__meta__: #Ecto.Schema.Metadata<:loaded,
+%"products">, brand: "brand", color: "color", id: 56, inserted_at: ~N[2021-08-21
+%09:53:11], main_image_url: "url", name: "name", order: 0, price_usd: 100,
+%released: false, sku: "p2", updated_at: ~N[2021-08-21 09:53:11]}}}
+
+
+[%{__meta__: #Ecto.Schema.Metadata<:loaded, "products">, __struct__: Sneakers23.Inventory.Product, brand: "brand", color: "color", id: 115, inserted_at: ~N[2021-08-21 10:17:21], items: [%{__meta__: #Ecto.Schema.Metadata<:loaded, "items">, __struct__: Sneakers23.Inventory.Item, available_count: 3, id: 160, inserted_at: ~N[2021-08-21 10:17:21], product: #Ecto.Association.NotLoaded<association :product is not loaded>, product_id: 115, size: "10", sku: "i3", updated_at: ~N[2021-08-21 10:17:21]}], main_image_url: "url", name: "name", order: 0, price_usd: 100, released: false, sku: "p2", updated_at: ~N[2021-08-21 10:17:21]}, %{__meta__: #Ecto.Schema.Metadata<:loaded, "products">, __struct__: Sneakers23.Inventory.Product, brand: "brand", color: "color", id: 114, inserted_at: ~N[2021-08-21 10:17:21], items: [%{__meta__: #Ecto.Schema.Metadata<:loaded, "items">, __struct__: Sneakers23.Inventory.Item, available_count: 1, id: 158, inserted_at: ~N[2021-08-21 10:17:21], product: #Ecto.Association.NotLoaded<association :product is not loaded>, product_id: 114, size: "10", sku: "i1", updated_at: ~N[2021-08-21 10:17:21]}, %{__meta__: #Ecto.Schema.Metadata<:loaded, "items">, __struct__: Sneakers23.Inventory.Item, available_count: 2, id: 159, inserted_at: ~N[2021-08-21 10:17:21], product: #Ecto.Association.NotLoaded<association :product is not loaded>, product_id: 114, size: "10", sku: "i2", updated_at: ~N[2021-08-21 10:17:21]}], main_image_url: "url", name: "name", order: 1, price_usd: 100, released: false, sku: "p1", updated_at: ~N[2021-08-21 10:17:21]}]
+
+
+
+  test "the update is sent to the client", %{test: test_name} do
+    {_, %{p1: p1}} = Test.Factory.InventoryFactory.complete_products()
+    {:ok, pid} = Server.start_link(name: test_name, loader_mod: DatabaseLoader)
+    Sneakers23Web.Endpoint.subscribe("product:#{p1.id}")
+  
+    Inventory.mark_product_released!(p1.id, pid: pid)
+    assert_received %Phoenix.Socket.Broadcast{event: "released"}
+  end
+
+  \u200b in vscode
+

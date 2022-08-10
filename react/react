@@ -1,0 +1,962 @@
+The main difference between Angular and React can be think of as:
+
+Angular:- Put javascript INTO html (template)
+React:- Put html INTO javascript
+
+Angular is also a total MVW (Whatever) framework but react is just a V (library).. with the rest being filled with whatever 3rd party libraries one fancies.
+
+--------------------------------
+Popular libraries (for easy reference):
+
+main:- react, react-dom
+
+3rd party libraries:
+react-router-dom (there's react-router for SSR?)
+redux
+rect-redux
+redux-form
+redux-thunk
+redux-promise
+redux-reselect
+
+react-semantic-ui
+
+--------------------------------
+
+Modern Javascript Tooling:
+
+Project Files:
+
+component_1.js												
+component_2.js
+component_3.js
+react.js
+redux.js
+   |
+   |
+   |
+   V
+Tooling(Transpile JSX + ES6 to ES5) 
+with webpack + babel
+   |
+   |
+   V
+index.html
+application.js
+style.css
+
+------------------------------
+Basic react:
+
+//index.js
+
+import React from 'react';//work with components
+import ReactDOM from 'react-dom';//work with rendering components INTO DOM
+
+//create a new component with JSX  --> functional component, it is a function
+const App = () => {
+  return(
+    <div>
+      Hello World
+    </div>
+  );
+}
+
+//Take this component and put it into the DOM
+ReactDOM.render(<App/>,document.querySelector('.container'));
+
+------------
+//index.html
+<html>
+ ...
+  <body>
+    <div class="container"></div>
+  </body>
+  <script src="/bundle.js"></script>
+</html>
+
+where bundle.js is index.js transpiled by babel loader and later bundled by webpack.
+
+-------------
+JSX styling:
+
+Two curly brackets. One is to escape the javascript expressions. Another is to tell that its a javascript object literal.
+
+<div style={{marginTop:'10px'}}>
+...
+</div>
+
+----------------------------
+Application 'state':
+
+React class component (Like those in Angular) has internal/local state . 'state' is fully controlled by the component. Modify 'state' instead of props.
+
+- Use this.setState(..some obj..) to update the 'state' variable.
+do not modify state directly, it will not rerender the component
+the only place to assign this.state is the constructor
+
+- There's a technique called controlled component
+for e.g. 
+<input
+      value={this.state.term}
+      onChange={event=>this.setState({term:event.target.value})}/>
+
+whereby the value of the element is reassigned back from the state, this is such that the value is always 'controlled'. Why? Such that the application 'state' remains the single source of truth (at least for application data). 
+
+   *This is possible because when the state is assigned to the value from the event handler, the value of the input is not yet assigned
+
+   *With a controlled component, every state mutation will have an associated handler function. This makes it straightforward to modify or validate user input
+
+   *<input type="text" value={this.state.value}>, <textarea value={this.state.value}>, and <select value={this.state.value}> all work very similarly - they all accept a value attribute that you can use to implement a controlled component.
+
+- For any event handler that needs to be called within an expression, use a fat arrow definition such that the this.setState can be accessed properly. (more Gothca below on point 11.)
+
+class SomeClass extends Component{
+
+  state={
+    someVar:''
+  }
+
+  onSomeHandler(event){
+    this.setState({someVar:event.target.value})
+  }
+
+//------above same as 
+
+  //onSomeHander = (event) =>{
+  //  this.setState({someVar:event.target.value})
+  //}
+
+  render(){
+   return(
+	<div>
+	  //event shorter on the code below: onChange={this.onSomeHandler}
+	  <input onChange={event=>this.onSomeHandler(event).bind(this)}
+  	  //<input onChange={event=>this.onSomeHandler(event)} //calling fat arrow function, without binding
+	</div>
+   )	
+  }
+}
+
+- Because this.props and this.state may be updated asynchronously, you should not rely on their values for calculating the next state. i.e. for a new state that need the input of the old state, use a function instead like below:
+
+//WRONG
+this.setState({
+  counter: this.state.counter + this.props.increment,
+});
+
+//CORRECT
+this.setState((prevState, props) => ({
+  counter: prevState.counter + props.increment
+}));
+
+setState accepts a function with previous state as first argument and props as second argument
+this function is a callback function which will get executed 'in queue' after all the previous batches of setting states are done.
+
+*The keyword here is 'asynchronously'. Updates to the DOM don’t happen immediately when this.setState is called. React batches updates so elements are re-rendered to the DOM efficiently.
+
+- The data flows unidirectionally downwards. A component may pass its state as props down to a child component.
+
+
+-----------------------------
+starter kit package: create-react-app
+
+can use this to generate new projects without worrying about webpack or babel configuration..
+it makes use of react-scripts package to do those. useful for building simple react application.
+
+------------------------------
+For navigation purpose, use react-router
+
+...
+import {BrowserRouter Route} from 'react-router-dom';
+
+...
+
+class Hello extends React.Component{
+  render(){return <div>Hello!</div>}
+}
+
+class GoodBye extends React.Component{
+  render(){return <div>GoodBye!</div>}
+}
+
+ReactDOM.render(
+ <BrowserRouter> //<--browser router only accepts ONE child element
+  <div>
+    Some Common Header..
+    <Route path="/hello" component={Hello} /> 
+//essentially all routes can be defined in this manner
+//This route component will pass in helper objects to help with navigation
+//specifically history.push, history.replace
+    <Route path="/goodbye" component={Goodbye} />
+  <div>
+ </BrowserRouter>
+, document.querySelector('.container')
+);
+
+...
+normal react + react-router allows the concept of nested parent-child routes
+
+GOTCHAs for routing:
+
+Switch tag allows for exclusive routing, i.e. it will render the first encountered route first. Put the more specific routes first..
+
+    <BrowserRouter>
+      <div>
+        <Switch>
+          <Route path="/posts/new" component={PostsNew} />
+          <Route path="/posts/:id" component={PostsShow} />
+          <Route path="/" component={PostsIndex} />
+        </Switch>
+      </div>
+    </BrowserRouter>
+
+...
+
+Link tag allows for a 'router link'
+
+          <Link className="btn btn-primary" to="/posts/new">
+            Add a Post
+          </Link>
+
+
+-----------------------------
+-----------------------------
+
+Next.js (framework for react)
+- wrapper for react
+- simple routing
+- Automatic transpilation and bundling (with webpack and babel)
+- Server rendering and indexing of ./pages
+- Static file serving. ./static/ is mapped to /static/
+- hot module reload
+- with many features like lazy loading etc just like angular
+
+-----------------------------
+Next.js
+
+project dir:-
+.next --> magic dir for next
+pages
+ - show.js  (react components - route page)         -----> localhost/show
+ - newcampaign.js  (react components - route page)  -----> localhost/newcampaign
+ - index.js ----------> localhost
+
+------
+
+inside the components:
+
+import React from 'react';
+
+export default () => {
+  return <h1>Hello World</h1>;
+}
+
+to show 'Hello World' on screen
+
+start next server by runnning 'next dev'
+
+One Gotcha: due to Next is by default using SSR, browser's global variable like window are not available during server side rendering..
+
+Another thing to take note is that, the js files will get executed 2 times if using SSR, once for the server and later, once for the browser. So, the error is thrown for the first time.
+
+------
+Next.js lifecycle for initial data population : use static getInitialProps() instead of the traditional react's componentDidMount() to assign data to props.
+===> Only the entry page, i.e. index.js is using getInitialProps;
+===> getInitialProps is for server side initialization in pages, it cannot be used in chidren components, 
+--if I have props that I want to initialize when server renders, I use this function in pages
+--for children component, please still use componentDidMount()
+
+This is because componentDidMount() is only called after browser side is rendered(). To fetch data which is to be made use of during server side rendering, use getInitialProps().
+
+------
+If need to check whether now is rendering in browser, use process.browser.
+
+------
+Next.js doesnt have support for dynamic routing. Need a module 
+- next-routes.
+- next-routes + next.js is more for Multiple Page Applications. Coz everytime a next route is 'pushed' (redirect) the whole component rerenders (for e.g if 
+I wanted the same header to appear in all pages, the header needs to be included in the render function of all the components.. 
+Hence, everytime a new component is called, the header rerenders. Is this the difference between react and angular? 
+Whereby react brings HTML 'into' JS? where as in angular there's parent-child component concept in HTML templates and 
+the same component (like header) can be included once in the app.js file and reuse over n over again.. making it more towards SPA)
+
+-create routes.js and server.js (refer to sample)
+-offers two tags <Link route="..."> - to enclose anchor links
+ and Router.pushRoute('...') for redirection --- internally still make use of next.js's function
+-when call pushRoute there will be an addition of this Route into the Browser History, such that user can navigate backward to.
+-replaceRoute(`..current page link`) to refresh page.
+
+***Whenever add new routes to routes.js, better to reboot server. Else, routes might be available at client side but not available at server side.
+
+-----
+Semantic UI react
+
+-A library that has a bunch of preconfigured components which look cool.
+
+But there's no easy way for next.js to render normal css!!
+-Next.js does provide a helper component to put link/other resources tags into the HTML page's HEAD component easily
+
+import Head from 'next/head';
+
+export default props =>{
+  return(
+   <Head>
+    <link rel="stylesheet" href="..."/>       //<---Just put the link inside the head children
+   </Head>
+
+  );//the result html page will have this link inside the head's tag
+}
+
+-----
+
+
+-----------------------------
+General info:
+
+1. ReactDOM uses camelCase property naming convention, hence class becomes className, tabindex becomes tabIndex. And Event Handlers like 'oninput, onclick...' everything should becomes camelCase
+i.e. const element = <div className="active">Hi</div>
+
+2. Use quotes for string and curly braces for expressions but not both in the same attribute.
+i.e. const element = <div tabIndex="0"></div>;
+const element = <img src={user.avatarUrl}></img>;
+
+3. By default, React DOM escapes any values embedded in JSX before rendering them.
+
+4. Elements, like the one in 2. is the smallest builing blocks of React apps.
+
+5. Props, which stands for properties can be think of as components' attributes, BUT which could accept ANYTHING, the most basic being a primitive value, a function OR other React elements.
+
+function Welcome(props) {
+  return <h1>Hello, {props.name}</h1>;
+}
+
+//---------------------------
+//above equivalent to this
+class Welcome extends React.Component {
+  render() {
+    return <h1>Hello, {this.props.name}</h1>;
+  }
+}
+//---------------------------
+
+const element = <Welcome name="Sara" />; //--->React calls the Welcome component with {name: 'Sara'} as the props.
+ReactDOM.render(
+  element,
+  document.getElementById('root')
+);
+
+
+//Can assign just the property name, means the implicit value is 'true'
+const element = <Button primary/>
+
+---
+
+using props.children, we can substitute child contents into a parent's template. (Something like ng-content)
+
+Layout.js:
+export default props =>{
+  return(
+    <div>
+      <h1>I am the header</h1>
+      {props.children}
+    </div>
+  );
+}
+
+index.js:
+
+return(
+  <Layout>
+    <...same content with the header above...>	
+  </Layout>
+)
+
+----
+
+JSX can render an array of elements... hence a code which maps array into another array works
+
+render(){
+  return(
+    {[<h1>Although lonelinness</h1>,<h1>has always been a friend</h1>]}
+  )
+}
+
+-----
+
+GOTCHA: When initializing component using lifecycle componentDidMount(), always remember that the rendering will occur at least ONCE already before this function is called. SO some properties may not be available in this.props during the first time rendering.
+
+componentDidMount(){
+  //assigning something to this.props via an async function
+}
+
+render(){
+  if(no such value from this.props) return <div>Loading...</div>
+  return(
+   //accessing some property values from this.props
+   //but these values may not be available during the first time round
+  )
+}
+
+6. Always start component names with capital letter.. lowercase letters are regarded as DOM tags
+
+7. React rule: All React components must act like pure functions with respect to their props.
+i.e. the function cannot modify props (ready-only) of itself.
+
+8. Lifecycle hooks (just like in Angular)
+- Mounting, Updating & Unmounting
+http://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/
+
+9. A props/attribute can also be a callbacks that's passed into a child component:
+
+-index.js
+  <div>
+        <SearchBar onSearchTermChange={term=>this.videoSearch(term)}/>
+...//onSearchTermChange here is a prop being passed into SearchBar component
+
+
+-search_bar.js
+
+<input onChange={event=>this.prop.onSearchTermChange(event.target.value)/>
+//when the input field changes, this.videoSearch function of index.js will be called.
+
+---
+this is called LIFTING STATE UP, i.e. the states that are supposedly belonging to the children component, because they are needed in the siblings component, are being lifted UP to a common component level. A function reference is then passed as prop which can be called at children level to change the state at the upper level.
+
+https://reactjs.org/docs/lifting-state-up.html
+
+10. In es2016 onward, any variable declaration in the constructor method of class can be written outside and still considered valid
+class App extends Component{
+ constructor(props){
+  super(props);
+  this.state={something:''}
+ }
+...
+equals to ===
+
+class App extends Component{
+  state={
+   something:''
+  }
+...
+
+
+11. Gotcha: More on 'this':
+Consider the following:
+
+  onCall(){ //<----1. function where this is following who calls it
+    console.log(this);
+    console.log(this.props);
+    console.log(this.state);
+  }
+
+  onCall=()=>{ //<---2. function where this belongs to this class regardless of who calls it
+    console.log(this);
+    console.log(this.props);
+    console.log(this.state);
+  }
+
+  render(){
+     return(
+	<Form onSubmit={this.onCall}> //<---if using function 1 above, here the this will point to the Form component, so props and state will be empty in function 1
+	  {this.onCall()}//since this is not inside any component, both functions 1 & 2 will have this belongs to class
+	</Form>
+     )
+  }
+
+Conclusion, to avoid confusion, all class functions whereby this should point to class variables should be defined as a fat arrow function.
+
+This way is called using the public class fields syntax. It's 'experimental'.
+
+ANOTHER way is to bind the methods in the CONSTRUCTOR:
+
+class NameForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {value: ''};
+
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event){
+	...
+  }
+
+...
+}
+
+12. For any iterables inside the rendering function, be sure to label the unique 'key' property else react will complain.
+
+render(){
+  return(
+    <ol>
+	{this.props.someList.map((item)=>return <li key={item.key}>... </li>)}
+	...
+    </ol>
+  )
+}
+
+---
+
+can also use 'index' if seriously dont have unique id. but highly not recommended to do so.
+
+const todoItems = todos.map((todo, index) =>
+  // Only do this if items have no stable IDs
+  <li key={index}>
+    {todo.text}
+  </li>
+);
+
+---
+
+A good rule of thumb is that elements inside the map() call need keys!
+
+const content = posts.map((post) =>
+  <Post
+    key={post.id}
+    id={post.id}
+    title={post.title} />
+);
+
+Component cannot read props.key. If need the key value as well, pass another props variable
+
+13. HTML element reference (like Angular's label) within the component code
+
+class SomeClass extends Component{
+  render(){
+    //can access this element anywhere within this component with this.refs.map-->
+    return <div ref="map"/>
+  }
+}
+
+Using ref is also the ingredient to 'uncontrolled components'
+
+https://reactjs.org/docs/uncontrolled-components.html
+
+------
+
+Reference are GREAT for using third party libraries like google maps which need to RENDER on A PARTICULAR element.
+
+Assuming google.maps is available (imported in script tag AND in the browser) below, we could create a React Google Map component (wrapper) like below.
+
+import React, {Component} from 'react';
+//---> can also consider react-google-maps package
+export default class GoogleMap extends Component{
+  componentDidMount(){
+    new google.maps.Map(this.refs.map, {
+      zoom:12,
+      center:{
+        lat: this.props.lat,
+        lng: this.props.lon
+      }
+    });
+  }
+
+  render(){
+    return(
+      <div ref="map" />
+    )
+  }
+
+}
+
+
+14. 
+A variable can store a JSX element
+...
+  render() {
+    const isLoggedIn = this.state.isLoggedIn;
+    let button;
+
+    if (isLoggedIn) {
+	//<-------HERE
+      button = <LogoutButton onClick={this.handleLogoutClick} />;
+    } else {
+      button = <LoginButton onClick={this.handleLoginClick} />
+    }
+
+    return (
+      <div>
+        <Greeting isLoggedIn={isLoggedIn} />
+        {button}
+      </div>
+    );
+  }
+
+15. HOC - higher-order component
+
+a higher-order component is a function that takes a component and returns a new component.
+
+const EnhancedComponent = higherOrderComponent(WrappedComponent);
+
+Whereas a component transforms props into UI, a higher-order component transforms a component into another component.
+
+This is possible because a props can take in a 1. component and a 2. function as argument. 1. component will be changed with the 2. function. for e.g.
+
+const CommentListWithSubscription = withSubscription(
+  CommentList,
+  (DataSource) => DataSource.getComments()
+);
+
+const BlogPostWithSubscription = withSubscription(
+  BlogPost,
+  (DataSource, props) => DataSource.getBlogPost(props.id)
+);
+
+A HOC composes the original component by wrapping it in a container component. A HOC is a pure function with zero side-effects.
+
+--
+
+// React Redux's `connect`
+const ConnectedComment = connect(commentSelector, commentActions)(CommentList);
+
+====>
+
+// connect is a function that returns another function
+const enhance = connect(commentListSelector, commentListActions);
+// The returned function is a HOC, which returns a component that is connected
+// to the Redux store
+const ConnectedComment = enhance(CommentList);
+
+
+------------------
+REDUX:
+
+Reducer - A function that returns a piece of the application state. (i.e. the only source of truth for our application!)
+
+There is no intrinsic connection between react and redux!!
+
+The connection between these 2 libraries are done with a separate library called react-redux.
+
+A 'container' is a 'smart-component' that has direct access to the state that is produced by redux.
+
+A usual (or called dumb-component) component doesnt care about the state in redux.
+
+---
+
+how it works?
+
+first make sure 'redux' and 'react-redux' is installed.
+make sure /src/actions and /src/reducers are available. Redux seems to look into these 2 directories.
+
+/src/reducers
+- index.js
+- reducer_1.js
+- reducer_2.js
+- ...
+
+the reducers**.js (here is reducer_books.js) are defined as functions which return some state data:
+
+export default function(){
+  return[
+    {title: 'Javascript: The good parts'},
+    {title: 'Harry Potter'},
+    {title: 'The good dino'},
+    {title: 'Eloquent bunny'}
+  ]
+}
+in the index.js file, all the reducers are combined into one rootReducer.
+
+import { combineReducers } from 'redux';
+import BooksReducer from './reducer_books';
+
+const rootReducer = combineReducers({
+  books: BooksReducer
+});
+
+export default rootReducer;
+
+---
+
+inside the container
+
+import React, {Component} from 'react';
+import {connect} from 'react-redux';
+
+class ASmartComponent extends Component{
+
+  //books state can be accessed using this.props.books
+
+}
+
+function mapStateToProps(state){ //<--- this function is the glue
+  //whatever is returned will show up as props inside the component above
+  return{
+    books: state.books
+  }
+}
+
+export default connect(mapStateToProps)(BookList);//<--- the connect here is the glue
+
+//the 'connected' component here is said to be a 'container'
+
+
+Same as in ngrx store, state in redux must be updated immutably.
+
+------------------
+A more advance idea for state storage in redux...
+
+For applications that would scale well, use an object literal instead of an array to store data. The key can then be used to pull/update data easily instead of using Array.find() etc.
+
+for e.g.
+
+{
+ 4: {title:'',content'', id:4...}
+ 8: {title:'',content'', id:8...}
+}
+
+instead of 
+[
+  {title:'',content'', id:4...},
+  {title:'',content'', id:8...}
+]
+
+..can use lodash's _.mapKeys(array,'id') to convert easily from array to object with specific keys
+
+------------------
+
+coupled with actions (action creator)
+
+/src/actions/index.js
+
+export function selectBook(book){
+  return{
+    type: 'BOOK_SELECTED', //<-- actions must return a type and payload (optional)
+    payload: book
+  };
+}
+
+---
+/src/reducers/reducer_active_book.js
+
+//the 'state' argument here is ONLY the CURRENT state this reducer is responsible for
+//initial state is 'null'. redux doesn't allow 'undefined' state;
+export default function(state = null, action){
+  //everytime there's an action dispatched here, i.e. this function is called
+  //the current state is available in 'state'
+  switch(action.type){
+    case 'BOOK_SELECTED':
+      return action.payload;
+    default:
+      return state;
+  }
+
+  return state;
+}
+
+---
+/containers/book-list.js
+
+//Anything returned from this function will end as props on the BookList container
+function mapDispatchToProps(dispatch){
+  //whenever selectBook is called, the result should be passed to all reducers
+  //selectBook is an action creator, it is bind to dispatch here
+  //when we call this.props.selectBook, its equivalent to calling dispatch
+  return bindActionCreators({selectBook},dispatch);
+}
+
+export default connect(mapStateToProps,mapDispatchToProps)(BookList);
+
+//OR in short hand way, can don't write the mapDispatchToProps and pass in the action creator function straight
+
+export default connect(mapStateToProps,{selectBook})(BookList);
+//here connect will do the necessary setup
+
+
+All in all, it is similar to concept of ngrx store & action.
+
+action.dispatch --> goes into reducer --> depends on type, process the payload accordingly --> state changes --> view with state data changes
+
+There are some initial redux actions during bootup like @@redux/INIT.
+
+*** make all components that need to talk to redux as 'containers'
+
+-----------------------------
+Redux-form: A package that handles the form input with redux action and state (Save a lot of boilerplate code for dev)
+
+Redux Form<----	   <Field> Component  --------needs an external 'view component' ---> JSX blob
+		-only knows how to 
+		interact with redux form
+		-handles all the event handlers/state, (for controlled element)
+		action creators and redux state
+		-BUT doesn't know how to display
+		itself!	
+
+The external 'view component' allows for easy customization & validation as well.
+
+
+-------------------------
+Middleware - A 'gatekeeper' between Action and Reducer
+
+-Something like ngrx effects. To handle asynchronous request.
+-But can install none or multiple middlewares up to the developer's desire.
+
+redux-promise
+--> process payload which was a promise and convert it into a resolved response data (from the promise) before sending it into the reducer
+
+
+-- for promise which are returned with error, 
+
+1. can catch in the reducer first, returning the previous state
+
+export default function(state=[],action){
+  if(action.error) {
+    console.log(`error from reducer: ${action.payload}`);
+    return state;
+  }
+  switch(action.type){
+    case FETCH_WEATHER:
+      return [action.payload.data, ...state];//immutable - new data is on top
+    default:
+      return state;
+  }
+
+  return state;
+}
+
+2. and then catch in the container (view) level
+
+this.props.fetchWeather(this.state.term).catch((e)=>console.log(`searchbar error${e}`));
+
+where by this catch statement can then do something... maybe update the view or call another action
+
+-----
+
+another way to process async action creators is using: redux-thunk
+
+export function fetchUsers(){
+
+  const request = axios.get('http://...');
+
+  return (dispatch) =>{
+    request.then(({data})=>{
+      dispatch({type:'FETCH_PROFILES',payload:data})
+//the benefit for this middleware is that we can use dispatch multiple actions within one action creator
+      dispatch({type:'SOME_MORE',...)
+      ..
+    });
+  }
+}
+
+both libraries can also be used together for (more complicated) multiples request processing:
+
+a. first use the redux-thunk
+b. but instead of chaining with 'then', just dispatch with a promise object
+
+What is a thunk?
+
+A thunk is a function that wraps an expression to delay its evaluation.
+
+// calculation of 1 + 2 is immediate
+// x === 3
+let x = 1 + 2;
+
+// calculation of 1 + 2 is delayed
+// foo can be called later to perform the calculation
+// foo is a thunk!
+let foo = () => 1 + 2;
+
+------------------------
+
+Redux-reselect:
+
+A library which allow devs to create 'selectors' with some logic to combine different states together and churn out a new state.
+
+-The goal is to remove away as much state related logic as possible from components (views related manipulation only!)
+
+------------------------
+
+Animation in React:
+
+use the addon 'ReactCSSTransitionGroup'
+
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
+
+Attach the JSX syntax below. Take note of the transition name
+
+        <ReactCSSTransitionGroup
+          transitionName="example"
+          transitionEnterTimeout={500}
+          transitionLeaveTimeout={300}>
+
+          {items}
+        </ReactCSSTransitionGroup>
+
+
+This will add some CSS attributes for your styling. Where 'example' is replaced in the CSS stylesheet.
+
+.example-enter {
+  opacity: 0.01;
+}
+
+.example-enter.example-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease-in;
+}
+
+.example-leave {
+  opacity: 1;
+}
+
+.example-leave.example-leave-active {
+  opacity: 0.01;
+  transition: opacity 300ms ease-in;
+}
+
+-----------------------------
+Webpack
+
+- use 'webpack -p' to build a single bundle.js file
+
+
+-----------------------------
+In case of any doubt of React's obscure syntax, use babeljs.io/repl
+
+for e.g.
+
+handleChange = field => e => {
+  e.preventDefault();
+  /// Do something here
+}
+
+is equal to 
+
+"use strict";
+
+handleChange = function handleChange(field) {
+  return function (e) {
+    e.preventDefault();
+    /// Do something here
+  };
+};
+
+---
+something tricky
+	
+//correct
+  makeIncrementer = amount => () =>{
+    this.setState(prevState =>{
+      return{
+        count: prevState.count + amount
+      }
+    })
+  }
+
+//wrong
+  makeIncrementer = (amount) =>{
+    this.setState(prevState =>{
+      return{
+        count: prevState.count + amount
+      }
+    })
+  }
+
+  increment = this.makeIncrementer(1);
+
+The first one returns a function:
+increment = () => {..}
+
+The second one returns the CONTENT of the function, which in this case would be undefined. Because the content itself is NOT returning anything with the this.setState.
+
+

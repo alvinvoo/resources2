@@ -1,0 +1,777 @@
+2 ways to resolve it
+1. Memoization
+
+2. Tabulation
+
+Dynamic Programming
+Visualize problem, break it down into sub problems, find recursive patterns that can be optimized.
+
+how to break into sub problems with recurring patterns:
+1. usually based on the given parameters, turn it into a 'tree format' for better
+visualization
+2. the actions (degree of freedom) or options that are allowed to take, can be used to
+split the root (source) into child nodes (destination)
+
+1) fib memoization
+fib has 2^n time complexity, big O notation: O(2^n)
+and space complexity (function stored on stack) of O(n)
+due to the maximum stack depth stored at any one time would be only n
+but needs 2^n time to traverse the whole stack to finish the calculation
+
+memorized fib has O(n) time and space complexity
+
+2) gridTraveler memoization
+You are a traveler on a 2D grid. You begin in the top-left corner and
+your goal is to travel to the bottom-right corner. You may only move down or right.
+
+In how many ways can you travel to the goal on a grid with dimensions m * n?
+
+Write a function `gridTraveler(m, n)` that calculates this.
+m - rows
+n - cols
+
+gridTraveler(2,3) - by travelling, we are `shrinking` the map
+and so that the next move can be recursively called by the same function
+                        (2,3)
+                    /           \
+                Down            Right
+                  /                \
+               (1,3)              (2,2) 
+               /   \            /       \
+            (0,3) (1,2)       (1,2)    (2,1)
+                  /   \       /  \     /   \
+                (0,2)(1,1)  (0,2)(1,1)(1,1)(0,0) // so in total for (2,3) is 3 ways
+
+- base cases: anything with 0, is 0 way, (1,1) is 1 way, actually, 
+anything with 1, should be just 1 way
+- the moves that can arrive at (1,1) would be the correct moves, whice are
+  1. Down, right, right
+  2. Right Down, Right
+  3. Right, Right, down
+
+Time Complexity - O(2^(n+m)) time
+due to to reach the goal of (1,1) or at least one 0, we need about (n - 1) + (m - 1) time for one branch length, since the nodes grow at base 2 exponential (similar as fib), hence 2^(n+m) - after simplifying the -1 bit
+Space Complexity - O(n + m) space
+
+*tips: gridTraveler(a,b) = gridTraveler(b,a)
+ 
+memoized gridTraveler
+Time Complexity - O(m * n) time - there are m * n choices of travelling (before hitting base cases)
+Space Complexity - still same O (m + n) space
+
+Memoization Recipe:
+---
+1. Make it work. (By brute force)
+    - Visualize problem as tree
+    - Implement tree using recursion
+    - Test it
+2. Make it efficient.
+    - Add memo object (or some hashmap, dictionary mapping)
+    - Add base case to return memo values
+    - Store return values into memo
+
+
+3) CanSum memoization (Decision Problem)
+
+Write a function `canSum(targetSum, numbers)` that takes in a targetSum and
+an array of numbers as arguments.
+
+The function should return a boolean indicating whether or not it is possible to
+generate the targetSum using numbers from the array.
+
+You may use an element of the array as many time as needed.
+
+You may assume that all input numbers are nonnegative.
+
+e.g. 
+
+canSum(7, [5, 3, 4, 7]) -> true
+canSum(7, [2, 4]) -> false
+
+
+branch out, as long as node - option >= 0
+         7
+   /  /    \  \ 
+  -5 -3    -4 -7
+  /  /      \   \
+ 2  4       3   0 (T)
+   / \     /
+  -3 -4  -3
+  /   \  /
+ 1 (T)0 0 (T)
+
+So there are 3 ways to get the target sum.
+
+Complexity:
+m = target sum
+n = array length
+
+height of tree = worst case is m
+branch out n nodes at every level, for as much as m levels
+hence time complexity is O(n^m) time
+space complexity is O(m) space
+
+after memoized: Time complexity becomes O(m * n) time
+
+4) HowSum memoization (Combinatoric Problem)
+
+Write a function `howSum(targetSum, numbers)` that takes in a 
+targetSum and an array of numbers as arguments.
+
+The function should return an array containing any combination of elements that add
+up to exactly the targetSum. If there is no combination that adds up to the targetSum,
+then return null.
+
+If there are multiple combinations possible, you may return any single one.
+
+e.g.
+
+howSum(7, [5, 3, 4, 7]) -> [3, 4]
+howSum(7, [5, 3, 4, 7]) -> [7]
+
+howSum(8, [2, 3, 5]) -> [2, 2, 2, 2]
+howSum(8, [2, 3, 5]) -> [3, 5]
+
+howSum(7, [2, 4]) -> null
+
+howSum(0, [1, 2, 3]) -> []
+
+compare to CanSum, rather than using the node, use the edge information of the tree.
+
+base case - node 0 gives []
+sum up all edge / path values when backtracing to the parent node
+anything > 0 gives null
+
+similar to CanSum, but with additional time copying into the array, or vec
+Complexity:
+m = target sum
+n = numbers array length
+
+height of tree = worst case is m
+branch out n nodes at every level, for as much as m levels
+but also with addtional time copying into the array or vec during the iteration 
+(which under the hood, copying is iterating over the original list and insert the item 
+at last place) 
+hence time complexity is O(n^m * m) time
+space complexity (including the one array being accumulated and returned - maybe 2 * m) ultimately O(m)
+
+after memoized: time complexity becomes O(n * m * m) = O(n * m^2)
+space complexity will increase due to storing array = O(m^2) // of coz, this is worst case scenario
+when we have something square like m^2, its not consider exponential becoz the exponent 2 is a constant
+
+5) BestSum memoization (Optimization Problem)
+Write a function `bestSum(targetSum, numbers)` that takes in a targetSum and an array of
+numbers as arguments.
+
+The function should return an array containing the shortest combination of numbers
+that add up to exactly the targetSum.
+
+If there is a tie for the shortest combination, you may return any one of the shortest.
+
+optimized version of `HowSum`
+
+bestSum(7, [5, 3, 4, 7]) -> [7]
+bestSum(8, [2, 3, 5]) -> [3, 5]
+
+
+                (lose)[3,3,2]     8 [5,3]            
+                    /             |         \
+                  -2             -3         -5
+                  /               |          \
+                 6 [3,3]          5           3
+              /  | \           /  | \        /  \
+            -2  -3 -5        -2  -3 -5      -2  -3
+            /    |   \       /    |   \     |    |
+           4     3    1     3     2    0    1    0
+         /  \   / \       /  \    | 
+        -2  -3 -2 -3     -2  -3  -2 
+         |  |   |  |      |  |    |
+         2  1   1  0      1  0    0
+         |
+        -2
+         |
+         0
+
+time complexity would be same as HowSum O(n^m * m) time
+space complexity O(m^2), since need to store a comparator variable, shortestCombination
+which can have size up to m for each level of m, hence m * m, there's also 
+the resultant array that is being returned (which can be ignored) 
+O(m * m + m) = O(m^2)
+
+after memoized: time complexity becomes O(n * m * m) = O(n * m^2)
+space complexity will increase due to storing array = O(m^2) // of coz, this is worst case scenario
+
+6) CanConstruct memoization (Yes/No Decision Problem)
+Write a function `canConstruct(target, wordBank)` that accepts a target string and an array of
+strings.
+
+The function should return a boolean indicating whether or not the `target` can be constructed
+by concatenating elements of the `wordBank` array.
+
+You may reuse elements of `wordBank` as many times as needed.
+
+
+e.g.
+
+canConstruct(abcdef, [ab, abc, cd, def, abcd]) -> true (abc + def)
+canConstruct(skatebaord, [bo, rd, ate, t, ska, sk, boar]) -> false
+
+base case:
+canConstruct('', [cat, dog, mouse]) -> true
+
+            abcdef
+    (branch off only with the _prefix_ substrings)
+(issue when taking out substrings _in the middle_)
+    ab   abc   cd(X) def(X)     abcd
+    |     |     |                 |
+   cdef  def  abef(              ef (F)
+    |     |   becoz `abe`
+   -cd   ''(T)is now possible)
+    |
+   ef (F)
+
+brute force complexity:
+m - target.length (height of tree)
+n - wordBank.length (branches)
+
+O(n^m) time + slicing time (could be up to m letters for each node operation)
+slicing is an `iterating` operation
+hence, in total
+O(n^m * m) time
+space complexity - each m will need to store up to m length of string
+hence
+O(m * m) space
+
+memoized complexity:
+O(n * m^2) time
+O(m^2) space
+
+7) CountConstruct(target, wordBank) (Combinatoric Problem - but sum up in count)
+Write a function `countConstruct(target, wordBank)` that accepts a target string and
+an array of strings.
+
+The function should return the _number of ways_ that the `target` can be constructed
+by concatenating elements of the `wordBank` array.
+
+You may reuse elements of `wordBank` as many times as needed.
+
+countConstruct(abcdef, [ab, abc, cd, def, abcd]) -> 1
+countConstruct(purple, [purp, p, ur, le, purpl]) -> 2
+
+same complexities as CanConstruct
+
+8) AllConstruct Memoization (Combinatoric Problem)
+Write a function `allConstruct(target, wordBank)` that accepts a target string and
+an array of strings
+
+The function should return a 2D array containing _all of the ways_ that the `target`
+can be constructed by concatenating elements of the `wordBank` array. Each element of
+the 2D array should represent one combination that constructs the `target`.
+
+You may reuse elements of `wordBank` as many times as needed.
+
+allConstruct(purple, [purp, p, ur, le, purpl]) -> 
+[
+    [purp, le],
+    [p, ur, p, le]
+]
+
+allConstruct(abcdef, [ab, abc, cd, def, abcd, ef, c]) ->
+[
+    [ab, cd, ef],
+    [ab, c, def],
+    [abc, def],
+    [abcd, ef]
+]
+
+base cases:
+allConstruct(hello, [d, a, c]) -> []
+allConstruct('', [c, d, e]) -> [[]]  (there's exactly one way for empty string, which is to take no word)
+
+complexity:
+since need to go through every combination, there's no escaping the exponential output
+
+overall, there are subarrays to consider, but if output is exponential, that already
+encompases the biggest possible complexity
+O(n^m) time
+O(m) space
+
+=======
+1) fib tabulation
+
+given
+fib(0) -> 0
+fib(1) -> 1
+
+find nth fib number, f.g.
+fib(6) -> 8
+
+not recursive, interate through an array with length n + 1 
+(becoz we want to align the index of the array with the target n of problem) 
+
+for any counting problem, its good to initialize with 0
+
+                            0  1  2  3  4  5  6
+initialize with all 0       0  0  0  0  0  0  0
+seed with given condition   0  1  0  0  0  0  0 
+first iter, position 0
+add ownself to next 2 0th+0    1  0
+positions             1st+1       1  1
+                      2nd+1          2  1
+                      3rd+2             3  2
+                      4th+3                5  3
+                      5th+5                   8  (+5, out of bounds, ignore)
+
+due to linear iteration
+n - target length
+O(n) time complexity
+O(n) space complexity
+                                    
+------
+2) Grid Traveler tabulation                                        
+gridTraveler(3,3) -> 6
+in order to match up the indices, need to make sure the array created has that
+one more dimension for case 0,0, which is a 4 x 4 array
+
+for any counting problem, its good to initialize with all 0s
+then look at the FIRST base case, gridTraveler(1,1) -> 1
+
+   0   1   2   3
+0  0   0   0   0
+
+1  0   1   0   0
+
+2  0   0   0   0
+
+3  0   0   0   0
+
+--
+based on the rule of the game, its to either travel right or downward
+so we traverse the grid, adding the current value to its right and downward neighbors
+
+   0   1   2   3
+0  0-> 0 ..0 ..0  = first row iteration finished with all zeros
+   |
+   V
+1  0   1   0   0
+
+2  0   0   0   0
+
+3  0   0   0   0
+
+--
+   0   1   2   3
+0  0   0   0   0
+
+1  0   1   1   1 = 2nd row iteration
+
+2  0   1   1   1 
+
+3  0   0   0   0
+
+--
+   0   1   2   3
+0  0   0   0   0
+
+1  0   1   1   1 
+
+2  0   1   2   3 = 3rd row iteration
+
+3  0   1   2   3 
+
+--
+   0   1   2   3
+0  0   0   0   0
+
+1  0   1   1   1 
+
+2  0   1   2   3 
+
+3  0   1   3   6 = 4th row iteration  (got the answer for grid(3,3) = 6 here)
+
+m - row
+n - columns
+
+O(m * n) time complexity
+O(m * n) space complexity
+
+----
+Tabulation Recipe
+1. visualize problem as table
+2. size the table based on the inputs
+3. initilize table with default values
+4. seed the trivial answer into the table
+5. iterate the table
+6. with logic which fill _further_ positions based on the _current_ position
+
+-------
+3) canSum tabulation
+canSum(7, [5, 3, 4]) -> true
+
+1, 2. a table with target sum + 1 length
+3. default values would be all false (based on expected output boolean type)
+4. seed: canSum(0, [..]) -> true (coz can always take NO value from array)
+
+0  1  2  3  4  5  6  7
+T  F  F  F  F  F  F  F
+
+5, 6. starting at index 0, which is True
+looking at the sum array [5, 3, 4]
+if 0 is true, that means the position 5 steps later should also be true
+    becoz we can generate 0 using array with 5
+    similarly with 3 and 4, so
+
+0  1  2  3  4  5  6  7
+T  F  F  T  T  T  F  F
+
+--
+
+at index 1, which is False
+which means, we should not modify the positions 5, 3, 4 ahead
+
+..
+
+at index 3, which is True
+position 3 and 4 will assign 6 and 7 to be true
+(which means 3 + 4 = 7, is the first `true` for 7)
+
+0  1  2  3  4  5  6  7
+T  F  F  T  T  T  T  T 
+
+..
+we can finish looping thru the rest of the indexes
+..
+at the end, 7 is True
+if we look at the True values, we see that 0, 3, 4, 5, 6, 7 are
+possible to be generated from [5, 3, 4] while 1, 2 are not possible
+
+m = targetSum
+n = numbers.length
+
+O(m * n) time complexity
+O(m) space complexity
+
+-----
+4) howSum tabulation
+howSum(7, [5, 3, 4]) -> [3, 4]
+if its not possible to generate, return null
+
+ 0   1    2  3   4   5   6   7 
+nullnullnullnullnullnullnullnull
+
+base case howSum(0, [..]) -> []
+
+ 0   1   2   3   4   5   6   7 
+ [] nullnullnullnullnullnullnull
+
+iteration by looking into 5, 3, 4 positions ahead 
+
+ 0   1   2   3   4   5   6   7 
+ [] nullnull[3] [4] [5] nullnull
+
+since we can generate 0 index, using these positions, we copy the
+current position value AND the position delta value into the array
+we skip index 1 and 2 since they are null (no way to generate them
+using any of the values in the array)
+
+at index 3:
+ 0   1   2   3   4   5   6   7 
+ [] nullnull[3] [4] [5] [3, 3] [3, 4] (we already have one answer and COULD stop here)
+
+if continue, at index 4:
+ 0   1   2   3   4   5   6   7 
+ [] nullnull[3] [4] [5] [3, 3] [4, 3] (overwritten with [4, 3])
+
+index 5 and 6 (adding the position delta) are out of bounds
+so the final answer could be [4, 3]
+
+m = targetSum
+n = numbers.length
+
+O(m * n * m) time complexity
+the 2nd m part is due to we need to copy the inner array into the target sum array
+the worst case of this array is size m [1, ... 1], e.g. 7 1's for targetSum 7
+so taken that in account, we need to multiply by m
+
+wit the same logic, the space complexity would be
+O(m * m) space complexity - which is a 2d array complexity
+
+----
+5) bestSum tabulation
+bestSum(8, [2, 3, 5]) -> [3, 5]
+
+base case: bestSum(0, [..]) -> []
+if not possible to get any route, return null
+ 0  1   2   3   4   5   6   7   8
+[] nullnullnullnullnullnullnullnull
+
+--
+index 0
+ 0  1   2   3   4   5   6   7   8
+[] null[2] [3]null [5] nullnullnull
+--
+index 1 (null, skip)
+ 0  1   2   3   4   5   6   7   8
+[] null[2] [3]null [5] nullnullnull
+--
+index 2
+                  [2,3] is valid, but longer array, so discard, same logic will 
+                  apply for similar future scenario
+ 0  1   2   3   4   5   6   7   8
+[] null[2] [3][2,2][5]null[2,5]null
+--
+index 3
+ 0  1   2   3   4   5   6   7   8
+[] null[2] [3][2,2][5][3,3][2,5][3,5]
+--
+index 4
+...
+index 5
+[5,3] will be discard for 8, 
+due to existing [3,5]
+final result will be [3,5]
+
+complexity is still like howSum
+O(m*n*m) time complexity
+O(m*m) space complexity
+
+
+-----
+6) canConstruct tabulation
+
+canConstruct(abcdef, [ab, abc, cd, def, abcd]) -> true
+
+base case: canConstruct('', [..]) -> true
+
+we need to encode the string (which are made up of 
+substrings which can be concatenated) 
+to the indices accordingly
+the encoding for a certain position will contain
+all before but not including current position substrings
+which means:
+ 0  1   2   3    4     5       6      (that's y we need an additional target length + 1 index)
+'' 'a' 'ab''abc''abcd''abcde''abcdef'
+ a  b   c   d    e     f
+
+at position 0, its ''
+at position 1, its 'a'
+at position 2, its 'ab'
+...
+
+--
+so starting with the base case, at index 0
+
+ 0   1   2   3   4   5   6
+ T   F   F   F   F   F   F
+ a   b   c   d   e   f
+ 
+-
+looking thru the word bank [ab, abc, cd, def, abcd], first encoding: ab, which is index 2
+
+ 0   1   2   3   4   5   6
+ T   F   T   F   F   F   F
+ a   b   c   d   e   f
+-
+same logic iterating thru .. abc, and abcd (skipping cd and def, coz its illegal move from current position 0)
+
+ 0   1   2   3   4   5   6
+ T   F   T   T   T   F   F
+ a   b   c   d   e   f
+
+--
+moving to index 1, its false, so skip
+
+moving to index 2, its true, we see that `cd` matches in wordbank
+which means, from current position, we can traverse 2 position ahead
+and set true
+but index 4 is already true, so nothing to do
+
+moving to index 3, we see `def` matches in wordbank
+which is 3 position ahead, index 6 is true
+which means, string from indices 0 to 6 can be generated
+
+ 0   1   2   3   4   5   6
+ T   F   T   T   T   F   T
+ a   b   c   d   e   f
+
+looking back, we can see that the below indices range (substrings) can be generated
+indices 0 '' (base case)
+indices 0 to 1 'ab'
+indices 0 to 2 'abc'
+indices 0 to 3 'abcd'
+indices 0 to 5 'abcdef'
+
+m = target length
+n = wordBank.length
+
+we need to look through each character of target string
+for each word in wordBank 
+but we also need to match the starting string pattern (
+for e.g. at starting index 0, `cd` doesnt match the encoding
+similarly, at index 2, `ab` doesnt match the encoding of `cd`)
+so the maximum (worst case) matching we need to do is m
+hence
+O(m * n * m) time complexity
+O(m) space -> just the boolean array 
+
+----------
+7) countConstruct tabulation : how many ways to construct the word from the wordbank
+countConstruct(purple, [purp, p, ur, le, purpl]) -> 2
+ - purp + le
+ - p + ur + p + le
+
+initialization: all zeros
+base case: countConstruct('', [..]) -> 1
+ 0  1  2  3  4  5  6
+ 1  0  0  0  0  0  0
+ p  u  r  p  l  e
+
+--
+starting at index 0 `p`, take current value, add it to any valid foward move based on the word bank
+
+ 0  1  2  3  4  5  6
+ 1  1  0  0  1  1  0
+ p  u  r  p  l  e
+
+--
+next index 1 `u`, only one match `ur` from word bank
+
+ 0  1  2  3  4  5  6
+ 1  1  0  1  1  1  0
+ p  u  r  p  l  e
+
+--
+next index 2 `r`, which is 0, and has no match from word bank, so skip
+
+--
+next index 3 `p`
+
+ 0  1  2  3  4  5  6
+ 1  1  0  1  2  1  0
+ p  u  r  p  l  e
+
+--
+next index 4 `l`
+
+ 0  1  2  3  4  5  6
+ 1  1  0  1  2  1  2 
+ p  u  r  p  l  e
+
+we can see at index `4` there are exactly 2 ways to construct the substring 
+from index 0 to 4 `purp`
+ - purp
+ - p + ur + p 
+
+and from index `4` to `6`, there's exactly 1 way, which to add `le`
+ - purp + le
+ - p + ur + p + le
+
+similar to canConstruct
+O(m * n * m) time complexity
+O(m) space complexity
+
+-----
+8) allConstruct -> return a 2D array containing ALL of the ways that the `target` can be 
+constructed by concatenating elements of `wordBank` array. Element os `wordBank` can
+be reused.
+
+for e.g.
+allConstruct(abcdef, [ab, abc, cd, def, abcd, ef ,c]) -> 
+[
+    [ab, cd, ef],
+    [ab, c, def],
+    [abc, def],
+    [abcd, ef]
+]
+
+base case: 
+allConstruct('', [...]) -> [ [] ]
+allConstruct('birds', [cat, dog]) -> [ ]
+
+--
+starting at index 0, `a`
+copy what it has over to forward possible possitions
+and then append each existing moves content with the delta move content
+
+for e.g. at 2, its index 0 copy its [] content over and append it with move `ab`
+ 0    1    2       3       4        5    6
+[    [    [       [       [        [    [ 
+ []        [ab]    [abc]   [abcd]                  
+                                       
+]    ]    ]       ]       ]        ]    ]
+a    b    c       d       e        f    
+--
+skipping index 1, coz its empty
+
+--
+moving to index `2`, two matches: cd and c
+ 0    1    2       3       4        5    6
+[    [    [       [       [        [    [ 
+ []        [ab]    [abc]   [abcd]                  
+                   [ab,c]  [ab,cd]                  
+]    ]    ]       ]       ]        ]    ]
+a    b    c       d       e        f    
+
+--
+moving to index `3`, one match: def
+ 0    1    2       3       4        5    6
+[    [    [       [       [        [    [ 
+ []        [ab]    [abc]   [abcd]         [abc,def]          
+                   [ab,c]  [ab,cd]        [ab,c,def]          
+]    ]    ]       ]       ]        ]    ]
+a    b    c       d       e        f    
+
+--
+moving to index 4, one match: ef
+ 0    1    2       3       4        5    6
+[    [    [       [       [        [    [ 
+ []        [ab]    [abc]   [abcd]         [abc,def]          
+                   [ab,c]  [ab,cd]        [ab,c,def]          
+                                          [abcd,ef] 
+                                          [ab,cd,ef]
+]    ]    ]       ]       ]        ]    ]
+a    b    c       d       e        f    
+
+index 5 is empty, so done here, we got all combinations for index 6
+
+looking back, lets say if we take index 3, for substring `abc`, we see there
+are exactly 2 ways to generate that
+
+m = target length
+n = wordBank length
+due to need to go through and storing every combination for the substrings
+
+~O(n^m) time complexity
+~O(n^m) space complexity (which is way worse than the memoization technique)
+
+there's also substring matching that needs to take into account, but since
+its already ultimately exponential complexity
+
+---------
+wrap up:
+
+1. notice any overlapping subproblems
+2. decide what is the trivially smallest input
+   - empty array 
+   - empty string
+   - number 0 or 1
+3. think recursively to use Memoization
+4. think iteratively to use Tabulation
+5. draw a strategy first
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
